@@ -22,11 +22,22 @@ FIND_PACKAGE(Gettext REQUIRED)
 
 set(package	xmradio)
 set(prefix	${CMAKE_INSTALL_PREFIX})
+set(exec_prefix ${CMAKE_INSTALL_PREFIX})
+set(bindir ${exec_prefix}/bin)
 
-set(pkgdatadir	${prefix}/share/${package})
-set(localedir	${prefix}/share/locale)
+if (NOT DEFINED LIB_INSTALL_DIR)
+	set(LIB_INSTALL_DIR ${exec_prefix}/lib)
+endif()
+
+set(libdir ${LIB_INSTALL_DIR})
+set(includedir ${CMAKE_INSTALL_PREFIX}/include)
+set(pkgdatadir ${prefix}/share/${package})
+set(localedir ${prefix}/share/locale)
 
 set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
+
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 add_subdirectory(cmake)
 add_subdirectory(data)
