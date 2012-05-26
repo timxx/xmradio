@@ -6,7 +6,7 @@
 G_BEGIN_DECLS
 
 #define XMR_SERVICE_TYPE            (xmr_service_get_type())
-#define XMR_SERVICEO(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), XMR_SERVICE_TYPE, XmrService))
+#define XMR_SERVICE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), XMR_SERVICE_TYPE, XmrService))
 #define XMR_SERVICE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  XMR_SERVICE_TYPE, XmrServiceClass))
 #define IS_XMR_SERVICE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), XMR_SERVICE_TYPE))
 #define IS_XMR_SERVICE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  XMR_SERVICE_TYPE))
@@ -31,7 +31,7 @@ struct _XmrServiceClass
 GType		xmr_service_get_type();
 GObject*	xmr_service_new();
 
-gboolean
+gint
 xmr_service_login(XmrService *xs,
 			const gchar *usr,
 			const gchar *pwd
