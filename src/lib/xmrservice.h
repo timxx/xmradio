@@ -73,6 +73,19 @@ enum
 gint
 xmr_service_get_radio_list(XmrService *xs, GList **list, gint style);
 
+
+gint
+xmr_service_like_song(XmrService *xs, const gchar *song_id, gboolean like);
+
+gint
+xmr_service_get_lyric(XmrService *xs, const gchar *song_id, GString *data);
+
+const gchar *
+xmr_service_get_usr_id(XmrService *xs);
+
+const gchar *
+xmr_service_get_usr_name(XmrService *xs);
+
 G_END_DECLS
 
 #endif /* __XMR_SERVICE_H__ */

@@ -656,3 +656,66 @@ get_radio(xmlNodePtr root, GList **list)
 
 	*list = g_list_append(*list, radio);
 }
+
+gint
+xmr_service_like_song(XmrService *xs, const gchar *song_id, gboolean like)
+{
+	gint result = 1;
+	gchar *url;
+	GString *data;
+
+	g_return_val_if_fail(xs != NULL, 1);
+
+	if (like){
+		url = g_strdup_printf("http://www.xiami.com/kuang/like/id/%s", song_id);
+	}else{
+		url = g_strdup_printf("http://www.xiami.com/kuang/unlike/id/%s", song_id);
+	}
+	if (url == NULL)
+		return result;
+
+	data = g_string_new("");
+
+	result = get_url_data(xs, url, data);
+
+	g_string_free(data, TRUE);
+
+	g_free(url);
+
+	return result;
+}
+
+gint
+xmr_service_get_lyric(XmrService *xs, const gchar *song_id, GString *data)
+{
+	gint result = 1;
+	gchar *url;
+
+	g_return_val_if_fail(xs != NULL && data != NULL, 1);
+
+	url = g_strdup_printf("http://www.xiami.com/radio/lyric/sid/%s", song_id);
+	if (url == NULL)
+		return result;
+
+	result = get_url_data(xs, url, data);
+
+	g_free(url);
+
+	return result;
+}
+
+const gchar *
+xmr_service_get_usr_id(XmrService *xs)
+{
+	g_return_val_if_fail(xs != NULL, NULL);
+
+	return xs->priv->usr_id;
+}
+
+const gchar *
+xmr_service_get_usr_name(XmrService *xs)
+{
+	g_return_val_if_fail(xs != NULL, NULL);
+
+	return xs->priv->usr_name;
+}
