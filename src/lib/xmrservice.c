@@ -1,5 +1,6 @@
 #include <curl/curl.h>
 #include <libxml/parser.h>
+#include <string.h>
 
 #include "xmrservice.h"
 #include "songinfo.h"
@@ -23,12 +24,17 @@ struct _XmrServicePrivate
 {
 	gboolean logged;	// user logged in ?
 
-	const gchar	*usr_id;
-	const gchar	*usr_name;
+	gchar	*usr_id;
+	gchar	*usr_name;
+
+	const gchar *style; // music style
 
 	CURL *curl;
 };
 
+/**
+ * curl data receive handler
+ */
 static size_t
 write_func(void *ptr, size_t size, size_t nmemb, void *data);
 
@@ -38,7 +44,10 @@ get_url_data(XmrService *xs, const gchar *url, GString *data);
 static gint
 post_url_data(XmrService *xs, const gchar *url, GString *post_data, GString *data);
 
-static gboolean
+/**
+ * parse login status data
+ */
+static gint
 parse_login_status(XmrService *xs, GString *data);
 
 static xmlNodePtr
@@ -46,6 +55,22 @@ xml_first_child(xmlNodePtr root, const xmlChar *child);
 
 static xmlChar*
 xml_first_child_content(xmlNodePtr root, const xmlChar *child);
+
+static gint
+parse_track_list_data(GString *data, GList **list);
+
+/**
+ * get track info
+ * and append to list
+ */
+static void
+get_track(xmlNodePtr root, GList **list);
+
+/**
+ * decode url
+ */
+static gchar *
+decode_url(const gchar *url);
 
 static void
 xmr_service_set_property(GObject      *object,
@@ -58,11 +83,11 @@ xmr_service_set_property(GObject      *object,
 	switch(prop_id)
 	{
 		case PROP_USR_ID:
-			xs->priv->usr_id = g_value_get_string(value);
+			xs->priv->usr_id = g_value_dup_string(value);
 			break;
 
 		case PROP_USR_NAME:
-			xs->priv->usr_name = g_value_get_string(value);
+			xs->priv->usr_name = g_value_dup_string(value);
 			break;
 	}
 }
@@ -98,6 +123,11 @@ xmr_service_dispose(GObject *obj)
 	xs = XMR_SERVICE(obj);
 	priv = xs->priv;
 
+	if (priv->usr_id)
+		g_free(priv->usr_id);
+	if (priv->usr_name)
+		g_free(priv->usr_name);
+
 	if (priv->curl)
 	{
 		curl_easy_cleanup(priv->curl);
@@ -121,10 +151,7 @@ static void xmr_service_class_init(XmrServiceClass *klass)
 							      "User id",
 							      "User id",
 								  NULL,
-								  G_PARAM_READWRITE		|
-							      G_PARAM_STATIC_NAME	|
-							      G_PARAM_STATIC_NICK	|
-							      G_PARAM_STATIC_BLURB
+								  G_PARAM_READWRITE
 						 ));
 
 	g_object_class_install_property(obj_class,
@@ -133,10 +160,7 @@ static void xmr_service_class_init(XmrServiceClass *klass)
 							      "User name",
 							      "User name",
 								  NULL,
-								  G_PARAM_READWRITE		|
-							      G_PARAM_STATIC_NAME	|
-							      G_PARAM_STATIC_NICK	|
-							      G_PARAM_STATIC_BLURB
+								  G_PARAM_READWRITE
 						 ));
 
 	g_type_class_add_private(obj_class, sizeof(XmrServicePrivate));
@@ -218,12 +242,48 @@ xmr_service_is_logged_in(XmrService *xs)
 	return xs->priv->logged;
 }
 
-void
+gint
 xmr_service_get_track_list(XmrService *xs, GList **list)
 {
-	g_return_if_fail(xs != NULL);
+	gchar *url;
+	gint result;
 
-	get_url_data(xs, NULL, NULL);
+	g_return_val_if_fail(xs != NULL, 1);
+
+	if (!xs->priv->logged || xs->priv->usr_id == NULL)
+	{
+		g_warning("You should login first\n");
+		return 1;
+	}
+
+	url = g_strdup_printf("http://www.xiami.com/kuang/xml/type/8/id/%s",
+				xs->priv->usr_id);
+
+	result = xmr_service_get_track_list_by_style(xs, list, url);
+
+	g_free(url);
+
+	return result;
+}
+
+gint
+xmr_service_get_track_list_by_style(XmrService *xs, GList **list, const gchar *url)
+{
+	gint result = 1;
+	GString *data;
+
+	g_return_val_if_fail(xs != NULL, 1);
+
+	data = g_string_new("");
+
+	result = get_url_data(xs, url, data);
+	if (result == 0){
+		parse_track_list_data(data, list);
+	}
+
+	g_string_free(data, TRUE);
+
+	return result;
 }
 
 static gint
@@ -298,7 +358,7 @@ parse_login_status(XmrService *xs, GString *data)
 	doc = xmlReadMemory(data->str, data->len, NULL, NULL,
 				XML_PARSE_RECOVER | XML_PARSE_NOERROR);
 	if (doc == NULL)
-		return FALSE;
+		return result;
 
 	do
 	{
@@ -373,4 +433,135 @@ xml_first_child_content(xmlNodePtr root, const xmlChar *child)
 	}
 
 	return NULL;
+}
+
+static gint
+parse_track_list_data(GString *data, GList **list)
+{
+	gint result = 1;
+	xmlDocPtr doc = NULL;
+
+	doc = xmlReadMemory(data->str, data->len, NULL, NULL,
+				XML_PARSE_RECOVER | XML_PARSE_NOERROR);
+
+	if (doc == NULL)
+		return result;
+
+	do
+	{
+		xmlNodePtr root;
+		xmlNodePtr track_list;
+		xmlNodePtr p;
+
+		root = xmlDocGetRootElement(doc);
+		if (root == NULL)
+			break;
+
+		track_list = xml_first_child(root, BAD_CAST "trackList");
+		if (track_list == NULL)
+			break;
+
+		for(p = xmlFirstElementChild(track_list); p ; p = xmlNextElementSibling(p))
+			get_track(p, list);
+
+		result = 0;
+	}
+	while(0);
+
+	xmlFreeDoc(doc);
+
+	return result;
+}
+
+static void
+get_track(xmlNodePtr root, GList **list)
+{
+	SongInfo *song;
+	gchar *url;
+
+	song = song_info_new();
+	if (song == NULL)
+		return ;
+
+	do
+	{
+		song->song_id		= (gchar *)xml_first_child_content(root, BAD_CAST "song_id");
+		if (song->song_id == NULL)
+			break;
+
+		song->song_name		= (gchar *)xml_first_child_content(root, BAD_CAST "song_name");
+		song->album_id		= (gchar *)xml_first_child_content(root, BAD_CAST "album_id");
+		song->album_name	= (gchar *)xml_first_child_content(root, BAD_CAST "album_name");
+		song->artist_id		= (gchar *)xml_first_child_content(root, BAD_CAST "artist_id");
+		song->artist_name	= (gchar *)xml_first_child_content(root, BAD_CAST "artist_name");
+		song->album_cover	= (gchar *)xml_first_child_content(root, BAD_CAST "album_cover");
+		url					= (gchar *)xml_first_child_content(root, BAD_CAST "location");
+		if (url == NULL)
+			break;
+
+		song->location		= decode_url(url);
+		g_free(url);
+
+		song->grade			= (gchar *)xml_first_child_content(root, BAD_CAST "grade");
+
+		*list = g_list_append(*list, song);
+
+		return ;
+	}
+	while(0);
+
+	song_info_free(song);
+}
+
+static gchar *
+decode_url(const gchar *url)
+{
+	int col = 0;
+	int row;
+	int x;
+	int len;
+	int i, j, k;
+	gchar *array;
+	gchar *decode_url = NULL;
+	gchar *p;
+
+	if (url == NULL)
+		return NULL;
+
+	row = *url - '0';
+	len = strlen(url + 1);
+	col = len / row;
+	x = len % row;
+
+	if (x != 0)
+	  col += 1;
+
+	array = (char *)calloc(len + sizeof(char), sizeof(char));
+
+	k = 1;
+	for(i=0; i<row; i++)
+	{
+		for(j=0; j<col; j++, k++)
+			array[i + row * j] = url[k];
+
+		if (x > 0)
+		{
+			x--;
+			if(x == 0)
+			 col -= 1;
+		}
+	}
+
+	decode_url = curl_easy_unescape(NULL, array, 0, NULL);
+	p = decode_url;
+
+	while(*p)
+	{
+		if (*p == '^')
+			*p = '0';
+		p++;
+	}
+	free(array);
+
+	return decode_url;
 }

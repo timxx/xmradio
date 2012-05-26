@@ -31,6 +31,11 @@ struct _XmrServiceClass
 GType		xmr_service_get_type();
 GObject*	xmr_service_new();
 
+/**
+ * login server
+ * @param usr user name (email)
+ * @param pwd password
+ */
 gint
 xmr_service_login(XmrService *xs,
 			const gchar *usr,
@@ -40,8 +45,17 @@ xmr_service_login(XmrService *xs,
 gboolean
 xmr_service_is_logged_in(XmrService *xs);
 
-void
+/**
+ * get private list
+ */
+gint
 xmr_service_get_track_list(XmrService *xs, GList **list);
+
+/**
+ * get by music style
+ */
+gint
+xmr_service_get_track_list_by_style(XmrService *xs, GList **list, const gchar *url);
 
 G_END_DECLS
 

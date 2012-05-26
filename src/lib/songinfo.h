@@ -1,21 +1,23 @@
 #ifndef __SONG_INFO_H__
 #define __SONG_INFO_H__
 
+#include <glib.h>
+
 G_BEGIN_DECLS
 
 typedef struct
 {
-	gchar *song_name;	// song name
 	gchar *song_id;
+	gchar *song_name;	// song name
 
-	gchar *ablum_id;
-	gchar *ablum_name;
+	gchar *album_id;
+	gchar *album_name;
 
 	gchar *artist_id;
 	gchar *artist_name;
-	gchar *album_cover;	// ablum image
+	gchar *album_cover;	// album image
 
-	gchar *url;	// song url
+	gchar *location;	// song url
 
 	gchar *grade;	//
 }SongInfo;
