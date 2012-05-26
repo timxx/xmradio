@@ -6,8 +6,10 @@
 
 #include "../src/lib/xmrservice.h"
 #include "../src/lib/songinfo.h"
+#include "../src/lib/radioinfo.h"
 
 static void print_song_info(SongInfo *song);
+static void print_radio_info(RadioInfo *radio);
 
 int main(int argc, char **argv)
 {
@@ -85,6 +87,29 @@ int main(int argc, char **argv)
 		list = NULL;
 	}
 
+	g_print("Getting FENGGE radio list...\n\n");
+
+	result = xmr_service_get_radio_list(XMR_SERVICE(service), &list, Style_FengGe);
+	if (result != 0)
+	{
+		g_print("failed to get radio list\n");
+	}
+	else
+	{
+		GList *p = list;
+
+		g_print("Radio List(%d)\n", g_list_length(list));
+
+		while(p)
+		{
+			print_radio_info(p->data);
+			p = p->next;
+		}
+
+		g_list_free_full(list, (GDestroyNotify)radio_info_free);
+		list = NULL;
+	}
+
 	g_object_unref(service);
 
 	return 0;
@@ -111,5 +136,21 @@ static void print_song_info(SongInfo *song)
 			song->album_cover,
 			song->location,
 			song->grade
+		   );
+}
+
+static void print_radio_info(RadioInfo *radio)
+{
+	g_print("radio_id:\t%s\n"
+			"radio_name:\t%s\n"
+			"radio_logo:\t%s\n"
+			"radio_url:\t%s\n"
+			"\n"
+			,
+
+			radio->id,
+			radio->name,
+			radio->logo,
+			radio->url
 		   );
 }

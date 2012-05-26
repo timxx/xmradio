@@ -57,6 +57,22 @@ xmr_service_get_track_list(XmrService *xs, GList **list);
 gint
 xmr_service_get_track_list_by_style(XmrService *xs, GList **list, const gchar *url);
 
+/**
+ * possible style for radio
+ */
+enum
+{
+	Style_XingZuo	= 1,
+	Style_NianDai	= 2,
+	Style_FengGe	= 12
+};
+
+/**
+ * get radio list
+ */
+gint
+xmr_service_get_radio_list(XmrService *xs, GList **list, gint style);
+
 G_END_DECLS
 
 #endif /* __XMR_SERVICE_H__ */

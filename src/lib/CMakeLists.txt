@@ -5,11 +5,13 @@ PKG_CHECK_MODULES(LIBXML REQUIRED "libxml-2.0")
 set(LIB_SOURCES
 	xmrservice.c
 	songinfo.c
+	radioinfo.c
 )
 
 set(LIB_HEADERS
 	xmrservice.h
 	songinfo.h
+	radioinfo.h
 )
 
 set(LIB_VERSION 0.1)

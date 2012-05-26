@@ -4,6 +4,7 @@
 
 #include "xmrservice.h"
 #include "songinfo.h"
+#include "radioinfo.h"
 
 #define XMR_SERVICE_GET_PRIVATE(obj)	\
 	(G_TYPE_INSTANCE_GET_PRIVATE((obj), XMR_SERVICE_TYPE, XmrServicePrivate))
@@ -71,6 +72,12 @@ get_track(xmlNodePtr root, GList **list);
  */
 static gchar *
 decode_url(const gchar *url);
+
+static gint
+parse_radio_list(GString *data, GList **list);
+
+static void
+get_radio(xmlNodePtr root, GList **list);
 
 static void
 xmr_service_set_property(GObject      *object,
@@ -281,6 +288,37 @@ xmr_service_get_track_list_by_style(XmrService *xs, GList **list, const gchar *u
 		parse_track_list_data(data, list);
 	}
 
+	g_string_free(data, TRUE);
+
+	return result;
+}
+
+gint
+xmr_service_get_radio_list(XmrService *xs, GList **list, gint style)
+{
+	gint result = 1;
+	GString *data;
+	gchar *url;
+
+	g_return_val_if_fail(xs != NULL, 1);	
+
+	data = g_string_new("");
+	if (data == NULL)
+		return result;
+
+	url = g_strdup_printf("http://www.xiami.com/kuang/radio/c/%d", style);
+	if (url == NULL)
+	{
+		g_string_free(data, TRUE);
+		return result;
+	}
+
+	result = get_url_data(xs, url, data);
+	if (result == 0){
+		parse_radio_list(data, list);
+	}
+
+	g_free(url);
 	g_string_free(data, TRUE);
 
 	return result;
@@ -564,4 +602,57 @@ decode_url(const gchar *url)
 	free(array);
 
 	return decode_url;
+}
+
+static gint
+parse_radio_list(GString *data, GList **list)
+{
+	gint result = 1;
+	xmlDocPtr doc;
+
+	if (data->str == NULL || data->len == 0)
+		return 1;
+
+	doc = xmlReadMemory(data->str, data->len, NULL, NULL,
+				XML_PARSE_RECOVER | XML_PARSE_NOERROR);
+
+	if (doc == NULL)
+		return result;
+
+	do
+	{
+		xmlNodePtr radioList;
+		xmlNodePtr p;
+
+		radioList = xmlDocGetRootElement(doc);
+		if (radioList == NULL)
+			break;
+
+		for(p=xmlFirstElementChild(radioList); p; p=xmlNextElementSibling(p))
+			get_radio(p, list);
+
+		result = 0;
+	}
+	while(0);
+
+	xmlFreeDoc(doc);
+
+	return result;
+}
+
+static void
+get_radio(xmlNodePtr root, GList **list)
+{
+	RadioInfo *radio;
+
+	radio = radio_info_new();
+	if (radio == NULL)
+		return ;
+
+	radio->id	= (gchar *)xml_first_child_content(root, BAD_CAST "radio_id");
+	radio->name = (gchar *)xml_first_child_content(root, BAD_CAST "radio_name");
+	radio->logo = (gchar *)xml_first_child_content(root, BAD_CAST "radio_logo");
+	radio->url	= (gchar *)xml_first_child_content(root, BAD_CAST "radio_url");
+
+	*list = g_list_append(*list, radio);
 }
