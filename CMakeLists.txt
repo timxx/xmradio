@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(xmradio)
 
-set(VERSION 0.1.0)
+set(version 0.1.0)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
@@ -15,10 +15,24 @@ configure_file(
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
+option(NLS	"Native language support"  ON)
+
 include(CheckIncludeFiles)
 include(FindPkgConfig)
 
-FIND_PACKAGE(Gettext REQUIRED)
+check_include_files(unistd.h HAVE_UNISTD_H)
+check_include_files(malloc.h HAVE_MALLOC_H)
+
+if (NLS)
+	FIND_PACKAGE(Gettext REQUIRED)
+endif(NLS)
+
+if (NLS AND GETTEXT_FOUND)
+	set(ENABLE_NLS TRUE)
+	message(STATUS "Native language support:  YES")
+else(NLS AND GETTEXT_FOUND)
+	message(STATUS "Native language support:  NO")
+endif(NLS AND GETTEXT_FOUND)
 
 set(package	xmradio)
 set(prefix	${CMAKE_INSTALL_PREFIX})
@@ -34,10 +48,14 @@ set(includedir ${CMAKE_INSTALL_PREFIX}/include)
 set(pkgdatadir ${prefix}/share/${package})
 set(localedir ${prefix}/share/locale)
 
-set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
+#set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
+
+configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
+
+include_directories(${PROJECT_BINARY_DIR})
 
 add_subdirectory(cmake)
 add_subdirectory(data)

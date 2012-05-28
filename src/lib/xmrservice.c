@@ -90,10 +90,12 @@ xmr_service_set_property(GObject      *object,
 	switch(prop_id)
 	{
 		case PROP_USR_ID:
+			g_free(xs->priv->usr_id);
 			xs->priv->usr_id = g_value_dup_string(value);
 			break;
 
 		case PROP_USR_NAME:
+			g_free(xs->priv->usr_name);
 			xs->priv->usr_name = g_value_dup_string(value);
 			break;
 	}

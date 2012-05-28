@@ -1,0 +1,15 @@
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
+
+#cmakedefine HAVE_UNISTD_H
+#cmakedefine HAVE_MALLOC_H
+#cmakedefine ENABLE_NLS
+
+#define PACKAGE "@package@"
+#define LOCALEDIR "@localedir@"
+#define GETTEXT_PACKAGE "@package@"
+#define DATADIR "@prefix@/share"
+#define PKGDATADIR "@pkgdatadir@"
+#define VERSION "@version@"
+
+#endif /* __CONFIG_H__ */
