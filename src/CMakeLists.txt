@@ -8,7 +8,9 @@ set(XMRADIO_SOURCES
 	main.c
 	xmrapp.c
 	xmrbutton.c
+	xmrdebug.c
 	xmrplayer.c
+	xmrskin.c
 	xmrwindow.c
 )
 

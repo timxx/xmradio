@@ -13,7 +13,7 @@ static void print_radio_info(RadioInfo *radio);
 
 int main(int argc, char **argv)
 {
-	GObject *service;
+	XmrService *service;
 	gint result;
 	const gchar *name, *pwd;
 	GList *list = NULL;

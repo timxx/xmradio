@@ -29,7 +29,7 @@ struct _XmrServiceClass
 };
 
 GType		xmr_service_get_type();
-GObject*	xmr_service_new();
+XmrService*	xmr_service_new();
 
 /**
  * login server

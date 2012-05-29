@@ -195,7 +195,7 @@ static void xmr_service_init(XmrService *xs)
     }
 }
 
-GObject* xmr_service_new()
+XmrService* xmr_service_new()
 {
 	return g_object_new(XMR_SERVICE_TYPE,
 				NULL);

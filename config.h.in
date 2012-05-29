@@ -11,5 +11,6 @@
 #define DATADIR "@prefix@/share"
 #define PKGDATADIR "@pkgdatadir@"
 #define VERSION "@version@"
+#define SKINDIR "@skindir@"
 
 #endif /* __CONFIG_H__ */
