@@ -4,6 +4,8 @@
 #include "xmrwindow.h"
 #include "xmrplayer.h"
 #include "xmrbutton.h"
+#include "xmrskin.h"
+#include "xmrdebug.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -12,9 +14,10 @@ enum
 	BUTTON_CLOSE = 0,	// X button
 	BUTTON_MINIMIZE,	// - button
 	BUTTON_PLAY,		// play
+	BUTTON_PAUSE,
 	BUTTON_NEXT,
 	BUTTON_LIKE,
-	BUTTON_UNLIKE,
+	BUTTON_DISLIKE,
 	BUTTON_VOLUME,
 	BUTTON_LYRIC,
 	BUTTON_DOWNLOAD,
@@ -93,6 +96,9 @@ set_cover_image(XmrWindow *window, GdkPixbuf *pixbuf);
 
 static void
 set_gtk_theme(XmrWindow *window);
+
+static void
+set_skin(XmrWindow *window, const gchar *skin);
 
 static void
 hide_children(XmrWindow *window);
@@ -182,7 +188,8 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(window, "draw", G_CALLBACK(on_draw), NULL);
 	g_signal_connect(window, "button-press-event", G_CALLBACK(on_button_press), NULL);
 
-	set_gtk_theme(window);
+	// set_gtk_theme(window);
+	set_skin(window, "../data/skin/pure.skn");
 }
 
 GtkWidget* xmr_window_new()
@@ -190,8 +197,8 @@ GtkWidget* xmr_window_new()
 	 return g_object_new(XMR_TYPE_WINDOW,
 				"type", GTK_WINDOW_TOPLEVEL,
 				"title", _("XMRadio"),
-				"height-request", 250,
-				"width-request", 540,
+//				"height-request", 250,
+//				"width-request", 540,
 				"resizable", FALSE,
 				NULL);
 }
@@ -317,7 +324,12 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 	XmrButton *button = XMR_BUTTON(widget);
 	glong id = (glong)data;
 
-	g_print("button %ld clicked\n", id);
+	xmr_debug("button %ld clicked\n", id);
+
+	if (id == BUTTON_CLOSE)
+	{
+		gtk_widget_destroy(gtk_widget_get_toplevel(widget));
+	}
 }
 
 static void
@@ -466,6 +478,95 @@ set_gtk_theme(XmrWindow *window)
 	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_FENGGE]), _("风格电台"));
 	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_XINGZUO]), _("星座电台"));
 	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_NIANDAI]), _("年代电台"));
+}
+
+static void
+set_skin(XmrWindow *window, const gchar *skin)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gint x, y;
+	GdkPixbuf *pixbuf;
+	gint i;
+	XmrSkin *xmr_skin;
+	static const gchar *ui_main_buttons[] =
+	{
+		"close", "minimize", "play", "pause",
+		"next", "like", "dislike", "volume",
+		"lyric", "download", "share", "siren",
+		"fengge", "xingzuo", "niandai"
+	};
+
+	static const gchar *ui_main_labels[] =
+	{
+		"radio_name", "song_name",
+		"artist", "progress"
+	};
+
+	xmr_skin = xmr_skin_new();
+
+	do
+	{
+		if (!xmr_skin_load(xmr_skin, skin))
+		{
+			xmr_debug("failed to load skin: %s", skin);
+			break;
+		}
+
+		pixbuf = xmr_skin_get_image(xmr_skin, UI_MAIN, NULL);
+		if (pixbuf == NULL)
+		{
+			xmr_debug("Missing background image ?");
+			break;
+		}
+
+		x = gdk_pixbuf_get_width(pixbuf);
+		y = gdk_pixbuf_get_height(pixbuf);
+
+		priv->gtk_theme = FALSE;
+
+		gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+		gtk_widget_set_size_request(GTK_WIDGET(window), x, y);
+		set_window_image(window, pixbuf);
+		g_object_unref(pixbuf);
+
+		hide_children(window);
+
+		for(i=0; i<LAST_BUTTON; ++i)
+		{
+			pixbuf = xmr_skin_get_image(xmr_skin, UI_MAIN, ui_main_buttons[i]);
+			if (pixbuf == NULL)
+				continue ;
+
+			xmr_button_set_image_from_pixbuf(XMR_BUTTON(priv->buttons[i]), pixbuf);
+			g_object_unref(pixbuf);
+			xmr_button_set_type(XMR_BUTTON(priv->buttons[i]), XMR_BUTTON_SKIN);
+
+			if (xmr_skin_get_position(xmr_skin, UI_MAIN, ui_main_buttons[i], &x, &y))
+			{
+				gtk_fixed_move(GTK_FIXED(priv->fixed), priv->buttons[i], x, y);
+				gtk_widget_show(priv->buttons[i]);
+			}
+		}
+
+		for(i=0; i<LAST_LABEL; ++i)
+		{
+			if (xmr_skin_get_position(xmr_skin, UI_MAIN, ui_main_labels[i], &x, &y))
+			{
+				gtk_fixed_move(GTK_FIXED(priv->fixed), priv->labels[i], x, y);
+				gtk_widget_show(priv->labels[i]);
+			}
+		}
+
+		if (xmr_skin_get_position(xmr_skin, UI_MAIN, "cover_image", &x, &y))
+		{
+			gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, x, y);
+			gtk_widget_show(priv->image);
+		}
+	}
+	while(0);
+
+	g_free(priv->skin);
+	g_object_unref(xmr_skin);
 }
 
 static void

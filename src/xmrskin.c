@@ -114,8 +114,6 @@ xmr_skin_load(XmrSkin *skin, const gchar *uri)
 		if (unzip_get_file_buffer(priv->zfile, "skin.xml",&buffer, &length) < 0)
 			break;
 
-		xmr_debug("buffer size: %d\n", length);
-
 		priv->doc = xmlReadMemory(buffer, length, NULL, NULL, XML_PARSE_RECOVER | XML_PARSE_NOERROR);
 		if (priv->doc){
 			result = fill_skin_info(skin, uri);
