@@ -3,6 +3,8 @@ add_subdirectory(plugins)
 
 PKG_CHECK_MODULES(GTK3 REQUIRED "gtk+-3.0")
 PKG_CHECK_MODULES(GTHREAD REQUIRED "gthread-2.0")
+PKG_CHECK_MODULES(ZLIB REQUIRED "zlib")
+PKG_CHECK_MODULES(GDKPIXBUF REQUIRED "gdk-pixbuf-2.0")
 
 set(XMRADIO_SOURCES
 	main.c
@@ -12,14 +14,22 @@ set(XMRADIO_SOURCES
 	xmrplayer.c
 	xmrskin.c
 	xmrwindow.c
+	minizip/ioapi.c
+	minizip/unzip.c
 )
 
 include_directories(${GTK3_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${LIBXML_INCLUDE_DIRS})
+include_directories(${ZLIB_INCLUDE_DIRS})
+include_directories(${GDKPIXBUF_INCLUDE_DIRS})
 
 add_executable(xmradio ${XMRADIO_SOURCES})
 target_link_libraries(xmradio xmrservice
 	${GTK3_LIBRARIES}
-	${GTHREAD_LIBRARIES})
+	${GTHREAD_LIBRARIES}
+	${ZLIB_LIBRARIES}
+	${GDKPIXBUF_LIBRARIES}
+	)
 
 install(TARGETS xmradio DESTINATION ${prefix}/bin)

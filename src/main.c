@@ -5,6 +5,7 @@
 
 #include "xmrapp.h"
 #include "config.h"
+#include "xmrdebug.h"
 
 int main(int argc, char **argv)
 {
@@ -15,6 +16,7 @@ int main(int argc, char **argv)
 #endif
 
 	g_type_init();
+	xmr_debug_enable(TRUE);
 
 	setlocale(LC_ALL, NULL);
 
