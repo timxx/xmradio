@@ -23,6 +23,13 @@ include(FindPkgConfig)
 check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(malloc.h HAVE_MALLOC_H)
 
+find_program(GLIB_GENMARSHAL
+	NAMES glib-genmarshal
+	DOC "glib-genmarshal executable"
+)
+
+mark_as_advanced(GLIB_GENMARSHAL)
+
 if (NLS)
 	FIND_PACKAGE(Gettext REQUIRED)
 endif(NLS)
