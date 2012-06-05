@@ -1,0 +1,24 @@
+[Desktop Entry]
+_Name=xmradio
+_GenericName=Music Player
+_Comment=XiaMi radio
+Exec=xmradio
+Icon=xmradio
+Terminal=false
+Type=Application
+Categories=GTK;AudioVideo;Network;
+StartupNotify=true
+X-GNOME-Gettext-Domain=xmradio
+Actions=Play;Pause;Next;
+
+[Desktop Action Play]
+_Name=Play
+Exec=xmradio --play
+
+[Desktop Action Pause]
+_Name=Pause
+Exec=xmradio --pause
+
+[Desktop Action Next]
+_Name=Next
+Exec=xmradio --next
