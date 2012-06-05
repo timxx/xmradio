@@ -3,9 +3,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name=xmradio
-Description: Xia Mi Radio
+Name:libxmrservice
+Description: Xia Mi Radio Service
 Version:@LIB_VERSION@
-Requires:
-Cflags: -I${includedir}
+Requires:gobject-2.0 libcurl libxml-2.0
+Cflags: -I${includedir}/xmrservice
 Libs: -L${libdir} -llibxmrservice

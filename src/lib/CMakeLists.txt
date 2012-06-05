@@ -32,8 +32,8 @@ target_link_libraries(xmrservice ${GOBJECT_LIBRARIES}
 	${LIBXML_LIBRARIES}
 )
 
-configure_file(xmrservice.pc.in ${CMAKE_CURRENT_BINARY_DIR}/xmrservice.pc)
+configure_file(libxmrservice.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libxmrservice.pc)
 
 install(TARGETS xmrservice LIBRARY DESTINATION ${libdir})
-install(FILES ${LIB_HEADERS} DESTINATION "${includedir}/xmradio")
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xmrservice.pc DESTINATION "${libdir}/pkconfig")
+install(FILES ${LIB_HEADERS} DESTINATION "${includedir}/xmrservice")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libxmrservice.pc DESTINATION "${libdir}/pkgconfig")
