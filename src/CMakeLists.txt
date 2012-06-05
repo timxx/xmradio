@@ -25,6 +25,7 @@ set(XMRADIO_SOURCES
 	xmrdebug.c
 	xmrplayer.c
 	xmrskin.c
+	xmrutil.c
 	xmrwindow.c
 	minizip/ioapi.c
 	minizip/unzip.c

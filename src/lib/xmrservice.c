@@ -47,8 +47,6 @@ struct _XmrServicePrivate
 	gchar	*usr_id;
 	gchar	*usr_name;
 
-	const gchar *style; // music style
-
 	CURL *curl;
 };
 
@@ -57,9 +55,6 @@ struct _XmrServicePrivate
  */
 static size_t
 write_func(void *ptr, size_t size, size_t nmemb, void *data);
-
-static gint
-get_url_data(XmrService *xs, const gchar *url, GString *data);
 
 static gint
 post_url_data(XmrService *xs, const gchar *url, GString *post_data, GString *data);
@@ -304,7 +299,7 @@ xmr_service_get_track_list_by_style(XmrService *xs, GList **list, const gchar *u
 
 	data = g_string_new("");
 
-	result = get_url_data(xs, url, data);
+	result = xmr_service_get_url_data(xs, url, data);
 	if (result == 0){
 		parse_track_list_data(data, list);
 	}
@@ -334,7 +329,7 @@ xmr_service_get_radio_list(XmrService *xs, GList **list, gint style)
 		return result;
 	}
 
-	result = get_url_data(xs, url, data);
+	result = xmr_service_get_url_data(xs, url, data);
 	if (result == 0){
 		parse_radio_list(data, list);
 	}
@@ -345,8 +340,8 @@ xmr_service_get_radio_list(XmrService *xs, GList **list, gint style)
 	return result;
 }
 
-static gint
-get_url_data(XmrService *xs, const gchar *url, GString *data)
+gint
+xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 {
 	XmrServicePrivate *priv;
 	gint ret = -1;
@@ -378,7 +373,17 @@ write_func(void *ptr, size_t size, size_t nmemb, void *data)
 
 	g_string = (GString *)data;
 
-	g_string = g_string_append(g_string, (gchar *)ptr);
+	// GString doesn't support '\0'
+	// g_string = g_string_append(g_string, (gchar *)ptr);
+	g_string->str = (gchar *)g_realloc(g_string->str, g_string->len + real_size + 1);
+    if (g_string->str == NULL)
+        return 0;
+
+    if (memcpy(&(g_string->str[g_string->len]), ptr, real_size) == NULL)
+        return 0;
+
+    g_string->len += real_size;
+    g_string->str[g_string->len] = 0;
 
     return real_size;
 }
@@ -697,7 +702,7 @@ xmr_service_like_song(XmrService *xs, const gchar *song_id, gboolean like)
 
 	data = g_string_new("");
 
-	result = get_url_data(xs, url, data);
+	result = xmr_service_get_url_data(xs, url, data);
 
 	g_string_free(data, TRUE);
 
@@ -718,7 +723,7 @@ xmr_service_get_lyric(XmrService *xs, const gchar *song_id, GString *data)
 	if (url == NULL)
 		return result;
 
-	result = get_url_data(xs, url, data);
+	result = xmr_service_get_url_data(xs, url, data);
 
 	g_free(url);
 

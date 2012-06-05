@@ -313,18 +313,8 @@ bus_cb(GstBus *bus, GstMessage *message, XmrPlayer *player)
 		}
 		else if (priv->buffering == FALSE && priv->playing)
 		{
-			GstState cur_state;
-
-			gst_element_get_state (priv->playbin, &cur_state, NULL, 0);
-			if (cur_state == GST_STATE_PLAYING)
-			{
-				xmr_debug ("buffering - temporarily pausing playback");
-				gst_element_set_state (priv->playbin, GST_STATE_PAUSED);
-			}
-			else
-			{
-				xmr_debug ("buffering - during preroll; doing nothing");
-			}
+			xmr_debug ("buffering - temporarily pausing playback");
+			gst_element_set_state (priv->playbin, GST_STATE_PAUSED);
 			priv->buffering = TRUE;
 		}
 		g_signal_emit(player, signals[BUFFERING], 0, progress);
@@ -340,6 +330,11 @@ bus_cb(GstBus *bus, GstMessage *message, XmrPlayer *player)
 
 			if (GST_MESSAGE_SRC(message) == GST_OBJECT(priv->playbin))
 			{
+				if (pending == GST_STATE_VOID_PENDING)
+				{
+					xmr_debug("playbin reached state %s", gst_element_state_get_name(newstate));
+					state_change_finished(player, NULL);
+				}
 				g_signal_emit(player, signals[STATE_CHANGED], 0, oldstate, newstate);
 			}
 			break;
@@ -701,9 +696,9 @@ xmr_player_play(XmrPlayer *player)
 	else if (priv->current_track_finishing)
 	{
 		xmr_debug ("current track finishing -> just setting URI on playbin");
-		g_object_set (priv->playbin, "uri", priv->uri, NULL);
+		g_object_set(priv->playbin, "uri", priv->uri, NULL);
 
-		track_change_done (player, NULL);
+		track_change_done(player, NULL);
 	}
 	else
 	{

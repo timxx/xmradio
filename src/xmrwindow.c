@@ -18,14 +18,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <glib/gi18n.h>
+#include <stdlib.h>
 
 #include "xmrwindow.h"
 #include "xmrplayer.h"
 #include "xmrbutton.h"
 #include "xmrskin.h"
 #include "xmrdebug.h"
+#include "xmrplayer.h"
+#include "lib/xmrservice.h"
+#include "config.h"
+#include "xmrutil.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
+
+#define DEFAULT_RADIO_URL	"http://www.xiami.com/kuang/xml/type/6/id/0"
+#define COVER_WIDTH	100
+#define COVER_HEIGHT 100
 
 enum
 {
@@ -58,7 +67,6 @@ enum
 
 struct _XmrWindowPrivate
 {
-	XmrPlayer	*player;
 	gchar		*skin;
 	gboolean	gtk_theme;	/* TRUE to use gtk theme rather than skin */
 
@@ -69,15 +77,33 @@ struct _XmrWindowPrivate
 	cairo_surface_t	*cs_bkgnd;	/* backgroud image surface */
 
 	GtkWidget	*fixed;	/* #GtkFixed */
+
+	XmrPlayer *player;
+	XmrService *service;
+
+	GList *playlist;
+	gchar *playlist_url;	/* set NULL to get private list */
 };
 
 enum
 {
 	PROP_0,
 	PROP_PLAYER,
+	PROP_SERVICE,
 	PROP_SKIN,
-	PROP_GTK_THEME
+	PROP_GTK_THEME,
+	PROP_LAYOUT
 };
+
+enum
+{
+	THEME_CHANGED,
+	TRACK_CHANGED,
+	RADIO_CHANGED,
+	LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0 };
 
 static void
 xmr_window_dispose(GObject *obj);
@@ -121,22 +147,67 @@ set_skin(XmrWindow *window, const gchar *skin);
 static void
 hide_children(XmrWindow *window);
 
-static void 
-xmr_window_class_init(XmrWindowClass *klass)
+static void
+player_eos(XmrPlayer *player,
+			gboolean early,
+			XmrWindow *window);
+
+static void
+player_error(XmrPlayer *player,
+			GError *error,
+			XmrWindow *window);
+
+static void
+player_tick(XmrPlayer *player,
+			gint64 elapsed,
+			gint64 duration,
+			XmrWindow *window);
+
+static void
+player_buffering(XmrPlayer *player,
+			guint progress,
+			XmrWindow *window);
+
+static void
+player_state_changed(XmrPlayer *player,
+			gint old_state,
+			gint new_state,
+			XmrWindow *window);
+
+static gboolean
+thread_finish(GThread *thread);
+
+static gpointer
+thread_get_playlist(XmrWindow *window);
+
+static gpointer
+thread_get_cover_image(XmrWindow *window);
+
+static void
+xmr_window_get_playlist(XmrWindow *window);
+
+static void
+xmr_window_get_cover_image(XmrWindow *window);
+
+static void
+xmr_window_set_track_info(XmrWindow *window);
+
+static void
+install_properties(GObjectClass *object_class)
 {
-	GObjectClass *object_class = G_OBJECT_CLASS(klass);
-
-	object_class->set_property = xmr_window_set_property;
-	object_class->get_property = xmr_window_get_property;
-
-	object_class->dispose = xmr_window_dispose;
-	object_class->finalize = xmr_window_finalize;
-
 	g_object_class_install_property(object_class,
 				PROP_PLAYER,
 				g_param_spec_object("player",
 					"Player",
 					"Player object",
+					G_TYPE_OBJECT,
+					G_PARAM_READABLE));
+
+	g_object_class_install_property(object_class,
+				PROP_SERVICE,
+				g_param_spec_object("service",
+					"Service",
+					"XmrService object",
 					G_TYPE_OBJECT,
 					G_PARAM_READABLE));
 
@@ -156,6 +227,79 @@ xmr_window_class_init(XmrWindowClass *klass)
 					FALSE,
 					G_PARAM_READWRITE));
 
+	g_object_class_install_property(object_class,
+				PROP_GTK_THEME,
+				g_param_spec_object("layout",
+					"Layout",
+					"Window layout",
+					G_TYPE_OBJECT,
+					G_PARAM_READABLE));
+}
+
+static void
+create_signals(XmrWindowClass *klass)
+{
+	GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+	/**
+	 * emit when user changed skin
+	 * when @new_theme is NULL, it means
+	 * UI use GTK theme
+	 */
+	signals[THEME_CHANGED] =
+		g_signal_new("theme-changed",
+					G_OBJECT_CLASS_TYPE(object_class),
+					G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE,
+					G_STRUCT_OFFSET(XmrWindowClass, theme_changed),
+					NULL, NULL,
+					g_cclosure_marshal_VOID__STRING,
+					G_TYPE_NONE,
+					1,
+					G_TYPE_STRING);
+
+	/**
+	 * emit when current track changed
+	 */
+	signals[TRACK_CHANGED] =
+		g_signal_new("track-changed",
+					G_OBJECT_CLASS_TYPE(object_class),
+					G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE,
+					G_STRUCT_OFFSET(XmrWindowClass, track_changed),
+					NULL, NULL,
+					g_cclosure_marshal_VOID__POINTER,
+					G_TYPE_NONE,
+					1,
+					G_TYPE_POINTER);
+
+	/**
+	 * emit when current radio changed
+	 */
+	signals[RADIO_CHANGED] =
+		g_signal_new("radio-changed",
+					G_OBJECT_CLASS_TYPE(object_class),
+					G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE,
+					G_STRUCT_OFFSET(XmrWindowClass, radio_changed),
+					NULL, NULL,
+					g_cclosure_marshal_VOID__POINTER,
+					G_TYPE_NONE,
+					1,
+					G_TYPE_POINTER);
+}
+
+static void 
+xmr_window_class_init(XmrWindowClass *klass)
+{
+	GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+	object_class->set_property = xmr_window_set_property;
+	object_class->get_property = xmr_window_get_property;
+
+	object_class->dispose = xmr_window_dispose;
+	object_class->finalize = xmr_window_finalize;
+
+	install_properties(object_class);
+	create_signals(klass);
+
 	g_type_class_add_private(object_class, sizeof(XmrWindowPrivate));
 }
 
@@ -168,10 +312,13 @@ xmr_window_init(XmrWindow *window)
 	window->priv = G_TYPE_INSTANCE_GET_PRIVATE(window, XMR_TYPE_WINDOW, XmrWindowPrivate);
 	priv = window->priv;
 
-	priv->player = NULL;
+	priv->player = xmr_player_new();
+	priv->service = xmr_service_new();
 	priv->skin = NULL;
 	priv->gtk_theme = FALSE;
 	priv->cs_bkgnd = NULL;
+	priv->playlist = NULL;
+	priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -206,8 +353,18 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(window, "draw", G_CALLBACK(on_draw), NULL);
 	g_signal_connect(window, "button-press-event", G_CALLBACK(on_button_press), NULL);
 
+	g_signal_connect(priv->player, "eos", G_CALLBACK(player_eos), window);
+	g_signal_connect(priv->player, "error", G_CALLBACK(player_error), window);
+	g_signal_connect(priv->player, "tick", G_CALLBACK(player_tick), window);
+	g_signal_connect(priv->player, "buffering", G_CALLBACK(player_buffering), window);
+	g_signal_connect(priv->player, "state-changed", G_CALLBACK(player_state_changed), window);
+
 	// set_gtk_theme(window);
 	set_skin(window, "../data/skin/pure.skn");
+
+	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
+
+	xmr_window_get_playlist(window);
 }
 
 GtkWidget* xmr_window_new()
@@ -215,8 +372,6 @@ GtkWidget* xmr_window_new()
 	 return g_object_new(XMR_TYPE_WINDOW,
 				"type", GTK_WINDOW_TOPLEVEL,
 				"title", _("XMRadio"),
-//				"height-request", 250,
-//				"width-request", 540,
 				"resizable", FALSE,
 				NULL);
 }
@@ -224,8 +379,19 @@ GtkWidget* xmr_window_new()
 static void
 xmr_window_dispose(GObject *obj)
 {
-//	XmrWindow *window = XMR_WINDOW(obj);
-//	XmrWindowPrivate *priv = window->priv;
+	XmrWindow *window = XMR_WINDOW(obj);
+	XmrWindowPrivate *priv = window->priv;
+
+	if (priv->player != NULL)
+	{
+		g_object_unref(priv->player);
+		priv->player = NULL;
+	}
+	if (priv->service != NULL)
+	{
+		g_object_unref(priv->service);
+		priv->service = NULL;
+	}
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->dispose(obj);
 }
@@ -237,10 +403,16 @@ xmr_window_finalize(GObject *obj)
 	XmrWindowPrivate *priv = window->priv;
 
 	if (priv->skin)
-	  g_free(priv->skin);
+		g_free(priv->skin);
 
 	if (priv->cs_bkgnd)
-	  cairo_surface_destroy(priv->cs_bkgnd);
+		cairo_surface_destroy(priv->cs_bkgnd);
+
+	if (priv->playlist_url)
+		g_free(priv->playlist_url);
+
+	if (priv->playlist)
+		g_list_free_full(priv->playlist, (GDestroyNotify)song_info_free);
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->finalize(obj);
 }
@@ -260,12 +432,20 @@ xmr_window_get_property(GObject *object,
 		g_value_set_object(value, priv->player);
 		break;
 
+	case PROP_SERVICE:
+		g_value_set_object(value, priv->service);
+		break;
+
 	case PROP_SKIN:
 		g_value_set_string(value, priv->skin);
 		break;
 
 	case PROP_GTK_THEME:
 		g_value_set_boolean(value, priv->gtk_theme);
+		break;
+
+	case PROP_LAYOUT:
+		g_value_set_object(value, priv->fixed);
 		break;
 
 	default:
@@ -285,10 +465,6 @@ xmr_window_set_property(GObject *object,
 
 	switch(prop_id)
 	{
-	case PROP_PLAYER:
-		priv->player = g_value_get_object(value);
-		break;
-
 	case PROP_SKIN:
 		g_free(priv->skin);
 		priv->skin = g_value_dup_string(value);
@@ -340,13 +516,76 @@ static void
 on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 {
 	XmrButton *button = XMR_BUTTON(widget);
+	XmrWindow *window = XMR_WINDOW(gtk_widget_get_toplevel(widget));
+	XmrWindowPrivate *priv = window->priv;
 	glong id = (glong)data;
 
-	xmr_debug("button %ld clicked\n", id);
-
-	if (id == BUTTON_CLOSE)
+	switch(id)
 	{
-		gtk_widget_destroy(gtk_widget_get_toplevel(widget));
+	case BUTTON_CLOSE:
+		gtk_widget_destroy(GTK_WIDGET(window));
+		break;
+
+	case BUTTON_MINIMIZE:
+		gtk_window_iconify(GTK_WINDOW(window));
+		break;
+
+	case BUTTON_PLAY:
+		xmr_player_play(priv->player);
+		break;
+
+	case BUTTON_PAUSE:
+		xmr_player_pause(priv->player);
+		break;
+
+	case BUTTON_NEXT:
+		xmr_window_play_next(window);
+		break;
+
+	case BUTTON_LIKE:
+	case BUTTON_DISLIKE:
+	{
+		SongInfo *song;
+		if (!xmr_service_is_logged_in(priv->service))
+		{
+			g_warning("You should login first\n");
+			break;
+		}
+
+		if (priv->playlist == NULL || priv->playlist->data == NULL)
+			break;
+
+		song = (SongInfo *)priv->playlist->data;
+		xmr_service_like_song(priv->service, song->song_id, id == BUTTON_LIKE);
+		if (id == BUTTON_DISLIKE)
+			xmr_window_play_next(window);
+	}
+		break;
+
+	case BUTTON_LYRIC:
+		break;
+
+	case BUTTON_DOWNLOAD:
+	{
+		SongInfo *song = xmr_window_get_current_song(window);
+		if (song == NULL)
+		{
+			xmr_debug("Playlist empty");
+		}
+		gchar *command = g_strdup_printf("xdg-open http://www.xiami.com/song/%s",
+					song->song_id);
+		if (command == NULL)
+			g_error("No more memory\n");
+
+		system(command);
+
+		g_free(command);
+	}
+		break;
+
+	case BUTTON_SHARE:
+		xmr_debug("Not implemented yet");
+		break;
 	}
 }
 
@@ -398,16 +637,14 @@ set_cover_image(XmrWindow *window, GdkPixbuf *pixbuf)
 {
 	XmrWindowPrivate *priv = window->priv;
 
-	gint width, height;
 	gint i_w, i_h;
 
-	gtk_widget_get_size_request(priv->image, &width, &height);
 	i_w = gdk_pixbuf_get_width(pixbuf);
 	i_h = gdk_pixbuf_get_height(pixbuf);
 
-	if (i_w != width || i_h != height) //scale
+	if (i_w != COVER_WIDTH || i_h != COVER_HEIGHT) //scale
 	{
-		GdkPixbuf *pb = gdk_pixbuf_scale_simple(pixbuf, width, height, GDK_INTERP_BILINEAR);
+		GdkPixbuf *pb = gdk_pixbuf_scale_simple(pixbuf, COVER_WIDTH, COVER_HEIGHT, GDK_INTERP_BILINEAR);
 		if (pb)
 		{
 			gtk_image_set_from_pixbuf(GTK_IMAGE(priv->image), pb);
@@ -600,4 +837,269 @@ hide_children(XmrWindow *window)
 	  gtk_widget_hide(priv->labels[i]);
 
 	gtk_widget_hide(priv->image);
+}
+
+static void
+player_eos(XmrPlayer *player,
+			gboolean early,
+			XmrWindow *window)
+{
+	xmr_window_play_next(window);
+}
+
+static void
+player_error(XmrPlayer *player,
+			GError *error,
+			XmrWindow *window)
+{
+	g_warning("Player error: %s\n", error->message);
+}
+
+static void
+player_tick(XmrPlayer *player,
+			gint64 elapsed,
+			gint64 duration,
+			XmrWindow *window)
+{
+	glong mins_elapsed;
+	glong secs_elapsed;
+
+	glong mins_duration;
+	glong secs_duration;
+
+	gint64 secs;
+	gchar *time;
+
+	secs = elapsed / G_USEC_PER_SEC / 1000;
+	mins_elapsed = secs / 60;
+	secs_elapsed = secs % 60;
+
+	secs = duration / G_USEC_PER_SEC / 1000;
+	mins_duration = secs / 60;
+	secs_duration = secs % 60;
+
+	time = g_strdup_printf("%02ld:%02ld/%02ld:%02ld",
+				mins_elapsed, secs_elapsed,
+				mins_duration, secs_duration
+				);
+
+	if (time == NULL){
+		g_error("Failed to alloc memory\n");
+	}
+
+	gtk_label_set_text(GTK_LABEL(window->priv->labels[LABEL_TIME]),
+				time);
+
+	g_free(time);
+}
+
+static void
+player_buffering(XmrPlayer *player,
+			guint progress,
+			XmrWindow *window)
+{
+	xmr_debug("Buffering: %d\n", progress);
+}
+
+static void
+player_state_changed(XmrPlayer *player,
+			gint old_state,
+			gint new_state,
+			XmrWindow *window)
+{
+	if (new_state == GST_STATE_PLAYING)
+	{
+		gtk_widget_hide(window->priv->buttons[BUTTON_PLAY]);
+		gtk_widget_show(window->priv->buttons[BUTTON_PAUSE]);
+	}
+	else if(new_state == GST_STATE_PAUSED)
+	{
+		gtk_widget_hide(window->priv->buttons[BUTTON_PAUSE]);
+		gtk_widget_show(window->priv->buttons[BUTTON_PLAY]);
+	}
+}
+
+static gboolean
+thread_finish(GThread *thread)
+{
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_unref(thread);
+#endif
+
+	return FALSE;
+}
+
+static gpointer
+thread_get_playlist(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gint result = 1;
+	gboolean auto_play = g_list_length(priv->playlist) == 0;
+
+	if (priv->playlist_url == NULL){
+		result = xmr_service_get_track_list(priv->service, &priv->playlist);
+	}else{
+		result = xmr_service_get_track_list_by_style(priv->service, &priv->playlist, priv->playlist_url);
+	}
+
+	if (result != 0)
+	{
+		xmr_debug("failed to get track list: %d", result);
+	}
+	else if (auto_play)
+	{
+		if (g_list_length(priv->playlist) > 0)
+		{
+			SongInfo *song = (SongInfo *)priv->playlist->data;
+			xmr_player_open(priv->player, song->location, NULL);
+			xmr_player_play(priv->player);
+
+			gdk_threads_enter();
+			xmr_window_set_track_info(window);
+			gdk_threads_leave();
+
+			g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
+		}
+	}
+
+	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+
+	return NULL;
+}
+
+static gpointer
+thread_get_cover_image(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	GString *data = NULL;
+	GdkPixbuf *pixbuf = NULL;
+
+	do
+	{
+		SongInfo *track;
+		gint result;
+
+		if (priv->playlist == NULL)
+			break;
+
+		data = g_string_new("");
+		if (data == NULL)
+			break;
+
+		// always get first song info
+		track = (SongInfo *)priv->playlist->data;
+		result = xmr_service_get_url_data(priv->service, track->album_cover, data);
+		if (result != 0)
+		{
+			xmr_debug("xmr_service_get_url_data failed: %d", result);
+			break;
+		}
+
+		pixbuf = gdk_pixbuf_from_memory(data->str, data->len);
+		if (pixbuf == NULL)
+		{
+			xmr_debug("gdk_pixbuf_from_memory failed");
+			break;
+		}
+
+		gdk_threads_enter();
+		set_cover_image(window, pixbuf);
+		gdk_threads_leave();
+	}
+	while(0);
+
+	if (data) {
+		g_string_free(data, TRUE);
+	}
+	if (pixbuf) {
+		g_object_unref(pixbuf);
+	}
+	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+
+	return NULL;
+}
+
+static void
+xmr_window_get_playlist(XmrWindow *window)
+{
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_new("playlist", (GThreadFunc)thread_get_playlist, window);
+#else
+	g_thread_create((GThreadFunc)thread_get_playlist, window, FALSE, NULL);
+#endif
+}
+
+static void
+xmr_window_get_cover_image(XmrWindow *window)
+{
+	#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_new("playlist", (GThreadFunc)thread_get_cover_image, window);
+#else
+	g_thread_create((GThreadFunc)thread_get_cover_image, window, FALSE, NULL);
+#endif
+}
+
+static void
+xmr_window_set_track_info(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	SongInfo *song = (SongInfo *)priv->playlist->data;
+
+	xmr_window_get_cover_image(window);
+
+	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_SONG_NAME]), song->song_name);
+	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_ARTIST]), song->artist_name);
+
+	gtk_widget_set_tooltip_text(priv->image, song->album_name);
+}
+
+void
+xmr_window_play_next(XmrWindow *window)
+{
+	XmrWindowPrivate *priv;
+	gpointer data;
+	SongInfo *song;
+
+	g_return_if_fail( window != NULL );
+	priv = window->priv;
+
+	if (g_list_length(priv->playlist) == 0){
+		goto no_more_track;
+	}
+
+	data = priv->playlist->data;
+
+	// remove current song
+	priv->playlist = g_list_remove(priv->playlist, data);
+	song_info_free(data);
+
+	if (g_list_length(priv->playlist) == 0){
+		goto no_more_track;
+	}
+
+	song = (SongInfo *)priv->playlist->data;
+	xmr_player_open(priv->player, song->location, NULL);
+	xmr_player_play(priv->player);
+
+	xmr_window_set_track_info(window);
+
+	g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
+
+	// get new playlist if only one song in playlist
+	if (g_list_length(priv->playlist) > 1)
+	  return ;
+
+no_more_track:
+	xmr_window_get_playlist(window);
+}
+
+SongInfo *
+xmr_window_get_current_song(XmrWindow *window)
+{
+	g_return_val_if_fail(window != NULL, NULL);
+
+	if (g_list_length(window->priv->playlist) == 0)
+		return NULL;
+
+	return (SongInfo *)window->priv->playlist->data;
 }

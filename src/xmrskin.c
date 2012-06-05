@@ -22,6 +22,7 @@
 #include "xmrskin.h"
 #include "minizip/unzip.h"
 #include "xmrdebug.h"
+#include "xmrutil.h"
 
 G_DEFINE_TYPE(XmrSkin, xmr_skin, G_TYPE_OBJECT);
 
@@ -54,9 +55,6 @@ pos_str_to_ii(const gchar *str,
 
 static xmlNodePtr
 xml_get_ui_node(XmrSkin *skin, SkinUi ui);
-
-static GdkPixbuf *
-gdk_pixbuf_from_memory(const gchar *buffer, gint len);
 
 static void 
 xmr_skin_dispose(GObject *obj)
@@ -408,27 +406,6 @@ xmr_skin_get_image(XmrSkin *skin,
 
 	xmlFree(image);
 	g_free(buffer);
-
-	return pixbuf;
-}
-
-static GdkPixbuf *
-gdk_pixbuf_from_memory(const gchar *buffer, gint len)
-{
-	GdkPixbuf *pixbuf = NULL;
-	GdkPixbufLoader *loader;
-
-	loader = gdk_pixbuf_loader_new();
-    if (loader == NULL)
-        return NULL;
-
-    if (!gdk_pixbuf_loader_write(loader, buffer, len, NULL))
-		return NULL;
-
-    // forces the data to be parsed by the loader
-    gdk_pixbuf_loader_close(loader, NULL);
-
-    pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
 
 	return pixbuf;
 }

@@ -105,6 +105,11 @@ xmr_service_get_usr_id(XmrService *xs);
 const gchar *
 xmr_service_get_usr_name(XmrService *xs);
 
+gint
+xmr_service_get_url_data(XmrService *xs,
+			const gchar *url,
+			GString *data);
+
 G_END_DECLS
 
 #endif /* __XMR_SERVICE_H__ */

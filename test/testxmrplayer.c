@@ -40,6 +40,7 @@ static void player_error(XmrPlayer	*player,
 			gpointer data)
 {
 	g_print("error: %s\n", error->message);
+	g_main_loop_quit(loop);
 }
 
 static void	player_tick(XmrPlayer	*player,

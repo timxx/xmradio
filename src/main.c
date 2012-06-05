@@ -22,6 +22,7 @@
 #include <locale.h>
 #include <glib.h>
 #include <curl/curl.h>
+#include <gst/gst.h>
 
 #include "xmrapp.h"
 #include "config.h"
@@ -35,7 +36,11 @@ int main(int argc, char **argv)
 	g_thread_init(NULL);
 #endif
 
+	gdk_threads_init();
+
 	g_type_init();
+	gst_init(&argc, &argv);
+
 	xmr_debug_enable(TRUE);
 
 	setlocale(LC_ALL, NULL);

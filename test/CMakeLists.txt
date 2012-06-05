@@ -13,6 +13,7 @@ target_link_libraries(testlibxmrservice xmrservice ${GOBJECT_LIBRARIES})
 add_executable(testxmrskin testxmrskin.c
 	../src/xmrskin.c
 	../src/xmrdebug.c
+	../src/xmrutil.c
 	../src/minizip/ioapi.c
 	../src/minizip/unzip.c)
 

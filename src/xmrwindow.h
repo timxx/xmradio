@@ -22,6 +22,9 @@
 
 #include <gtk/gtk.h>
 
+#include "lib/songinfo.h"
+#include "lib/radioinfo.h"
+
 G_BEGIN_DECLS
 
 #define XMR_TYPE_WINDOW			(xmr_window_get_type())
@@ -44,10 +47,28 @@ struct _XmrWindow
 struct _XmrWindowClass
 {
 	GtkWindowClass parent_class;
+
+	void (*theme_changed)(XmrWindow *window,
+				const gchar *new_theme);
+
+	void (*track_changed)(XmrWindow *window,
+				SongInfo *new_track);
+
+	void (*radio_changed)(XmrWindow *window,
+				RadioInfo *new_radio);
 };
 
 GType		xmr_window_get_type();
 GtkWidget*	xmr_window_new();
+
+/**
+ * play next song
+ */
+void
+xmr_window_play_next(XmrWindow *window);
+
+SongInfo *
+xmr_window_get_current_song(XmrWindow *window);
 
 G_END_DECLS
 
