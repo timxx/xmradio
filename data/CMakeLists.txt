@@ -12,7 +12,7 @@ find_program(INTLTOOL_MERGE intltool-merge)
 MACRO(INTLTOOL_MERGE_TRANSLATION infile outfile)
     ADD_CUSTOM_COMMAND(
         OUTPUT ${outfile}
-        COMMAND LC_ALL=C ${INTLTOOL_MERGE} -d -u ${PROJECT_SOURCE_DIR}/po ${infile} ${outfile}
+        COMMAND LC_ALL=C ${INTLTOOL_MERGE} -d -u ${i18ndir} ${infile} ${outfile}
         DEPENDS ${infile}
     )
 ENDMACRO(INTLTOOL_MERGE_TRANSLATION)
@@ -21,3 +21,23 @@ intltool_merge_translation(${CMAKE_CURRENT_SOURCE_DIR}/xmradio.desktop.in ${CMAK
 
 add_custom_target(desktopfile ALL DEPENDS ${DESKTOP_FILES})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xmradio.desktop DESTINATION ${prefix}/share/applications/)
+
+set(gsettings_SCHEMAS
+	com.timxx.xmradio.gschema.xml
+)
+
+MACRO(TRANSLATE_XML infile outfile)
+	ADD_CUSTOM_COMMAND(
+		OUTPUT ${outfile}
+		COMMAND ${INTLTOOL_MERGE} -x -u ${i18ndir} ${infile} ${outfile}
+		DEPENDS ${infile}
+	)
+ENDMACRO(TRANSLATE_XML)
+
+add_custom_target(schmeasfile ALL DEPENDS ${gsettings_SCHEMAS})
+translate_xml(${CMAKE_CURRENT_SOURCE_DIR}/com.timxx.xmradio.gschema.xml.in
+	${CMAKE_CURRENT_BINARY_DIR}/com.timxx.xmradio.gschema.xml)
+
+install(SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/compile-schemas.cmake)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/com.timxx.xmradio.gschema.xml
+	DESTINATION ${prefix}/share/glib-2.0/schemas/)

@@ -55,6 +55,7 @@ set(includedir ${CMAKE_INSTALL_PREFIX}/include)
 set(pkgdatadir ${prefix}/share/${package})
 set(localedir ${prefix}/share/locale)
 set(skindir ${pkgdatadir}/skin)
+set(i18ndir ${PROJECT_SOURCE_DIR}/po)
 
 #set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
 
