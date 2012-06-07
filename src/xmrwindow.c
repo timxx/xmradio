@@ -76,7 +76,9 @@ struct _XmrWindowPrivate
 
 	cairo_surface_t	*cs_bkgnd;	/* backgroud image surface */
 
-	GtkWidget	*fixed;	/* #GtkFixed */
+	GtkWidget	*fixed;			/* #GtkFixed */
+	GtkWidget	*popup_menu;	/* #GtkMenu */
+	GtkWidget	*skin_menu;
 
 	XmrPlayer *player;
 	XmrService *service;
@@ -92,6 +94,7 @@ enum
 	PROP_SERVICE,
 	PROP_SKIN,
 	PROP_GTK_THEME,
+	PROP_MENU_POPUP,
 	PROP_LAYOUT
 };
 
@@ -193,6 +196,12 @@ static void
 xmr_window_set_track_info(XmrWindow *window);
 
 static void
+create_popup_menu(XmrWindow *window);
+
+static void
+on_menu_item_activate(GtkMenuItem *item, XmrWindow *window);
+
+static void
 install_properties(GObjectClass *object_class)
 {
 	g_object_class_install_property(object_class,
@@ -232,6 +241,14 @@ install_properties(GObjectClass *object_class)
 				g_param_spec_object("layout",
 					"Layout",
 					"Window layout",
+					G_TYPE_OBJECT,
+					G_PARAM_READABLE));
+
+	g_object_class_install_property(object_class,
+				PROP_MENU_POPUP,
+				g_param_spec_object("menu-popup",
+					"Popup menu",
+					"Popup menu",
 					G_TYPE_OBJECT,
 					G_PARAM_READABLE));
 }
@@ -327,6 +344,7 @@ xmr_window_init(XmrWindow *window)
 	gtk_window_set_default_icon_name("xmradio");
 
 	priv->fixed = gtk_fixed_new();
+	create_popup_menu(window);
 
 	for(i=0; i<LAST_BUTTON; ++i)
 	{
@@ -448,6 +466,10 @@ xmr_window_get_property(GObject *object,
 		g_value_set_object(value, priv->fixed);
 		break;
 
+	case PROP_MENU_POPUP:
+		g_value_set_object(value, priv->popup_menu);
+		break;
+
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
 		break;
@@ -508,6 +530,13 @@ on_button_press(XmrWindow *window, GdkEventButton *event, gpointer data)
 					event->x_root, event->y_root,
 					event->time);
     }
+	else if (event->button == 3)
+	{
+		GtkMenu *menu = GTK_MENU(window->priv->popup_menu);
+		gtk_menu_popup(menu, NULL, NULL, NULL, NULL,
+					event->button, event->time);
+		return TRUE;
+	}
 
 	return FALSE;
 }
@@ -1093,6 +1122,17 @@ no_more_track:
 	xmr_window_get_playlist(window);
 }
 
+void
+xmr_window_pause(XmrWindow *window)
+{
+	XmrWindowPrivate *priv;
+
+	g_return_if_fail( window != NULL );
+	priv = window->priv;
+
+	xmr_player_pause(priv->player);
+}
+
 SongInfo *
 xmr_window_get_current_song(XmrWindow *window)
 {
@@ -1102,4 +1142,63 @@ xmr_window_get_current_song(XmrWindow *window)
 		return NULL;
 
 	return (SongInfo *)window->priv->playlist->data;
+}
+
+static void
+create_popup_menu(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	GtkWidget *item = NULL;
+	GtkAccelGroup* accel_group;
+
+	accel_group = gtk_accel_group_new();
+	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
+
+	priv->popup_menu = gtk_menu_new();
+	priv->skin_menu = gtk_menu_new();
+
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Gtk Theme"));
+	gtk_image_menu_item_set_accel_group(GTK_IMAGE_MENU_ITEM(item), accel_group);
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->skin_menu), item);
+
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
+
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Skin"));
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), priv->skin_menu);
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	item = gtk_image_menu_item_new_with_mnemonic(_("_Preferences"));
+	gtk_image_menu_item_set_accel_group(GTK_IMAGE_MENU_ITEM(item), accel_group);
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
+
+	item = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
+
+	gtk_widget_show_all(priv->popup_menu);
+}
+
+static void
+on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
+{
+	const gchar *menu = gtk_menu_item_get_label(item);
+
+	g_print("menu item: %s\n", menu);
+
+	if (g_strcmp0(menu, _("_Gtk Theme")) == 0)
+	{
+	}
+	else if(g_strcmp0(menu, _("_Preferences")) == 0)
+	{
+	}
+	else if(g_strcmp0(menu, GTK_STOCK_QUIT) == 0)
+	{
+		gtk_widget_destroy(GTK_WIDGET(window));
+	}
 }

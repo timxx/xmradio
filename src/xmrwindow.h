@@ -67,6 +67,9 @@ GtkWidget*	xmr_window_new();
 void
 xmr_window_play_next(XmrWindow *window);
 
+void
+xmr_window_pause(XmrWindow *window);
+
 SongInfo *
 xmr_window_get_current_song(XmrWindow *window);
 
