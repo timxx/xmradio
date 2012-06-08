@@ -18,6 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "xmrutil.h"
+#include "config.h"
+
+static gchar _config_dir[256] = { 0 };
 
 GdkPixbuf *
 gdk_pixbuf_from_memory(const gchar *buffer, gint len)
@@ -38,4 +41,72 @@ gdk_pixbuf_from_memory(const gchar *buffer, gint len)
     pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
 
 	return pixbuf;
+}
+
+void
+list_file(const gchar *folder,
+			gboolean recursive,
+			FileOpFunc opfunc,
+			gpointer data)
+{
+	GDir *dir;
+    const gchar *name;
+    gchar *full_path;
+
+    if (NULL == folder || NULL == opfunc)
+        return ;
+
+    dir = g_dir_open(folder, 0, NULL);
+    if (NULL == dir)
+        return ;
+
+    while((name = g_dir_read_name(dir)))
+    {
+        full_path = g_build_filename(folder, name, NULL);
+        if (g_file_test(full_path, G_FILE_TEST_IS_DIR))
+        {
+            if (recursive)
+                list_file(full_path, TRUE, opfunc, data);
+        }
+        else
+        {
+            opfunc(full_path, data);
+        }
+        g_free(full_path);
+    }
+
+    g_dir_close(dir);
+}
+
+const gchar *
+xmr_config_dir()
+{
+	if (_config_dir[0] == 0)
+	{
+		g_snprintf(_config_dir, 256,
+					"%s/%s",
+					g_get_user_config_dir(),
+					PACKAGE);
+	}
+	
+	return _config_dir;
+}
+
+void
+xmr_message(GtkWidget *parent,
+			const gchar *message,
+			const gchar *title)
+{
+	GtkWidget *dialog;
+
+	dialog = gtk_message_dialog_new(GTK_WINDOW(parent),
+				GTK_DIALOG_DESTROY_WITH_PARENT,
+                GTK_MESSAGE_INFO,
+                GTK_BUTTONS_OK,
+                message,
+				NULL);
+
+	gtk_window_set_title(GTK_WINDOW(dialog), title);
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
 }

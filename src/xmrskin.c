@@ -217,6 +217,10 @@ xmr_skin_info_free(SkinInfo *info)
 		g_free(info->email);
 		g_free(info->file);
 
+		if (info->data)
+		  if (info->data_destroy)
+				info->data_destroy(info->data);
+
 		g_free(info);
 	}
 }
@@ -408,4 +412,39 @@ xmr_skin_get_image(XmrSkin *skin,
 	g_free(buffer);
 
 	return pixbuf;
+}
+
+gboolean
+xmr_skin_get_color(XmrSkin *skin,
+			SkinUi ui,
+			const gchar *name,
+			gchar **color)
+{
+	XmrSkinPrivate *priv;
+	xmlNodePtr root = NULL;
+	xmlNodePtr child = NULL;
+	xmlChar *value = NULL;
+
+	g_return_val_if_fail(skin != NULL && name != NULL && color != NULL, FALSE);
+	priv = skin->priv;
+	g_return_val_if_fail(priv->doc != NULL && priv->zfile != NULL, FALSE);
+
+	root = xml_get_ui_node(skin, ui);
+	if (root == NULL)
+		return FALSE;
+
+	child = xml_first_child(root, name);
+	if (child == NULL)
+	{
+		xmr_debug("No such element: %s", name);
+		return FALSE;
+	}
+
+	value = xml_get_prop(child, "color");
+	if (value == NULL)
+		return FALSE;
+
+	*color = value;
+
+	return TRUE;
 }

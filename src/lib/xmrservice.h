@@ -110,6 +110,9 @@ xmr_service_get_url_data(XmrService *xs,
 			const gchar *url,
 			GString *data);
 
+const gchar *
+xmr_service_get_error_str(gint code);
+
 G_END_DECLS
 
 #endif /* __XMR_SERVICE_H__ */

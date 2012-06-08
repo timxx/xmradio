@@ -57,6 +57,8 @@ typedef struct
 	gchar *email;		// email
 	gchar *file;		// the skin file path
 
+	gpointer data;		// extra data
+	GDestroyNotify data_destroy;
 }SkinInfo;
 
 GType		xmr_skin_get_type();
@@ -105,6 +107,15 @@ GdkPixbuf *
 xmr_skin_get_image(XmrSkin *skin,
 			SkinUi ui,
 			const gchar *name);
+
+/**
+ * get color attribute value
+ */
+gboolean
+xmr_skin_get_color(XmrSkin *skin,
+			SkinUi ui,
+			const gchar *name,
+			gchar **color);
 
 G_END_DECLS
 

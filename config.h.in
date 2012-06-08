@@ -12,5 +12,6 @@
 #define PKGDATADIR "@pkgdatadir@"
 #define VERSION "@version@"
 #define SKINDIR "@skindir@"
+#define UIDIR	"@uidir@"
 
 #endif /* __CONFIG_H__ */

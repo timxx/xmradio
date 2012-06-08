@@ -745,3 +745,9 @@ xmr_service_get_usr_name(XmrService *xs)
 
 	return xs->priv->usr_name;
 }
+
+const gchar *
+xmr_service_get_error_str(gint code)
+{
+	return curl_easy_strerror(code);
+}

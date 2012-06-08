@@ -19,7 +19,8 @@ add_executable(testxmrskin testxmrskin.c
 
 target_link_libraries(testxmrskin ${LIBXML_LIBRARIES}
 	${GOBJECT_LIBRARIES}
-	${GDKPIXBUF_LIBRARIES})
+	${GDKPIXBUF_LIBRARIES}
+	${GTK3_LIBRARIES})
 
 add_executable(testxmrplayer testxmrplayer.c
 	../src/xmrplayer.c

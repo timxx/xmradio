@@ -41,3 +41,7 @@ translate_xml(${CMAKE_CURRENT_SOURCE_DIR}/com.timxx.xmradio.gschema.xml.in
 install(SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/compile-schemas.cmake)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/com.timxx.xmradio.gschema.xml
 	DESTINATION ${prefix}/share/glib-2.0/schemas/)
+
+install(DIRECTORY ui DESTINATION ${pkgdatadir}
+	PATTERN .* EXCLUDE
+	PATTERN *~ EXCLUDE)

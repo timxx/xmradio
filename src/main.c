@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	g_type_init();
 	gst_init(&argc, &argv);
 
-	xmr_debug_enable(TRUE);
+//	xmr_debug_enable(TRUE);
 
 	setlocale(LC_ALL, NULL);
 

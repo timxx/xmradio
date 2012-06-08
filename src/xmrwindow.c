@@ -29,6 +29,7 @@
 #include "lib/xmrservice.h"
 #include "config.h"
 #include "xmrutil.h"
+#include "xmrsettings.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -85,6 +86,23 @@ struct _XmrWindowPrivate
 
 	GList *playlist;
 	gchar *playlist_url;	/* set NULL to get private list */
+
+	XmrSettings *settings;
+	GList *skin_list;
+
+	GSList *skin_item_group; /* skin menu item list */
+
+	GtkBuilder *ui_pref;
+	GtkBuilder *ui_login;
+
+	gchar *usr;
+	gchar *pwd;
+
+	/**
+	 * flag to state when login success whether 
+	 * switch to siren radio or not
+	 */
+	gboolean switch_radio;
 };
 
 enum
@@ -177,6 +195,9 @@ player_state_changed(XmrPlayer *player,
 			gint new_state,
 			XmrWindow *window);
 
+/**
+ * threads
+ */
 static gboolean
 thread_finish(GThread *thread);
 
@@ -186,6 +207,9 @@ thread_get_playlist(XmrWindow *window);
 static gpointer
 thread_get_cover_image(XmrWindow *window);
 
+static gpointer
+thread_login(XmrWindow *window);
+
 static void
 xmr_window_get_playlist(XmrWindow *window);
 
@@ -193,13 +217,88 @@ static void
 xmr_window_get_cover_image(XmrWindow *window);
 
 static void
+xmr_window_login(XmrWindow *window);
+
+static void
 xmr_window_set_track_info(XmrWindow *window);
+
 
 static void
 create_popup_menu(XmrWindow *window);
 
+/**
+ * popup menu message
+ */
 static void
 on_menu_item_activate(GtkMenuItem *item, XmrWindow *window);
+
+/**
+ * for skin menu item only
+ */
+static void
+on_skin_menu_item_activate(GtkMenuItem *item, SkinInfo *skin);
+
+static void
+load_settings(XmrWindow *window);
+
+static void
+load_skin(XmrWindow *window);
+
+/**
+ * read @skin information
+ * if OK, then append to skin_list
+ * @data, skin_list pointer pointer
+ */
+static void
+append_skin(const gchar *skin,
+			gpointer data);
+
+static GtkWidget *
+append_skin_to_menu(XmrWindow *window, SkinInfo *info);
+
+/**
+ * set @widget fg color by parse @color_str
+ */
+static void
+set_widget_fg_color(GtkWidget *widget,
+			const gchar *color_str);
+
+static GtkBuilder *
+create_builder_with_file(const gchar *file);
+
+static void
+init_pref_window(XmrWindow *window,
+			GtkWidget *pref);
+
+/**
+ * login to server
+ */
+static void
+do_login(XmrWindow *window);
+
+
+/**
+ * set @url to NULL to change to siren radio
+ */
+static void
+change_radio(XmrWindow *window,
+			const gchar *name,
+			const gchar *url);
+
+/**
+ * login dialog >login button clicked
+ */
+static gboolean
+on_login_dialog_button_login_clicked(GtkButton *button,
+			GdkEvent  *event,
+			XmrWindow *window);
+
+/**
+ * test if @text is empty
+ * or just contains blank chars
+ */
+static gboolean
+is_text_empty(const gchar *text);
 
 static void
 install_properties(GObjectClass *object_class)
@@ -325,6 +424,7 @@ xmr_window_init(XmrWindow *window)
 {
 	XmrWindowPrivate *priv;
 	gint i;
+	gchar *path = NULL;
 
 	window->priv = G_TYPE_INSTANCE_GET_PRIVATE(window, XMR_TYPE_WINDOW, XmrWindowPrivate);
 	priv = window->priv;
@@ -335,7 +435,15 @@ xmr_window_init(XmrWindow *window)
 	priv->gtk_theme = FALSE;
 	priv->cs_bkgnd = NULL;
 	priv->playlist = NULL;
-	priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
+	priv->playlist_url = NULL;
+	priv->settings = xmr_settings_new();
+	priv->skin_list = NULL;
+	priv->skin_item_group = NULL;
+	priv->ui_pref = create_builder_with_file(UIDIR"/pref.ui");
+	priv->ui_login = NULL;
+	priv->usr = NULL;
+	priv->pwd = NULL;
+	priv->switch_radio = FALSE;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -377,12 +485,9 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->player, "buffering", G_CALLBACK(player_buffering), window);
 	g_signal_connect(priv->player, "state-changed", G_CALLBACK(player_state_changed), window);
 
-	// set_gtk_theme(window);
-	set_skin(window, "../data/skin/pure.skn");
-
 	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 
-	xmr_window_get_playlist(window);
+	load_settings(window);
 }
 
 GtkWidget* xmr_window_new()
@@ -411,6 +516,18 @@ xmr_window_dispose(GObject *obj)
 		priv->service = NULL;
 	}
 
+	if (priv->ui_pref)
+	{
+		g_object_unref(priv->ui_pref);
+		priv->ui_pref = NULL;
+	}
+
+	if (priv->ui_login)
+	{
+		g_object_unref(priv->ui_login);
+		priv->ui_login = NULL;
+	}
+
 	G_OBJECT_CLASS(xmr_window_parent_class)->dispose(obj);
 }
 
@@ -431,6 +548,14 @@ xmr_window_finalize(GObject *obj)
 
 	if (priv->playlist)
 		g_list_free_full(priv->playlist, (GDestroyNotify)song_info_free);
+
+	if (priv->skin_list)
+		g_list_free_full(priv->skin_list, (GDestroyNotify)xmr_skin_info_free);
+
+	if (priv->usr)
+		g_free(priv->usr);
+	if (priv->pwd)
+		g_free(priv->pwd);
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->finalize(obj);
 }
@@ -519,13 +644,11 @@ on_draw(XmrWindow *window, cairo_t *cr, gpointer data)
 static gboolean
 on_button_press(XmrWindow *window, GdkEventButton *event, gpointer data)
 {
-	// ignore if using gtk theme
-	if (window->priv->gtk_theme)
-		return FALSE;
-
 	if (event->button == 1)  
-    {  
-        gtk_window_begin_move_drag(GTK_WINDOW(window),
+    {
+		if (window->priv->gtk_theme) 	// ignore if using gtk theme
+			return FALSE;
+		gtk_window_begin_move_drag(GTK_WINDOW(window),
 					event->button,
 					event->x_root, event->y_root,
 					event->time);
@@ -600,6 +723,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		if (song == NULL)
 		{
 			xmr_debug("Playlist empty");
+			break;
 		}
 		gchar *command = g_strdup_printf("xdg-open http://www.xiami.com/song/%s",
 					song->song_id);
@@ -614,6 +738,29 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 
 	case BUTTON_SHARE:
 		xmr_debug("Not implemented yet");
+		break;
+	
+	case BUTTON_SIREN:
+		if (!xmr_service_is_logged_in(priv->service))
+		{
+			priv->switch_radio = TRUE;
+			do_login(window);
+		}
+		else
+		{
+			// to avoid change radio from siren to siren
+			if (priv->playlist_url != NULL)
+				change_radio(window, _("私人电台"), NULL);
+		}
+		break;
+
+	case BUTTON_FENGGE:
+		break;
+
+	case BUTTON_XINGZUO:
+		break;
+
+	case BUTTON_NIANDAI:
 		break;
 	}
 }
@@ -696,7 +843,7 @@ set_gtk_theme(XmrWindow *window)
 	static struct Pos button_pos[LAST_BUTTON] =
 	{
 		{0, 0}, {0, 0},
-		{360, 100}, {430, 100},
+		{360, 100}, {360, 100}, {430, 100},
 		{170, 160}, {210, 160}, {250, 160},
 		{330, 170}, {385, 170}, {440, 170},
 		{110, 250}, {195, 250}, {280, 250}, {365, 250}
@@ -712,7 +859,7 @@ set_gtk_theme(XmrWindow *window)
 	static gchar *stock_id[] =
 	{
 		"", "",
-		GTK_STOCK_MEDIA_PLAY, GTK_STOCK_MEDIA_NEXT,
+		GTK_STOCK_MEDIA_PLAY, GTK_STOCK_MEDIA_PAUSE, GTK_STOCK_MEDIA_NEXT,
 		GTK_STOCK_ABOUT, GTK_STOCK_CANCEL, NULL,
 		NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL
@@ -723,6 +870,7 @@ set_gtk_theme(XmrWindow *window)
 
 	gtk_window_set_decorated(GTK_WINDOW(window), TRUE);
 	gtk_widget_set_size_request(GTK_WIDGET(window), 540, 250);
+	gtk_window_set_default_size(GTK_WINDOW(window), 540, 250);
 
 	hide_children(window);
 
@@ -751,7 +899,6 @@ set_gtk_theme(XmrWindow *window)
 	}
 
 	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, 60, 85);
-	gtk_widget_set_size_request(GTK_WIDGET(priv->image), 100, 100);
 	gtk_widget_show(priv->image);
 
 	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_LYRIC]), _("歌词"));
@@ -762,6 +909,15 @@ set_gtk_theme(XmrWindow *window)
 	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_FENGGE]), _("风格电台"));
 	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_XINGZUO]), _("星座电台"));
 	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_NIANDAI]), _("年代电台"));
+
+	xmr_settings_set_theme(priv->settings, "");
+
+	gtk_widget_queue_draw(GTK_WIDGET(window));
+
+	if (xmr_player_playing(priv->player))
+		gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
+	else
+		gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 }
 
 static void
@@ -809,7 +965,6 @@ set_skin(XmrWindow *window, const gchar *skin)
 		priv->gtk_theme = FALSE;
 
 		gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-		gtk_widget_set_size_request(GTK_WIDGET(window), x, y);
 		set_window_image(window, pixbuf);
 		g_object_unref(pixbuf);
 
@@ -834,10 +989,22 @@ set_skin(XmrWindow *window, const gchar *skin)
 
 		for(i=0; i<LAST_LABEL; ++i)
 		{
+			gchar *color = NULL;
 			if (xmr_skin_get_position(xmr_skin, UI_MAIN, ui_main_labels[i], &x, &y))
 			{
 				gtk_fixed_move(GTK_FIXED(priv->fixed), priv->labels[i], x, y);
 				gtk_widget_show(priv->labels[i]);
+			}
+
+			if (xmr_skin_get_color(xmr_skin, UI_MAIN, ui_main_labels[i], &color))
+			{
+				set_widget_fg_color(priv->labels[i], color);
+				g_free(color);
+			}
+			else
+			{
+				// set default color to black
+				set_widget_fg_color(priv->labels[i], "#000000");
 			}
 		}
 
@@ -846,10 +1013,23 @@ set_skin(XmrWindow *window, const gchar *skin)
 			gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, x, y);
 			gtk_widget_show(priv->image);
 		}
+
+		xmr_settings_set_theme(priv->settings, skin);
+		if (priv->skin)
+			g_free(priv->skin);
+
+		priv->skin = g_strdup(skin);
+
+		gtk_widget_queue_draw(GTK_WIDGET(window));
+		g_signal_emit(window, signals[THEME_CHANGED], 0, skin);
+
+		if (xmr_player_playing(priv->player))
+			gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
+		else
+			gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 	}
 	while(0);
 
-	g_free(priv->skin);
 	g_object_unref(xmr_skin);
 }
 
@@ -1048,6 +1228,47 @@ thread_get_cover_image(XmrWindow *window)
 	return NULL;
 }
 
+static gpointer
+thread_login(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gint result;
+
+	result = xmr_service_login(priv->service, priv->usr, priv->pwd);
+	if (result != 0)
+	{
+		gchar *message;
+
+		message = g_strdup_printf(_("Login failed:\n%s"),
+						xmr_service_get_error_str(result)
+						);
+
+		if (message == NULL){
+			g_error("No more memory??\n");
+		}
+
+		gdk_threads_enter();
+		xmr_message(GTK_WIDGET(window), message, _("Login Status"));
+		gdk_threads_leave();
+		g_free(message);
+	}
+	else
+	{
+		xmr_settings_set_usr_info(priv->settings, priv->usr, priv->pwd);
+		// switch to siren radio
+		if (priv->switch_radio)
+		{
+			gdk_threads_enter();
+			change_radio(window, _("私人电台"), NULL);
+			gdk_threads_leave();
+		}
+	}
+
+	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+
+	return NULL;
+}
+
 static void
 xmr_window_get_playlist(XmrWindow *window)
 {
@@ -1061,10 +1282,20 @@ xmr_window_get_playlist(XmrWindow *window)
 static void
 xmr_window_get_cover_image(XmrWindow *window)
 {
-	#if GLIB_CHECK_VERSION(2, 32, 0)
-	g_thread_new("playlist", (GThreadFunc)thread_get_cover_image, window);
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_new("gcimage", (GThreadFunc)thread_get_cover_image, window);
 #else
 	g_thread_create((GThreadFunc)thread_get_cover_image, window, FALSE, NULL);
+#endif
+}
+
+static void
+xmr_window_login(XmrWindow *window)
+{
+	#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_new("login", (GThreadFunc)thread_login, window);
+#else
+	g_thread_create((GThreadFunc)thread_login, window, FALSE, NULL);
 #endif
 }
 
@@ -1157,8 +1388,9 @@ create_popup_menu(XmrWindow *window)
 	priv->popup_menu = gtk_menu_new();
 	priv->skin_menu = gtk_menu_new();
 
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Gtk Theme"));
-	gtk_image_menu_item_set_accel_group(GTK_IMAGE_MENU_ITEM(item), accel_group);
+	item = gtk_radio_menu_item_new_with_mnemonic(priv->skin_item_group, _("_Gtk Theme"));
+	priv->skin_item_group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM(item));
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->skin_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
@@ -1167,8 +1399,16 @@ create_popup_menu(XmrWindow *window)
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), priv->skin_menu);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Preferences"));
+	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_PREFERENCES, accel_group);
 	gtk_image_menu_item_set_accel_group(GTK_IMAGE_MENU_ITEM(item), accel_group);
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
+
+	item = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ABOUT, accel_group);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
@@ -1187,18 +1427,425 @@ create_popup_menu(XmrWindow *window)
 static void
 on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 {
+	XmrWindowPrivate *priv = window->priv;
 	const gchar *menu = gtk_menu_item_get_label(item);
-
-	g_print("menu item: %s\n", menu);
 
 	if (g_strcmp0(menu, _("_Gtk Theme")) == 0)
 	{
+		set_gtk_theme(window);
 	}
-	else if(g_strcmp0(menu, _("_Preferences")) == 0)
+	else if(g_strcmp0(menu, GTK_STOCK_PREFERENCES) == 0)
 	{
+		static GtkWidget *pref_window = NULL;
+
+		if (pref_window == NULL)
+		{
+			pref_window = (GtkWidget *)gtk_builder_get_object(priv->ui_pref, "window_pref");
+			init_pref_window(window, pref_window);
+		}
+
+		gtk_widget_show_all(pref_window);
+	}
+	else if(g_strcmp0(menu, GTK_STOCK_ABOUT) == 0)
+	{
+		GtkBuilder *builder = NULL;
+		static GtkWidget *dialog_about;
+
+		if (dialog_about == NULL)
+		{
+			builder = create_builder_with_file(UIDIR"/about.ui");
+			if (builder == NULL)
+			{
+				g_warning("Missing about.ui file!\n");
+				return ;
+			}
+
+			dialog_about = GTK_WIDGET(gtk_builder_get_object(builder, "dialog_about"));
+
+			gtk_window_set_transient_for(GTK_WINDOW(dialog_about), GTK_WINDOW(window));
+			gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog_about), VERSION);
+
+			g_object_unref(builder);
+		}
+
+		gtk_dialog_run(GTK_DIALOG(dialog_about));
+		gtk_widget_hide(dialog_about);
 	}
 	else if(g_strcmp0(menu, GTK_STOCK_QUIT) == 0)
 	{
 		gtk_widget_destroy(GTK_WIDGET(window));
 	}
+}
+
+static void
+on_skin_menu_item_activate(GtkMenuItem *item, SkinInfo *skin)
+{
+	if (skin == NULL)
+		return ;
+
+	set_skin(skin->data, skin->file);
+}
+
+static void
+load_settings(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gchar *radio_name = NULL;
+	gchar *radio_url = NULL;
+	gint x = -1, y = -1;
+
+	// call before load_skin
+	priv->skin = xmr_settings_get_theme(priv->settings);
+
+	load_skin(window);
+
+	xmr_settings_get_usr_info(priv->settings, &priv->usr, &priv->pwd);
+	if (xmr_settings_get_auto_login(priv->settings))
+	{
+		if (priv->usr != NULL && priv->pwd != NULL &&
+			*priv->usr != 0 && *priv->pwd != 0)
+		{
+			xmr_window_login(window);
+		}
+	}
+
+	xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
+
+	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), radio_name);
+	if (radio_url && *radio_url != 0)
+		priv->playlist_url = g_strdup(radio_url);
+	else
+		priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
+
+	xmr_settings_get_window_pos(priv->settings, &x, &y);
+	if (x !=- 1 && y != -1)
+		gtk_window_move(GTK_WINDOW(window), x, y);
+
+	xmr_window_get_playlist(window);
+
+	g_free(radio_name);
+	g_free(radio_url);
+}
+
+static void
+load_skin(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gchar *skin_dir;
+
+	// load user config location
+	skin_dir = g_strdup_printf("%s/skin", xmr_config_dir());
+	if (skin_dir)
+	{
+		list_file(skin_dir, FALSE, append_skin, &priv->skin_list);
+		g_free(skin_dir);
+	}
+
+	// load install location
+	list_file(SKINDIR, FALSE, append_skin, &priv->skin_list);
+	
+	// always set gtk theme first
+	set_gtk_theme(window);
+
+	if (g_list_length(priv->skin_list) > 0)
+	{
+		GList *p = priv->skin_list;
+		gboolean no_skin_match = TRUE;
+
+		while(p)
+		{
+			GtkWidget *item;
+			SkinInfo *skin_info = (SkinInfo *)p->data;
+			skin_info->data = window;
+			item = append_skin_to_menu(window, skin_info);
+
+			if (no_skin_match && g_strcmp0(skin_info->file, priv->skin) == 0)
+			{
+				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
+	
+				set_skin(window, skin_info->file);
+
+				no_skin_match = FALSE;
+			}
+			p = p->next;
+		}
+
+		if (no_skin_match)
+		{
+			set_skin(window, ((SkinInfo *)priv->skin_list->data)->file);
+		}
+	}
+}
+
+static void
+append_skin(const gchar *skin,
+			gpointer data)
+{
+	GList **list = (GList **)data;
+	SkinInfo *skin_info = xmr_skin_info_new();
+
+	g_return_if_fail(skin_info != NULL);
+
+	XmrSkin *xmr_skin = xmr_skin_new();
+
+	do
+	{
+		if (!xmr_skin_load(xmr_skin, skin))
+		{
+			xmr_debug("Failed to load skin: %s", skin);
+			break;
+		}
+
+		xmr_skin_get_info(xmr_skin, skin_info);
+
+		*list = g_list_append(*list, skin_info);
+	}
+	while(0);
+
+	g_object_unref(xmr_skin);
+}
+
+static GtkWidget *
+append_skin_to_menu(XmrWindow *window, SkinInfo *info)
+{
+	XmrWindowPrivate *priv = window->priv;
+	GtkWidget *item = NULL;
+
+	if (info->name == NULL)
+	{
+		gchar *name = g_path_get_basename(info->file);
+		if (name == NULL)
+			return NULL;
+		item = gtk_radio_menu_item_new_with_label(priv->skin_item_group, name);
+		g_free(name);
+	}
+	else
+	{
+		item = gtk_radio_menu_item_new_with_label(priv->skin_item_group, info->name);
+	}
+
+	gtk_widget_show(item);
+	priv->skin_item_group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
+
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->skin_menu), item);
+
+	g_signal_connect(item, "activate", G_CALLBACK(on_skin_menu_item_activate), info);
+
+	return item;
+}
+
+static gint
+hex_to_int(gchar ch)
+{
+	if (ch >= 'A' && ch <= 'F')
+		return ch - 'A' + 10;
+	if (ch >= 'a' && ch <= 'f')
+		return ch - 'a' + 10;
+
+	return ch - '0';
+}
+
+static void
+hex_color_to_rgba(const gchar *hex_color,
+			GdkRGBA *rgba)
+{
+	gfloat value = 0;
+	const gchar *p = hex_color;
+
+	p++;	// skip '#'
+	// r
+	value = hex_to_int(*p++) * 16 + hex_to_int(*p++);
+	rgba->red = value/255.0;
+
+	// g
+	value = hex_to_int(*p++) * 16 + hex_to_int(*p++);
+	rgba->green = value/255.0;
+
+	// b
+	value = hex_to_int(*p++) * 16 + hex_to_int(*p);
+	rgba->blue = value/255.0;
+
+	// currently just ignore transparency
+	rgba->alpha = 1.0;
+}
+
+static void
+set_widget_fg_color(GtkWidget *widget,
+			const gchar *color_str)
+{
+	GdkRGBA rgba = { 0 };
+	gint COLOR_LEN = strlen("#FFFFFF");
+
+	if (color_str == NULL ||
+		strlen(color_str) != COLOR_LEN)
+		return ;
+
+	hex_color_to_rgba(color_str, &rgba);
+
+	gtk_widget_override_color(widget,
+				GTK_STATE_FLAG_NORMAL,
+				&rgba);
+}
+
+static GtkBuilder *
+create_builder_with_file(const gchar *file)
+{
+	GtkBuilder *builder = NULL;
+
+	builder = gtk_builder_new();
+	g_return_val_if_fail(builder != NULL, NULL);
+
+	gtk_builder_set_translation_domain(builder, GETTEXT_PACKAGE);
+	gtk_builder_add_from_file(builder, file, NULL);
+	gtk_builder_connect_signals(builder, NULL);
+
+	return builder;
+}
+
+static void
+init_pref_window(XmrWindow *window,
+			GtkWidget *pref)
+{
+	XmrWindowPrivate *priv = window->priv;
+	GtkWidget *notebook;
+	GtkWidget *widget;
+
+	notebook = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "nb_pref"));
+	g_return_if_fail(notebook != NULL);
+
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "box_skin"));
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
+				gtk_label_new(_("Skin")));
+
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "grid_radio"));
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
+				gtk_label_new(_("Radio")));
+}
+
+static void
+do_login(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	static GtkWidget *dialog_login;
+
+	if (dialog_login == NULL)
+	{
+		GtkWidget *button_login;
+		GtkWidget *entry_usr, *entry_pwd;
+		GtkWidget *checkbox;
+
+		window->priv->ui_login = create_builder_with_file(UIDIR"/login.ui");
+		g_return_if_fail(window->priv->ui_login != NULL);
+
+		dialog_login = GTK_WIDGET(gtk_builder_get_object(window->priv->ui_login, "dialog_login"));
+		gtk_window_set_transient_for(GTK_WINDOW(dialog_login), GTK_WINDOW(window));
+
+		button_login = GTK_WIDGET(gtk_builder_get_object(window->priv->ui_login, "button_login"));
+
+		g_signal_connect(button_login, "button-release-event",
+					G_CALLBACK(on_login_dialog_button_login_clicked), window);
+
+		entry_usr = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_usr"));
+		entry_pwd = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_pwd"));
+		checkbox = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "cb_auto_login"));
+
+		gtk_entry_set_text(GTK_ENTRY(entry_usr), priv->usr);
+		gtk_entry_set_text(GTK_ENTRY(entry_pwd), priv->pwd);
+
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbox),
+					xmr_settings_get_auto_login(priv->settings)
+					);
+
+	}
+
+	gtk_dialog_run(GTK_DIALOG(dialog_login));
+	gtk_widget_hide(dialog_login);
+}
+
+static void
+change_radio(XmrWindow *window,
+			const gchar *name,
+			const gchar *url)
+{
+	XmrWindowPrivate *priv = window->priv;
+
+	xmr_player_pause(priv->player);
+
+	g_list_free_full(priv->playlist, (GDestroyNotify)song_info_free);
+	priv->playlist = NULL;
+
+	g_free(priv->playlist_url);
+
+	priv->playlist_url = (url == NULL ? NULL : g_strdup(url));
+
+	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), name);
+	xmr_window_get_playlist(window);
+}
+
+static gboolean
+on_login_dialog_button_login_clicked(GtkButton *button,
+			GdkEvent  *event,
+			XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+
+	static GtkWidget *entry_usr, *entry_pwd;
+	static GtkWidget *checkbox;
+
+	const gchar *usr, *pwd;
+
+	if (entry_usr == NULL)
+	{
+		entry_usr = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_usr"));
+		entry_pwd = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_pwd"));
+		checkbox = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "cb_auto_login"));
+	}
+
+	usr = gtk_entry_get_text(GTK_ENTRY(entry_usr));
+	pwd = gtk_entry_get_text(GTK_ENTRY(entry_pwd));
+
+	if (is_text_empty(usr) || is_text_empty(pwd))
+	{
+		xmr_message(GTK_WIDGET(window),
+					_("User name and password may not empty"),
+					_("Login"));
+		return TRUE;
+	}
+
+	g_free(priv->usr);
+	g_free(priv->pwd);
+
+	priv->usr = g_strdup(usr);
+	priv->pwd = g_strdup(pwd);
+
+	xmr_settings_set_auto_login(priv->settings,
+				gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbox))
+				);
+
+	xmr_window_login(window);
+
+	return FALSE;
+}
+
+static gboolean
+is_text_empty(const gchar *text)
+{
+	const gchar *p;
+
+	if (text == NULL)
+		return TRUE;
+
+	p = text;
+
+	while(p && *p)
+	{
+		if (*p != ' '){
+			return FALSE;
+		}
+		p++;
+	}
+
+	return TRUE;
 }
