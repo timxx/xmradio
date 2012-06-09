@@ -25,6 +25,7 @@ set(XMRADIO_SOURCES
 	xmrdebug.c
 	xmrplayer.c
 	xmrradio.c
+	xmrradiochooser.c
 	xmrsettings.c
 	xmrskin.c
 	xmrutil.c

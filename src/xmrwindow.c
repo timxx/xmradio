@@ -30,6 +30,7 @@
 #include "config.h"
 #include "xmrutil.h"
 #include "xmrsettings.h"
+#include "xmrradiochooser.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -80,6 +81,14 @@ struct _XmrWindowPrivate
 	GtkWidget	*fixed;			/* #GtkFixed */
 	GtkWidget	*popup_menu;	/* #GtkMenu */
 	GtkWidget	*skin_menu;
+
+	/**
+	 * #XmrRadioChooser
+	 * 0 - FengGe
+	 * 1 - XingZuo
+	 * 2 - NianDai
+	 */
+	GtkWidget	*chooser[3];
 
 	XmrPlayer *player;
 	XmrService *service;
@@ -154,6 +163,11 @@ static void
 on_xmr_button_clicked(GtkWidget *widget, gpointer data);
 
 static void
+radio_selected(XmrRadioChooser *chooser,
+			XmrRadio *radio,
+			XmrWindow *window);
+
+static void
 set_window_image(XmrWindow *window, GdkPixbuf *pixbuf);
 
 static void
@@ -168,6 +182,9 @@ set_skin(XmrWindow *window, const gchar *skin);
 static void
 hide_children(XmrWindow *window);
 
+/**
+ * player signals
+ */
 static void
 player_eos(XmrPlayer *player,
 			gboolean early,
@@ -476,6 +493,10 @@ xmr_window_init(XmrWindow *window)
 
 	gtk_widget_show(priv->fixed);
 
+	priv->chooser[0] = xmr_radio_chooser_new(_("风格电台"));
+	priv->chooser[1] = xmr_radio_chooser_new(_("星座电台"));
+	priv->chooser[2] = xmr_radio_chooser_new(_("年代电台"));
+
 	g_signal_connect(window, "draw", G_CALLBACK(on_draw), NULL);
 	g_signal_connect(window, "button-press-event", G_CALLBACK(on_button_press), NULL);
 
@@ -484,6 +505,10 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->player, "tick", G_CALLBACK(player_tick), window);
 	g_signal_connect(priv->player, "buffering", G_CALLBACK(player_buffering), window);
 	g_signal_connect(priv->player, "state-changed", G_CALLBACK(player_state_changed), window);
+
+	for(i=0; i<3; ++i)
+	  g_signal_connect(priv->chooser[i], "radio-selected",
+				  G_CALLBACK(radio_selected), window);
 
 	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 
@@ -755,14 +780,55 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_FENGGE:
+		if (gtk_widget_get_visible(priv->chooser[0]))
+		{
+			gtk_widget_hide(priv->chooser[0]);
+		}
+		else
+		{
+			gtk_widget_show_all(priv->chooser[0]);
+			gtk_widget_hide(priv->chooser[1]);
+			gtk_widget_hide(priv->chooser[2]);
+		}
 		break;
 
 	case BUTTON_XINGZUO:
+		if (gtk_widget_get_visible(priv->chooser[1]))
+		{
+			gtk_widget_hide(priv->chooser[1]);
+		}
+		else
+		{
+			gtk_widget_show_all(priv->chooser[1]);
+			gtk_widget_hide(priv->chooser[0]);
+			gtk_widget_hide(priv->chooser[2]);
+		}
 		break;
 
 	case BUTTON_NIANDAI:
+		if (gtk_widget_get_visible(priv->chooser[2]))
+		{
+			gtk_widget_hide(priv->chooser[2]);
+		}
+		else
+		{
+			gtk_widget_show_all(priv->chooser[2]);
+			gtk_widget_hide(priv->chooser[1]);
+			gtk_widget_hide(priv->chooser[0]);
+		}
 		break;
 	}
+}
+
+static void
+radio_selected(XmrRadioChooser *chooser,
+			XmrRadio *radio,
+			XmrWindow *window)
+{
+	const gchar *name = xmr_radio_get_name(radio);
+	const gchar *url = xmr_radio_get_url(radio);
+
+	change_radio(window, name, url);
 }
 
 static void
@@ -1771,7 +1837,8 @@ change_radio(XmrWindow *window,
 {
 	XmrWindowPrivate *priv = window->priv;
 
-	xmr_player_pause(priv->player);
+	if (xmr_player_playing(priv->player))
+		xmr_player_pause(priv->player);
 
 	g_list_free_full(priv->playlist, (GDestroyNotify)song_info_free);
 	priv->playlist = NULL;
