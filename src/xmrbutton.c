@@ -27,6 +27,8 @@ struct _XmrButtonPrivate
 
 	GdkPixbuf *images[LAST_STATE];
 	XmrButtonState	state;	/* current state */
+
+	GdkCursor *cursor;
 };
 
 enum
@@ -62,6 +64,11 @@ xmr_button_dispose(GObject *obj)
 	XmrButton *button = XMR_BUTTON(obj);
 
 	xmr_button_unref_images(button);
+	if (button->priv->cursor)
+	{
+		g_object_unref(button->priv->cursor);
+		button->priv->cursor = NULL;
+	}
 
 	G_OBJECT_CLASS(xmr_button_parent_class)->dispose(obj);
 }
@@ -140,6 +147,7 @@ xmr_button_init(XmrButton *button)
 
 	priv->type = XMR_BUTTON_NORMAL;
 	priv->state = STATE_NORMAL;
+	priv->cursor = gdk_cursor_new(GDK_HAND1);
 
 	for(i=0; i<LAST_STATE; ++i) 
 		priv->images[i] = NULL;
@@ -234,7 +242,6 @@ on_draw(XmrButton *button, cairo_t *cr, gpointer data)
 static gboolean
 on_button_mouse_event(XmrButton *button, GdkEvent *event, gpointer data)
 {
-    static GdkCursor *cursor = NULL;
 	XmrButtonPrivate *priv;
 
 	priv = button->priv;
@@ -252,9 +259,7 @@ on_button_mouse_event(XmrButton *button, GdkEvent *event, gpointer data)
         break;
 
     case GDK_ENTER_NOTIFY:
-        if (NULL == cursor)
-            cursor = gdk_cursor_new(GDK_HAND1);
-        gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), cursor);
+        gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), priv->cursor);
 		priv->state = STATE_FOCUS;
         break;
 
