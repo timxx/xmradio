@@ -19,12 +19,12 @@
  */
 #include "xmrradio.h"
 
-G_DEFINE_TYPE(XmrRadio, xmr_radio, GTK_TYPE_VBOX);
+G_DEFINE_TYPE(XmrRadio, xmr_radio, GTK_TYPE_BUTTON);
 
 struct _XmrRadioPrivate
 {
 	GtkWidget *image;
-	GtkWidget *label;
+	GdkCursor *cursor;
 
 	gchar *url;
 };
@@ -36,6 +36,9 @@ enum
 	PROP_NAME,
 	PROP_URL
 };
+
+static gboolean
+on_mouse_event(XmrRadio *radio, GdkEvent *event, gpointer data);
 
 static void
 xmr_radio_get_property(GObject *object,
@@ -58,7 +61,7 @@ xmr_radio_get_property(GObject *object,
 		break;
 
 	case PROP_NAME:
-		g_value_set_string(value, gtk_label_get_text(GTK_LABEL(priv->label)));
+		g_value_set_string(value, gtk_button_get_label(GTK_BUTTON(radio)));
 		break;
 
 	case PROP_URL:
@@ -118,6 +121,14 @@ xmr_radio_dispose(GObject *obj)
 		g_free(priv->url);
 		priv->url = NULL;
 	}
+
+	if (priv->cursor)
+	{
+		g_object_unref(priv->cursor);
+		priv->cursor = NULL;
+	}
+
+	G_OBJECT_CLASS(xmr_radio_parent_class)->dispose(obj);
 }
 
 static void xmr_radio_init(XmrRadio *radio)
@@ -128,11 +139,14 @@ static void xmr_radio_init(XmrRadio *radio)
 	radio->priv = priv;
 
 	priv->image = gtk_image_new();
-	priv->label = gtk_label_new("");
+	priv->cursor = gdk_cursor_new(GDK_HAND1);
 	priv->url = NULL;
 
-	gtk_box_pack_start(GTK_BOX(radio), priv->image, FALSE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(radio), priv->label, FALSE, TRUE, 0);
+	gtk_button_set_image(GTK_BUTTON(radio), priv->image);
+    g_signal_connect(radio, "enter-notify-event",
+                G_CALLBACK(on_mouse_event), NULL);
+    g_signal_connect(radio, "leave-notify-event",
+                G_CALLBACK(on_mouse_event), NULL);
 
 	gtk_widget_show_all(GTK_WIDGET(radio));
 }
@@ -175,12 +189,31 @@ static void xmr_radio_class_init(XmrRadioClass *klass)
 	 g_type_class_add_private(G_OBJECT_CLASS(klass), sizeof(XmrRadioPrivate));
 }
 
+
+static gboolean
+on_mouse_event(XmrRadio *radio, GdkEvent *event, gpointer data)
+{
+    switch(event->type)
+    {
+    case GDK_ENTER_NOTIFY:
+        gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(radio)), radio->priv->cursor);
+        break;
+
+    case GDK_LEAVE_NOTIFY:
+        gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(radio)), NULL);
+        break;
+    }
+
+	return FALSE;
+}
+
+
 XmrRadio *
 xmr_radio_new()
 {
 	return g_object_new(XMR_TYPE_RADIO,
-				"expand", FALSE,
-				"spacing", 5,
+				"image-position", GTK_POS_TOP,
+				"relief", GTK_RELIEF_NONE,
 				NULL);
 }
 
@@ -190,8 +223,8 @@ xmr_radio_new_with_info(const gchar *logo,
 			const gchar *url)
 {
 	return g_object_new(XMR_TYPE_RADIO,
-				"expand", FALSE,
-				"spacing", 5,
+				"image-position", GTK_POS_TOP,
+				"relief", GTK_RELIEF_NONE,
 				"logo", logo,
 				"name", name,
 				"url", url,
@@ -213,7 +246,7 @@ xmr_radio_set_name(XmrRadio *radio,
 {
 	g_return_if_fail(radio != NULL);
 
-	gtk_label_set_text(GTK_LABEL(radio->priv->label), name);
+	gtk_button_set_label(GTK_BUTTON(radio), name);
 }
 
 const gchar *
@@ -221,7 +254,7 @@ xmr_radio_get_name(XmrRadio *radio)
 {
 	g_return_val_if_fail(radio != NULL, NULL);
 
-	return gtk_label_get_text(GTK_LABEL(radio->priv->label));
+	return gtk_button_get_label(GTK_BUTTON(radio));
 }
 
 void

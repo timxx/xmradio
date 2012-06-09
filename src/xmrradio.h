@@ -37,13 +37,13 @@ typedef struct _XmrRadioPrivate	XmrRadioPrivate;
 
 struct _XmrRadio
 {
-	GtkVBox parent;
+	GtkButton parent;
 	XmrRadioPrivate *priv;
 };
 
 struct _XmrRadioClass
 {
-	GtkVBoxClass parent_class;
+	GtkButtonClass parent_class;
 };
 
 GType xmr_radio_get_type();
