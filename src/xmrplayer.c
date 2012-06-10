@@ -717,6 +717,10 @@ xmr_player_pause(XmrPlayer *player)
 	g_return_if_fail( player != NULL);
 	priv = player->priv;
 
+	if (!priv->playing)
+		return ;
+
+	priv->playing = FALSE;
 	g_return_if_fail( priv->playbin != NULL);
 
 	start_state_change(player, GST_STATE_PAUSED, STOP_TICK_TIMER);
