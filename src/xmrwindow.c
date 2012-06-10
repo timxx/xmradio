@@ -297,6 +297,13 @@ static void
 set_widget_fg_color(GtkWidget *widget,
 			const gchar *color_str);
 
+/**
+ * set @widget font
+ */
+static void
+set_widget_font(GtkWidget *widget,
+			const gchar *font_desc);
+
 static GtkBuilder *
 create_builder_with_file(const gchar *file);
 
@@ -1089,23 +1096,21 @@ set_skin(XmrWindow *window, const gchar *skin)
 
 		for(i=0; i<LAST_LABEL; ++i)
 		{
-			gchar *color = NULL;
+			gchar *value = NULL;
 			if (xmr_skin_get_position(xmr_skin, UI_MAIN, ui_main_labels[i], &x, &y))
 			{
 				gtk_fixed_move(GTK_FIXED(priv->fixed), priv->labels[i], x, y);
 				gtk_widget_show(priv->labels[i]);
 			}
 
-			if (xmr_skin_get_color(xmr_skin, UI_MAIN, ui_main_labels[i], &color))
-			{
-				set_widget_fg_color(priv->labels[i], color);
-				g_free(color);
-			}
-			else
-			{
-				// set default color to black
-				set_widget_fg_color(priv->labels[i], "#000000");
-			}
+			xmr_skin_get_color(xmr_skin, UI_MAIN, ui_main_labels[i], &value);
+			set_widget_fg_color(priv->labels[i], value);
+			g_free(value);
+
+			value = NULL;
+			xmr_skin_get_font(xmr_skin, UI_MAIN, ui_main_labels[i], &value);
+			set_widget_font(priv->labels[i], value);
+			g_free(value);
 		}
 
 		if (xmr_skin_get_position(xmr_skin, UI_MAIN, "cover", &x, &y))
@@ -1924,14 +1929,37 @@ set_widget_fg_color(GtkWidget *widget,
 	gint COLOR_LEN = strlen("#FFFFFF");
 
 	if (color_str == NULL ||
-		strlen(color_str) != COLOR_LEN)
-		return ;
-
-	hex_color_to_rgba(color_str, &rgba);
+		strlen(color_str) != COLOR_LEN) // set to black color
+	{
+		rgba.alpha = 1.0;
+	}
+	else
+	{
+		hex_color_to_rgba(color_str, &rgba);
+	}
 
 	gtk_widget_override_color(widget,
 				GTK_STATE_FLAG_NORMAL,
 				&rgba);
+}
+
+static void
+set_widget_font(GtkWidget *widget,
+			const gchar *font_desc)
+{
+	PangoFontDescription * pfd;
+	if (font_desc == NULL){
+		pfd = pango_font_description_from_string("Sans 10");
+	}else{
+		pfd = pango_font_description_from_string(font_desc);
+	}
+
+	if (pfd)
+	{
+		gtk_widget_modify_font(widget, pfd);
+
+		pango_font_description_free(pfd);
+	}
 }
 
 static GtkBuilder *
