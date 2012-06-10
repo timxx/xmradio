@@ -36,4 +36,11 @@
 			<_description>user password</_description>
 		</key>
 	</schema>
+	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
+    <key name="active-plugins" type="as">
+      <default>['notification']</default>
+      <_summary>Active plugins</_summary>
+      <_description>List of active plugins.</_description>
+    </key>
+  </schema>
 </schemalist>
