@@ -8,6 +8,7 @@ PKG_CHECK_MODULES(GDKPIXBUF REQUIRED "gdk-pixbuf-2.0")
 PKG_CHECK_MODULES(GSTREAMER REQUIRED "gstreamer-0.10")
 PKG_CHECK_MODULES(GST-PLUGIN REQUIRED "gstreamer-interfaces-0.10")
 PKG_CHECK_MODULES(SQLITE3 REQUIRED "sqlite3")
+PKG_CHECK_MODULES(DBUS REQUIRED "dbus-glib-1")
 
 execute_process(COMMAND ${GLIB_GENMARSHAL} --body
 	--prefix=xmr_marshal ${CMAKE_CURRENT_SOURCE_DIR}/xmrmarshal.list
@@ -44,6 +45,7 @@ include_directories(${ZLIB_INCLUDE_DIRS})
 include_directories(${GDKPIXBUF_INCLUDE_DIRS})
 include_directories(${GSTREAMER_INCLUDE_DIRS})
 include_directories(${SQLITE3_INCLUDE_DIRS})
+include_directories(${DBUS_INCLUDE_DIRS})
 
 add_executable(xmradio ${XMRADIO_SOURCES})
 target_link_libraries(xmradio xmrservice
@@ -54,6 +56,7 @@ target_link_libraries(xmradio xmrservice
 	${GSTREAMER_LIBRARIES}
 	${GST-PLUGIN_LIBRARIES}
 	${SQLITE3_LIBRARIES}
+	${DBUS_LIBRARIES}
 	)
 
 install(TARGETS xmradio DESTINATION ${prefix}/bin)

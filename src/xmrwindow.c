@@ -781,18 +781,20 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_LYRIC:
-		break;
-
 	case BUTTON_DOWNLOAD:
 	{
 		SongInfo *song = xmr_window_get_current_song(window);
+		gchar *command = NULL;
 		if (song == NULL)
 		{
 			xmr_debug("Playlist empty");
 			break;
 		}
-		gchar *command = g_strdup_printf("xdg-open http://www.xiami.com/song/%s",
-					song->song_id);
+		if (id == BUTTON_LYRIC){
+			command = g_strdup_printf("xdg-open http://www.xiami.com/radio/lyric/sid/%s", song->song_id);
+		}else{
+			command = g_strdup_printf("xdg-open http://www.xiami.com/song/%s", song->song_id);
+		}
 		if (command == NULL)
 			g_error("No more memory\n");
 
@@ -1514,6 +1516,25 @@ update_radio_list(XmrWindow *window)
 #else
 	g_thread_create((GThreadFunc)thread_update_radio_list, window, FALSE, NULL);
 #endif
+}
+
+void
+xmr_window_play(XmrWindow *window)
+{
+	XmrWindowPrivate *priv;
+
+	g_return_if_fail(window != NULL);
+	priv = window->priv;
+
+	if (!xmr_player_playing(priv->player))
+	{
+		// playlist empty
+		if (g_list_length(priv->playlist) == 0){
+			xmr_window_get_playlist(window);
+		}else{
+			xmr_player_resume(priv->player);
+		}
+	}
 }
 
 void

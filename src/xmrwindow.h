@@ -62,6 +62,9 @@ struct _XmrWindowClass
 GType		xmr_window_get_type();
 GtkWidget*	xmr_window_new();
 
+void
+xmr_window_play(XmrWindow *window);
+
 /**
  * play next song
  */

@@ -23,14 +23,56 @@
 #include <glib.h>
 #include <curl/curl.h>
 #include <gst/gst.h>
+#include <dbus/dbus.h>
 
 #include "xmrapp.h"
 #include "config.h"
 #include "xmrdebug.h"
 
+static gboolean debug = FALSE;
+static gboolean action_play = FALSE;
+static gboolean action_pause = FALSE;
+static gboolean action_next = FALSE;
+
+static gboolean
+print_version_and_exit (const gchar *option_name,
+			 const gchar *value,
+			 gpointer data,
+			 GError **error)
+{
+	g_print("%s %s\n", PACKAGE, VERSION);
+	exit(EXIT_SUCCESS);
+	return TRUE;
+}
+
+const GOptionEntry options []  =
+{
+	{"debug",	'd', 0, G_OPTION_ARG_NONE,	&debug, N_("Enable debug output"), NULL},
+	{"play",	'p', 0, G_OPTION_ARG_NONE,	&action_play, N_("Play song"), NULL},
+	{"pause",	's', 0, G_OPTION_ARG_NONE,	&action_pause, N_("Pause current song if playing"), NULL},
+	{"next",	'n', 0, G_OPTION_ARG_NONE,	&action_next, N_("Play next song"), NULL},
+	{"version", 'v', G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, print_version_and_exit, N_("Show the application's version"), NULL},
+	{ NULL }
+};
+
+typedef enum
+{
+	ActionNone,
+	ActionPlay,
+	ActionPause,
+	ActionNext
+}
+PlayerAction;
+
+static void
+send_action(DBusConnection *bus, PlayerAction action);
+
 int main(int argc, char **argv)
 {
 	XmrApp *app;
+	GOptionContext *context;
+	GError *error = NULL;
+	PlayerAction player_action = ActionNone;
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_init(NULL);
@@ -39,9 +81,6 @@ int main(int argc, char **argv)
 	gdk_threads_init();
 
 	g_type_init();
-	gst_init(&argc, &argv);
-
-	xmr_debug_enable(TRUE);
 
 	setlocale(LC_ALL, NULL);
 
@@ -52,11 +91,59 @@ int main(int argc, char **argv)
 
 	textdomain(GETTEXT_PACKAGE);
 #endif
+	
+	context = g_option_context_new(NULL);
+
+	g_option_context_add_main_entries(context, options, GETTEXT_PACKAGE);
+
+	g_option_context_add_group(context, gtk_get_option_group(TRUE));
+	g_option_context_add_group(context, gst_init_get_option_group());
+
+	if (g_option_context_parse(context, &argc, &argv, &error) == FALSE)
+	{
+		g_print(_("%s\nRun '%s --help' to see a full list of available command line options.\n"),
+			 error->message, argv[0]);
+		g_error_free(error);
+		g_option_context_free(context);
+		exit(1);
+	}
+
+	g_option_context_free(context);
+
+	if (action_play){
+		player_action = ActionPlay;
+	}else if (action_pause){
+		player_action = ActionPause;
+	}else if(action_next){
+		player_action = ActionNext;
+	}
+
+	if (player_action != ActionNone)
+	{
+		DBusConnection *bus;
+		DBusError dbus_error;
+		dbus_error_init(&dbus_error);
+		bus = dbus_bus_get(DBUS_BUS_SESSION, &dbus_error);
+		if (!bus)
+		{
+			g_warning ("Failed to connect to the D-BUS daemon: %s", dbus_error.message);
+			dbus_error_free(&dbus_error);
+			exit(1);
+		}
+		
+		dbus_connection_setup_with_g_main(bus, NULL);
+
+		send_action(bus, player_action);
+	}
+
+	xmr_debug_enable(debug);
+
+	gst_init(&argc, &argv);
 
 	gdk_threads_init();
 	curl_global_init(CURL_GLOBAL_ALL);
 
-	app = xmr_app_new(argc, argv);
+	app = xmr_app_new();
 
 	g_application_run(G_APPLICATION(app), argc, argv);
 
@@ -65,4 +152,23 @@ int main(int argc, char **argv)
 	curl_global_cleanup();
 
 	return 0;
+}
+
+static void
+send_action(DBusConnection *bus, PlayerAction action)
+{
+	DBusMessage *message;
+
+	dbus_int32_t d_action = action;
+
+	message = dbus_message_new_signal("/com/xmradio/dbus/action",
+                                     "com.xmradio.dbus.Signal",
+									 "Action");
+	dbus_message_append_args(message,
+                            DBUS_TYPE_INT32, &d_action,
+                            DBUS_TYPE_INVALID);
+
+	dbus_connection_send(bus, message, NULL);
+	
+	dbus_message_unref(message);
 }

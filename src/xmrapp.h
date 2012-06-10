@@ -49,7 +49,7 @@ struct _XmrAppClass
 };
 
 GType	xmr_app_get_type();
-XmrApp*	xmr_app_new(gint argc, gchar **argv);
+XmrApp*	xmr_app_new();
 
 
 G_END_DECLS
