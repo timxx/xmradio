@@ -56,6 +56,13 @@ pos_str_to_ii(const gchar *str,
 static xmlNodePtr
 xml_get_ui_node(XmrSkin *skin, SkinUi ui);
 
+static gboolean
+get_name_value(XmrSkin *skin,
+			SkinUi ui,
+			const gchar *name,
+			const gchar *attr,
+			gchar **value);
+
 static void 
 xmr_skin_dispose(GObject *obj)
 {
@@ -319,19 +326,21 @@ xml_get_ui_node(XmrSkin *skin, SkinUi ui)
 	return child;
 }
 
-gboolean
-xmr_skin_get_position(XmrSkin *skin,
+static gboolean
+get_name_value(XmrSkin *skin,
 			SkinUi ui,
 			const gchar *name,
-			gint *x, gint *y)
+			const gchar *attr,
+			gchar **value)
 {
 	XmrSkinPrivate *priv;
 	xmlNodePtr root = NULL;
 	xmlNodePtr child = NULL;
-	xmlChar *value = NULL;
-	gboolean result = FALSE;
+	xmlChar *xml_value = NULL;
 
-	g_return_val_if_fail(skin != NULL && name != NULL, FALSE);
+	g_return_val_if_fail(skin != NULL && name != NULL &&
+				attr != NULL && value != NULL, FALSE);
+
 	priv = skin->priv;
 	g_return_val_if_fail(priv->doc != NULL && priv->zfile != NULL, FALSE);
 
@@ -346,13 +355,31 @@ xmr_skin_get_position(XmrSkin *skin,
 		return FALSE;
 	}
 
-	value = xml_get_prop(child, "position");
+	xml_value = xml_get_prop(child, attr);
+	if (xml_value == NULL)
+		return FALSE;
+
+	*value = xml_value;
+
+	return TRUE;
+}
+
+gboolean
+xmr_skin_get_position(XmrSkin *skin,
+			SkinUi ui,
+			const gchar *name,
+			gint *x, gint *y)
+{
+	gchar *value = NULL;
+	gint result;
+
+	get_name_value(skin, ui, name, "position", &value);
 	if (value == NULL)
 		return FALSE;
 
-	result = pos_str_to_ii((gchar *)value, x, y);
+	result = pos_str_to_ii(value, x, y);
 
-	xmlFree(value);
+	g_free(value);
 
 	return result;
 }
@@ -420,31 +447,15 @@ xmr_skin_get_color(XmrSkin *skin,
 			const gchar *name,
 			gchar **color)
 {
-	XmrSkinPrivate *priv;
-	xmlNodePtr root = NULL;
-	xmlNodePtr child = NULL;
-	xmlChar *value = NULL;
-
-	g_return_val_if_fail(skin != NULL && name != NULL && color != NULL, FALSE);
-	priv = skin->priv;
-	g_return_val_if_fail(priv->doc != NULL && priv->zfile != NULL, FALSE);
-
-	root = xml_get_ui_node(skin, ui);
-	if (root == NULL)
-		return FALSE;
-
-	child = xml_first_child(root, name);
-	if (child == NULL)
-	{
-		xmr_debug("No such element: %s", name);
-		return FALSE;
-	}
-
-	value = xml_get_prop(child, "color");
-	if (value == NULL)
-		return FALSE;
-
-	*color = value;
-
-	return TRUE;
+	return get_name_value(skin, ui, name, "color", color);
 }
+
+gboolean
+xmr_skin_get_font(XmrSkin *skin,
+			SkinUi ui,
+			const gchar *name,
+			gchar **font)
+{
+	return get_name_value(skin, ui, name, "font", font);
+}
+

@@ -117,6 +117,16 @@ xmr_skin_get_color(XmrSkin *skin,
 			const gchar *name,
 			gchar **color);
 
+/**
+ * get font attribute value
+ */
+gboolean
+xmr_skin_get_font(XmrSkin *skin,
+			SkinUi ui,
+			const gchar *name,
+			gchar **font);
+
+
 G_END_DECLS
 
 #endif /* __XMR_SKIN_H__ */
