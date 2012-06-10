@@ -48,7 +48,7 @@ xmr_settings_get_window_pos(XmrSettings *sett,
 {
 	g_return_val_if_fail( sett != NULL, FALSE);
 
-	g_settings_set(G_SETTINGS(sett), "window-pos", "(ii)", x, y);
+	g_settings_get(G_SETTINGS(sett), "window-pos", "(ii)", x, y);
 
 	return TRUE;
 }
