@@ -31,6 +31,8 @@
 #include "xmrutil.h"
 #include "xmrsettings.h"
 #include "xmrradiochooser.h"
+#include "xmrdb.h"
+#include "xmrmarshal.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -101,6 +103,8 @@ struct _XmrWindowPrivate
 
 	GSList *skin_item_group; /* skin menu item list */
 
+	GdkPixbuf *pb_cover;	/* default album cover image pixbuf */
+
 	GtkBuilder *ui_pref;
 	GtkBuilder *ui_login;
 
@@ -134,6 +138,11 @@ enum
 };
 
 static guint signals[LAST_SIGNAL] = { 0 };
+
+static const gchar *radio_style[]=
+{
+	"风格电台", "星座电台", "年代电台"
+};
 
 static void
 xmr_window_dispose(GObject *obj);
@@ -227,6 +236,9 @@ thread_get_cover_image(XmrWindow *window);
 static gpointer
 thread_login(XmrWindow *window);
 
+static gpointer
+thread_update_radio_list(XmrWindow *window);
+
 static void
 xmr_window_get_playlist(XmrWindow *window);
 
@@ -239,6 +251,8 @@ xmr_window_login(XmrWindow *window);
 static void
 xmr_window_set_track_info(XmrWindow *window);
 
+static void
+update_radio_list(XmrWindow *window);
 
 static void
 create_popup_menu(XmrWindow *window);
@@ -260,6 +274,9 @@ load_settings(XmrWindow *window);
 
 static void
 load_skin(XmrWindow *window);
+
+static void
+load_radio(XmrWindow *window);
 
 /**
  * read @skin information
@@ -316,6 +333,14 @@ on_login_dialog_button_login_clicked(GtkButton *button,
  */
 static gboolean
 is_text_empty(const gchar *text);
+
+static gchar *
+radio_logo_url_to_uri(RadioInfo *radio);
+
+static gboolean
+on_delete_event(XmrWindow *window,
+			GdkEvent *event,
+			gpointer data);
 
 static void
 install_properties(GObjectClass *object_class)
@@ -413,10 +438,10 @@ create_signals(XmrWindowClass *klass)
 					G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE,
 					G_STRUCT_OFFSET(XmrWindowClass, radio_changed),
 					NULL, NULL,
-					g_cclosure_marshal_VOID__POINTER,
+					xmr_marshal_VOID__STRING_STRING,
 					G_TYPE_NONE,
-					1,
-					G_TYPE_POINTER);
+					2,
+					G_TYPE_STRING, G_TYPE_STRING);
 }
 
 static void 
@@ -461,6 +486,7 @@ xmr_window_init(XmrWindow *window)
 	priv->usr = NULL;
 	priv->pwd = NULL;
 	priv->switch_radio = FALSE;
+	priv->pb_cover = NULL;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -510,6 +536,8 @@ xmr_window_init(XmrWindow *window)
 	  g_signal_connect(priv->chooser[i], "radio-selected",
 				  G_CALLBACK(radio_selected), window);
 
+	g_signal_connect_after(window, "delete-event", G_CALLBACK(on_delete_event), NULL);
+
 	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 
 	load_settings(window);
@@ -551,6 +579,12 @@ xmr_window_dispose(GObject *obj)
 	{
 		g_object_unref(priv->ui_login);
 		priv->ui_login = NULL;
+	}
+
+	if (priv->pb_cover)
+	{
+		g_object_unref(priv->pb_cover);
+		priv->pb_cover = NULL;
 	}
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->dispose(obj);
@@ -700,7 +734,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 	switch(id)
 	{
 	case BUTTON_CLOSE:
-		gtk_widget_destroy(GTK_WIDGET(window));
+		xmr_window_quit(window);
 		break;
 
 	case BUTTON_MINIMIZE:
@@ -1074,12 +1108,20 @@ set_skin(XmrWindow *window, const gchar *skin)
 			}
 		}
 
-		if (xmr_skin_get_position(xmr_skin, UI_MAIN, "cover_image", &x, &y))
+		if (xmr_skin_get_position(xmr_skin, UI_MAIN, "cover", &x, &y))
 		{
 			gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, x, y);
 			gtk_widget_show(priv->image);
 		}
 
+		if (priv->pb_cover)
+			g_object_unref(priv->pb_cover);
+
+		priv->pb_cover = xmr_skin_get_image(xmr_skin, UI_MAIN, "cover");
+		if (priv->pb_cover && gtk_image_get_pixbuf(GTK_IMAGE(priv->image)) == NULL)
+			set_cover_image(window, priv->pb_cover);
+
+		// save to settings
 		xmr_settings_set_theme(priv->settings, skin);
 		if (priv->skin)
 			g_free(priv->skin);
@@ -1335,6 +1377,86 @@ thread_login(XmrWindow *window)
 	return NULL;
 }
 
+static gpointer
+thread_update_radio_list(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gint style[3] = { Style_FengGe, Style_XingZuo, Style_NianDai };
+	gint i;
+	XmrService *service;
+	XmrDb *db = xmr_db_new();
+
+	// use a new service rather than priv->service
+	// it will block other data receiving
+	service = xmr_service_new();
+
+	// use BEGIN.. COMMIT to speed up writing
+	xmr_db_begin(db);
+
+	for(i=0; i<3; ++i)
+	{
+		GList *list = NULL;
+		GList *p;
+		gint result;
+
+		result = xmr_service_get_radio_list(service, &list, style[i]);
+		if (result != 0)
+		{
+			g_print("xmr_service_get_radio_list: %d", result);
+			continue ;
+		}
+
+		p = list;
+
+		while(p)
+		{
+			RadioInfo *radio_info = (RadioInfo *)p->data;
+			GString *data = g_string_new("");
+
+			result = xmr_service_get_url_data(service, radio_info->logo, data);
+			if (result != 0)
+			{
+				g_print("xmr_service_get_url_data: %d", result);
+			}
+			else
+			{
+				gchar *uri = radio_logo_url_to_uri(radio_info);
+				XmrRadio *xmr_radio;
+
+				g_free(radio_info->logo);
+				radio_info->logo = uri;
+
+				// save cover to local file
+				write_memory_to_file(uri, data->str, data->len);
+
+				// save to database
+				xmr_db_add_radio(db, radio_info, radio_style[i]);
+
+				// append to chooser
+				xmr_radio = xmr_radio_new_with_info(uri,
+							radio_info->name, radio_info->url);
+
+				xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[i]),
+							xmr_radio);
+			}
+
+			g_string_free(data, TRUE);
+			p = p->next;
+		} // end of while(p)
+
+		g_list_free_full(list, (GDestroyNotify)radio_info_free);
+	}
+
+	xmr_db_commit(db);
+
+	g_object_unref(service);
+	g_object_unref(db);
+
+	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+
+	return NULL;
+}
+
 static void
 xmr_window_get_playlist(XmrWindow *window)
 {
@@ -1358,7 +1480,7 @@ xmr_window_get_cover_image(XmrWindow *window)
 static void
 xmr_window_login(XmrWindow *window)
 {
-	#if GLIB_CHECK_VERSION(2, 32, 0)
+#if GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_new("login", (GThreadFunc)thread_login, window);
 #else
 	g_thread_create((GThreadFunc)thread_login, window, FALSE, NULL);
@@ -1379,6 +1501,16 @@ xmr_window_set_track_info(XmrWindow *window)
 	gtk_widget_set_tooltip_text(priv->image, song->album_name);
 }
 
+static void
+update_radio_list(XmrWindow *window)
+{
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_new("radio", (GThreadFunc)thread_update_radio_list, window);
+#else
+	g_thread_create((GThreadFunc)thread_update_radio_list, window, FALSE, NULL);
+#endif
+}
+
 void
 xmr_window_play_next(XmrWindow *window)
 {
@@ -1388,6 +1520,10 @@ xmr_window_play_next(XmrWindow *window)
 
 	g_return_if_fail( window != NULL );
 	priv = window->priv;
+
+	// change to default cover image first
+	if (priv->pb_cover)
+		set_cover_image(window, priv->pb_cover);
 
 	if (g_list_length(priv->playlist) == 0){
 		goto no_more_track;
@@ -1539,7 +1675,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 	}
 	else if(g_strcmp0(menu, GTK_STOCK_QUIT) == 0)
 	{
-		gtk_widget_destroy(GTK_WIDGET(window));
+		xmr_window_quit(window);
 	}
 }
 
@@ -1588,6 +1724,8 @@ load_settings(XmrWindow *window)
 		gtk_window_move(GTK_WINDOW(window), x, y);
 
 	xmr_window_get_playlist(window);
+
+	load_radio(window);
 
 	g_free(radio_name);
 	g_free(radio_url);
@@ -1641,6 +1779,49 @@ load_skin(XmrWindow *window)
 			set_skin(window, ((SkinInfo *)priv->skin_list->data)->file);
 		}
 	}
+}
+
+static void
+load_radio(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	XmrDb *db = xmr_db_new();
+
+	if (xmr_db_is_empty(db))
+	{
+		update_radio_list(window);
+	}
+	else
+	{
+		gint i;
+
+		for(i=0; i<3; ++i)
+		{
+			GSList *list = NULL;
+			GSList *p;
+
+			list = xmr_db_get_radio_list(db, radio_style[i]);
+			if (g_slist_length(list) == 0)
+				continue ;
+
+			p = list;
+			while(p)
+			{
+				RadioInfo *radio_info = (RadioInfo *)p->data;
+
+				XmrRadio *xmr_radio = xmr_radio_new_with_info(radio_info->logo,
+							radio_info->name, radio_info->url);
+
+				xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[i]), xmr_radio);
+
+				p = p->next;
+			}
+
+			g_slist_free_full(list, (GDestroyNotify)radio_info_free);
+		}
+	}
+
+	g_object_unref(db);
 }
 
 static void
@@ -1849,6 +2030,10 @@ change_radio(XmrWindow *window,
 
 	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), name);
 	xmr_window_get_playlist(window);
+
+	xmr_settings_set_radio(priv->settings, name, (url == NULL ? "" : url));
+
+	g_signal_emit(window, signals[RADIO_CHANGED], 0, name, url);
 }
 
 static gboolean
@@ -1915,4 +2100,41 @@ is_text_empty(const gchar *text)
 	}
 
 	return TRUE;
+}
+
+static gchar *
+radio_logo_url_to_uri(RadioInfo *radio)
+{
+	gchar *uri = NULL;
+
+	g_return_val_if_fail(radio != NULL, NULL);
+
+	uri = g_strdup_printf("%s/%s",
+				xmr_radio_icon_dir(),
+				g_path_get_basename(radio->logo)
+				);
+
+	return uri;
+}
+
+static gboolean
+on_delete_event(XmrWindow *window,
+			GdkEvent *event,
+			gpointer data)
+{
+	xmr_window_quit(window);
+
+	return TRUE;
+}
+
+void
+xmr_window_quit(XmrWindow *window)
+{
+	gint x, y;
+
+	gtk_window_get_position(GTK_WINDOW(window), &x, &y);
+
+	xmr_settings_set_window_pos(window->priv->settings, x, y);
+
+	gtk_widget_destroy(GTK_WIDGET(window));
 }

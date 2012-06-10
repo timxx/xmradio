@@ -52,10 +52,24 @@ list_file(const gchar *folder,
 const gchar *
 xmr_config_dir();
 
+/**
+ * radio album cover image dir
+ */
+const gchar *
+xmr_radio_icon_dir();
+
 void
 xmr_message(GtkWidget *parent,
 			const gchar *message,
 			const gchar *title);
+
+/**
+ * write @data to @file
+ */
+gint
+write_memory_to_file(const gchar *file,
+			const gpointer data,
+			gint len);
 
 G_END_DECLS
 

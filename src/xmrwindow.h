@@ -55,7 +55,8 @@ struct _XmrWindowClass
 				SongInfo *new_track);
 
 	void (*radio_changed)(XmrWindow *window,
-				RadioInfo *new_radio);
+				const gchar *name,
+				const gchar *url);
 };
 
 GType		xmr_window_get_type();
@@ -72,6 +73,9 @@ xmr_window_pause(XmrWindow *window);
 
 SongInfo *
 xmr_window_get_current_song(XmrWindow *window);
+
+void
+xmr_window_quit(XmrWindow *window);
 
 G_END_DECLS
 

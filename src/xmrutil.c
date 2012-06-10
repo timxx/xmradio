@@ -21,6 +21,7 @@
 #include "config.h"
 
 static gchar _config_dir[256] = { 0 };
+static gchar _cover_dir[256] = { 0 };
 
 GdkPixbuf *
 gdk_pixbuf_from_memory(const gchar *buffer, gint len)
@@ -87,9 +88,26 @@ xmr_config_dir()
 					"%s/%s",
 					g_get_user_config_dir(),
 					PACKAGE);
+		g_mkdir_with_parents(_config_dir, 0755);
 	}
 	
 	return _config_dir;
+}
+
+const gchar *
+xmr_radio_icon_dir()
+{
+	if (_cover_dir[0] == 0)
+	{
+		g_snprintf(_cover_dir, 256,
+					"%s/%s/radio/icons",
+					g_get_user_config_dir(),
+					PACKAGE);
+
+		g_mkdir_with_parents(_cover_dir, 0755);
+	}
+	
+	return _cover_dir;
 }
 
 void
@@ -109,4 +127,23 @@ xmr_message(GtkWidget *parent,
 	gtk_window_set_title(GTK_WINDOW(dialog), title);
 	gtk_dialog_run(GTK_DIALOG(dialog));
 	gtk_widget_destroy(dialog);
+}
+
+gint
+write_memory_to_file(const gchar *file,
+			const gpointer data,
+			gint len)
+{
+	FILE *fp;
+	gint result = -1;
+
+	fp = fopen(file, "wb");
+	if (fp == NULL)
+		return -1;
+
+	result = fwrite(data, 1, len, fp);
+
+	fclose(fp);
+
+	return result;
 }
