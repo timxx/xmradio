@@ -13,5 +13,7 @@
 #define VERSION "@version@"
 #define SKINDIR "@skindir@"
 #define UIDIR	"@uidir@"
+#define PLUGIN_DIR "@plugindir@"
+#define PLUGIN_DATA_DIR "@plugindatadir@"
 
 #endif /* __CONFIG_H__ */
