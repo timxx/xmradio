@@ -57,12 +57,14 @@ set(XMRADIO_CORE_SOURCES
 set(XMRPLAYER_SOURCES
 	xmrplayer.c
 	${CMAKE_BINARY_DIR}/xmrmarshal.c
+	xmrdebug.c
 )
 
 set(XMRSKIN_SOURCES
 	xmrskin.c
 	minizip/ioapi.c
 	minizip/unzip.c
+	xmrdebug.c
 )
 
 include_directories(${GTK3_INCLUDE_DIRS})
@@ -86,6 +88,7 @@ add_library(xmrskin SHARED ${XMRSKIN_SOURCES})
 target_link_libraries(xmrskin
 	${ZLIB_LIBRARIES}
 	${GDKPIXBUF_LIBRARIES}
+	${LIBXML_LIBRARIES}
 )
 
 add_library(xmradio-core SHARED ${XMRADIO_CORE_SOURCES})

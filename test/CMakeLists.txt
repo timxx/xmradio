@@ -10,25 +10,10 @@ include_directories(${GST-PLUGIN_INCLUDE_DIRS})
 add_executable(testlibxmrservice testlibxmrservice.c)
 target_link_libraries(testlibxmrservice xmrservice ${GOBJECT_LIBRARIES})
 
-add_executable(testxmrskin testxmrskin.c
-	../src/xmrskin.c
-	../src/xmrdebug.c
-	../src/xmrutil.c
-	../src/minizip/ioapi.c
-	../src/minizip/unzip.c)
+add_executable(testxmrskin testxmrskin.c)
 
-target_link_libraries(testxmrskin ${LIBXML_LIBRARIES}
-	${GOBJECT_LIBRARIES}
-	${GDKPIXBUF_LIBRARIES}
-	${GTK3_LIBRARIES})
+target_link_libraries(testxmrskin xmrskin)
 
-add_executable(testxmrplayer testxmrplayer.c
-	../src/xmrplayer.c
-	../src/xmrdebug.c
-	${CMAKE_BINARY_DIR}/xmrmarshal.c
-	)
+add_executable(testxmrplayer testxmrplayer.c)
 
-target_link_libraries(testxmrplayer ${GOBJECT_LIBRARIES}
-	${GSTREAMER_LIBRARIES}
-	${GST-PLUGIN_LIBRARIES}
-	)
+target_link_libraries(testxmrplayer xmrplayer)

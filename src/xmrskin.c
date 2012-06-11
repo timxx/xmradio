@@ -22,7 +22,6 @@
 #include "xmrskin.h"
 #include "minizip/unzip.h"
 #include "xmrdebug.h"
-#include "xmrutil.h"
 
 G_DEFINE_TYPE(XmrSkin, xmr_skin, G_TYPE_OBJECT);
 
@@ -102,6 +101,27 @@ static void xmr_skin_init(XmrSkin *skin)
 	priv->doc = NULL;
 	priv->zfile = NULL;
 	priv->skin_info = g_new0(SkinInfo, 1);
+}
+
+static GdkPixbuf *
+gdk_pixbuf_from_memory(const gchar *buffer, gint len)
+{
+	GdkPixbuf *pixbuf = NULL;
+	GdkPixbufLoader *loader;
+
+	loader = gdk_pixbuf_loader_new();
+    if (loader == NULL)
+        return NULL;
+
+    if (!gdk_pixbuf_loader_write(loader, buffer, len, NULL))
+		return NULL;
+
+    // forces the data to be parsed by the loader
+    gdk_pixbuf_loader_close(loader, NULL);
+
+    pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
+
+	return pixbuf;
 }
 
 XmrSkin* xmr_skin_new()
