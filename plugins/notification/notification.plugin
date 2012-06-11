@@ -1,0 +1,8 @@
+[Plugin]
+Module=notification
+IAge=2
+Name=Notification
+Description=Notification popups
+Authors=Weitian Leung
+Copyright=Copyright © 2012 Weitian Leung<weitianleung@gmail.com>
+Website=https://github.com/timxx/xmradio
