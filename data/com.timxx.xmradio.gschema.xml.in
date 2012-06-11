@@ -6,7 +6,7 @@
 			<_description>The last window position</_description>
 		</key>
 		<key name="theme" type="s">
-			<default>''</default>
+			<default>'pure'</default>
 			<_summary>UI theme</_summary>
 			<_description>Set null or leave empty to use gtk theme</_description>
 		</key>
