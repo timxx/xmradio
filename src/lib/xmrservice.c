@@ -63,7 +63,7 @@ post_url_data(XmrService *xs, const gchar *url, GString *post_data, GString *dat
  * parse login status data
  */
 static gint
-parse_login_status(XmrService *xs, GString *data);
+parse_login_status(XmrService *xs, GString *data, gchar **message);
 
 static xmlNodePtr
 xml_first_child(xmlNodePtr root, const xmlChar *child);
@@ -218,7 +218,8 @@ XmrService* xmr_service_new()
 gint
 xmr_service_login(XmrService *xs,
 			const gchar *usr,
-			const gchar *pwd
+			const gchar *pwd,
+			gchar **message
 			)
 {
 	GString *data;
@@ -241,7 +242,7 @@ xmr_service_login(XmrService *xs,
 		if (post_url_data(xs, XMR_LOGIN_URL, post_data, data) != CURLE_OK)
 			break;
 
-		result = parse_login_status(xs, data);
+		result = parse_login_status(xs, data, message);
 	}
 	while(0);
 
@@ -413,7 +414,7 @@ post_url_data(XmrService *xs, const gchar *url, GString *post_data, GString *dat
 }
 
 static gint
-parse_login_status(XmrService *xs, GString *data)
+parse_login_status(XmrService *xs, GString *data, gchar **message)
 {
 	gboolean result = 1;
 	xmlDocPtr doc = NULL;
@@ -433,12 +434,22 @@ parse_login_status(XmrService *xs, GString *data)
 		if (node == NULL)
 			break;
 
-		 child = xml_first_child(node, BAD_CAST "status");
-		 if (child == NULL)
+		if (message)
+		{
+			child = xml_first_child(node, BAD_CAST "message");
+			if (child)
+			{
+				value = xmlNodeGetContent(child);
+				*message = value;
+			}
+		}
+
+		child = xml_first_child(node, BAD_CAST "status");
+		if (child == NULL)
 			break;
 
-		 value = xmlNodeGetContent(child);
-		 if (value == NULL)
+		value = xmlNodeGetContent(child);
+		if (value == NULL)
 			break;
 		 
 		result = g_strtod((gchar *)value, NULL);

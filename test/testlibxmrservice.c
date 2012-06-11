@@ -36,6 +36,7 @@ int main(int argc, char **argv)
 	gint result;
 	const gchar *name, *pwd;
 	GList *list = NULL;
+	gchar *message = NULL;
 
 	setlocale(LC_ALL, "");
 	g_type_init();
@@ -48,7 +49,7 @@ int main(int argc, char **argv)
 	if (name && pwd)
 	{
 		g_print("Login with user: %s\n", name);
-		result = xmr_service_login(XMR_SERVICE(service), name, pwd);
+		result = xmr_service_login(XMR_SERVICE(service), name, pwd, &message);
 	}
 	else
 	{
@@ -71,7 +72,8 @@ int main(int argc, char **argv)
 
 		result = xmr_service_login(XMR_SERVICE(service),
 				usr_name,
-				usr_pwd
+				usr_pwd,
+				&message
 				);
 	}
 
@@ -83,6 +85,8 @@ int main(int argc, char **argv)
 	{
 		g_print("login ok\n");
 	}
+
+	g_free(message);
 
 	g_print("Getting private track list...\n\n");
 	result = xmr_service_get_track_list(XMR_SERVICE(service), &list);

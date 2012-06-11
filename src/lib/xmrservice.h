@@ -54,11 +54,13 @@ XmrService*	xmr_service_new();
  * login server
  * @param usr user name (email)
  * @param pwd password
+ * @param message returned
  */
 gint
 xmr_service_login(XmrService *xs,
 			const gchar *usr,
-			const gchar *pwd
+			const gchar *pwd,
+			gchar **message
 			);
 
 gboolean
