@@ -10,7 +10,9 @@ Build-Depends: debhelper (>= 8.0.0), cmake,
          libgstreamer-plugins-base0.10-dev,
          libsqlite3-dev, libdbus-glib-1-dev,
          libpeas-dev, libcurl4-openssl-dev,
-         libxml2-dev, libnotify-dev
+         libxml2-dev, libnotify-dev,
+         intltool (>= 0.35.0),
+         pkg-config, cdbs, gnome-common
 
 Package: xmradio
 Architecture: any
