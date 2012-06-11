@@ -35,6 +35,8 @@ typedef struct
 {
 	PeasExtensionBase parent;
 
+	NotifyNotification *notification;
+
 }XmrNotificationPlugin;
 
 typedef struct
@@ -44,24 +46,27 @@ typedef struct
 
 XMR_DEFINE_PLUGIN(XMR_TYPE_NOTIFICATION_PLUGIN, XmrNotificationPlugin, xmr_notification_plugin)
 
+#define NOTIFY_TIMEOUT 3000
+
 static void
-track_notification(SongInfo *info,
+track_notification(XmrNotificationPlugin *plugin,
+			SongInfo *info,
 			gint timeout)
 {
-	NotifyNotification *notification;
 	gchar *summary, *body;
 
-	g_return_if_fail(info != NULL);
+	g_return_if_fail(info != NULL && plugin->notification != NULL);
 
 	summary = info->song_name;
 	body = info->artist_name;
 
-	notification = notify_notification_new(summary, body, "xmradio");
-	notify_notification_set_timeout(notification, timeout);
+	notify_notification_clear_hints(plugin->notification);
 
-	notify_notification_show(notification, NULL);
+	notify_notification_update(plugin->notification, summary, body, "xmradio");
+	
+	notify_notification_set_timeout(plugin->notification, timeout);
 
-	g_object_unref(notification);
+	notify_notification_show(plugin->notification, NULL);
 }
 
 static void
@@ -69,7 +74,7 @@ track_changed(XmrWindow *window,
 			SongInfo *new_track,
 			XmrNotificationPlugin *plugin)
 {
-	track_notification(new_track, NOTIFY_EXPIRES_DEFAULT);
+	track_notification(plugin, new_track, NOTIFY_TIMEOUT);
 }
 
 static void
@@ -106,12 +111,17 @@ impl_deactivate(PeasActivatable *activatable)
 
 		g_object_unref(window);
 	}
+
+	if (plugin->notification)
+		notify_notification_close(plugin->notification, NULL);
 }
 
 static void
 xmr_notification_plugin_init (XmrNotificationPlugin *plugin)
 {
 	notify_init("xmrario-notification-plugin");
+
+	plugin->notification = notify_notification_new("", "", "xmradio");
 }
 
 G_MODULE_EXPORT void
