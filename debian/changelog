@@ -1,3 +1,15 @@
+xmradio (0.1.0~alpha1-precise) precise; urgency=low
+
+  * Alpha 1 fix no data depends
+
+ -- Weitian Leung <weitianleung@gmail.com>  Mon, 11 Jun 2012 20:23:43 +0800
+
+xmradio (0.1-0~alpha1-oneiric) oneiric; urgency=low
+
+  * Alpha 1 for oneiric
+
+ -- Weitian Leung <weitianleung@gmail.com>  Mon, 11 Jun 2012 20:21:28 +0800
+ 
 xmradio (0.1-20120611~alpha1-precise) precise; urgency=low
 
   * Alpha 1 repackage
