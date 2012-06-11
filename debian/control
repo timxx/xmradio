@@ -1,0 +1,60 @@
+Source: xmradio
+Section: utils
+Priority: optional
+Maintainer: Weitian Leung <weitianleung@gmail.com>
+Standards-Version: 3.9.2
+Homepage: https://github.com/timxx/xmradio
+Build-Depends: debhelper (>= 8.0.0), cmake,
+         libgtk-3-dev, libglib2.0-dev, zlib1g-dev,
+         libgdk-pixbuf2.0-dev, libgstreamer0.10-dev,
+         libgstreamer-plugins-base0.10-dev,
+         libsqlite3-dev, libdbus-glib-1-dev,
+         libpeas-dev, libcurl4-openssl-dev,
+         libxml2-dev, libnotify-dev
+
+Package: xmradio
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         libxmradio-core,
+         dbus,
+         gstreamer0.10-plugins-base,
+         gnome-icon-theme,
+         gstreamer0.10-x
+Recommends: xmradio-plugins
+Description: Xia Mi Radio for Linux
+ xmradio is a tiny Internet Xia Mi Radio client for Linux, which
+ supports many radio style, skin builtin and many other features.
+
+Package: xmradio-data
+Architecture: all
+Depends: ${misc:Depends}
+Recommends: xmradio
+Description: data files for xmradio
+ Data files such as icons ui files etc. for xmradio
+
+Package: libxmradio-core
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: xmradio shell core
+ This package contains the core support library used by xmradio
+
+Package: xmradio-plugins
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         xmradio,
+         libxmradio-core
+Description: plugins for xmradio
+ plugins for xmradio
+
+Package: xmradio-dev
+Section: libdevel
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         libxmradio-core,
+         libgtk-3-dev,
+         libgstreamer0.10-dev
+Description: development files for xmradio
+ This package contains the development headers and libraries needed to 
+ build xmradio plugins.
+
