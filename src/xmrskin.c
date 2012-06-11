@@ -54,11 +54,11 @@ pos_str_to_ii(const gchar *str,
 			gint *x, gint *y);
 
 static xmlNodePtr
-xml_get_ui_node(XmrSkin *skin, SkinUi ui);
+xml_get_ui_node(XmrSkin *skin, const gchar *ui);
 
 static gboolean
 get_name_value(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			const gchar *attr,
 			gchar **value);
@@ -300,7 +300,7 @@ pos_str_to_ii(const gchar *str,
 }
 
 static xmlNodePtr
-xml_get_ui_node(XmrSkin *skin, SkinUi ui)
+xml_get_ui_node(XmrSkin *skin, const gchar *ui)
 {
 	XmrSkinPrivate *priv;
 	xmlNodePtr root = NULL;
@@ -312,23 +312,14 @@ xml_get_ui_node(XmrSkin *skin, SkinUi ui)
 	if (root == NULL)
 		return NULL;
 
-	switch(ui)
-	{
-	case UI_MAIN:
-		child = xml_first_child(root, "main_window");
-		break;
-
-	default:
-		xmr_debug("Invalid ui");
-		break;
-	}
+	child = xml_first_child(root, ui);
 
 	return child;
 }
 
 static gboolean
 get_name_value(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			const gchar *attr,
 			gchar **value)
@@ -366,7 +357,7 @@ get_name_value(XmrSkin *skin,
 
 gboolean
 xmr_skin_get_position(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			gint *x, gint *y)
 {
@@ -386,7 +377,7 @@ xmr_skin_get_position(XmrSkin *skin,
 
 GdkPixbuf *
 xmr_skin_get_image(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name)
 {
 	XmrSkinPrivate *priv;
@@ -443,7 +434,7 @@ xmr_skin_get_image(XmrSkin *skin,
 
 gboolean
 xmr_skin_get_color(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			gchar **color)
 {
@@ -452,7 +443,7 @@ xmr_skin_get_color(XmrSkin *skin,
 
 gboolean
 xmr_skin_get_font(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			gchar **font)
 {

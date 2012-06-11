@@ -78,10 +78,7 @@ xmr_skin_info_new();
 void
 xmr_skin_info_free(SkinInfo *info);
 
-typedef enum
-{
-	UI_MAIN
-}SkinUi;
+#define UI_MAIN "main_window"
 
 /**
  * fill skin info to @info
@@ -94,7 +91,7 @@ xmr_skin_get_info(XmrSkin *skin, SkinInfo *info);
  */
 gboolean
 xmr_skin_get_position(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			gint *x, gint *y);
 
@@ -105,7 +102,7 @@ xmr_skin_get_position(XmrSkin *skin,
  */
 GdkPixbuf *
 xmr_skin_get_image(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name);
 
 /**
@@ -113,7 +110,7 @@ xmr_skin_get_image(XmrSkin *skin,
  */
 gboolean
 xmr_skin_get_color(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			gchar **color);
 
@@ -122,7 +119,7 @@ xmr_skin_get_color(XmrSkin *skin,
  */
 gboolean
 xmr_skin_get_font(XmrSkin *skin,
-			SkinUi ui,
+			const gchar *ui,
 			const gchar *name,
 			gchar **font);
 
