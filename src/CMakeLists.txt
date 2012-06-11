@@ -21,6 +21,21 @@ execute_process(COMMAND ${GLIB_GENMARSHAL} --header
 	OUTPUT_FILE xmrmarshal.h
 )
 
+set(XMRADIO_HEADERS
+	xmrapp.h
+	xmrbutton.h
+	xmrdb.h
+	xmrdebug.h
+	xmrplayer.h
+	xmrpluginengine.h
+	xmrradio.h
+	xmrradiochooser.h
+	xmrsettings.h
+	xmrskin.h
+	xmrutil.h
+	xmrwindow.h
+)
+
 set(XMRADIO_SOURCES
 	main.c
 )
@@ -89,7 +104,11 @@ target_link_libraries(xmradio-core
 add_executable(xmradio ${XMRADIO_SOURCES})
 target_link_libraries(xmradio xmradio-core)
 
+configure_file(xmradio.pc.in ${CMAKE_CURRENT_BINARY_DIR}/xmradio.pc)
+
 install(TARGETS xmrplayer LIBRARY DESTINATION ${libdir})
 install(TARGETS xmrskin LIBRARY DESTINATION ${libdir})
 install(TARGETS xmradio-core LIBRARY DESTINATION ${libdir})
 install(TARGETS xmradio DESTINATION ${prefix}/bin)
+install(FILES ${XMRADIO_HEADERS} DESTINATION ${includedir}/xmradio)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xmradio.pc DESTINATION "${libdir}/pkgconfig")
