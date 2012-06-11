@@ -48,7 +48,7 @@ static void	player_tick(XmrPlayer	*player,
 			gint64		 duration,
 			gpointer data)
 {
-	g_print("tick: %ld/%ld\n", elapsed, duration);
+	g_print("tick: %"G_GINT64_FORMAT"/%"G_GINT64_FORMAT"\n", elapsed, duration);
 }
 
 static void player_buffering(XmrPlayer *player,
