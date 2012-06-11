@@ -19,6 +19,9 @@
  */
 #include <glib/gi18n.h>
 #include <stdlib.h>
+#include <libpeas-gtk/peas-gtk-plugin-manager.h>
+#include <libpeas/peas-extension-set.h>
+#include <libpeas/peas-activatable.h>
 
 #include "xmrwindow.h"
 #include "xmrplayer.h"
@@ -33,6 +36,8 @@
 #include "xmrradiochooser.h"
 #include "xmrdb.h"
 #include "xmrmarshal.h"
+#include "xmrapp.h"
+#include "xmrpluginengine.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -116,6 +121,9 @@ struct _XmrWindowPrivate
 	 * switch to siren radio or not
 	 */
 	gboolean switch_radio;
+
+	XmrPluginEngine		*plugin_engine;
+	PeasExtensionSet	*extensions;
 };
 
 enum
@@ -126,7 +134,8 @@ enum
 	PROP_SKIN,
 	PROP_GTK_THEME,
 	PROP_MENU_POPUP,
-	PROP_LAYOUT
+	PROP_LAYOUT,
+	PROP_PLAYLIST
 };
 
 enum
@@ -350,6 +359,17 @@ on_delete_event(XmrWindow *window,
 			gpointer data);
 
 static void
+on_extension_added(PeasExtensionSet *set,
+		    PeasPluginInfo   *info,
+		    PeasActivatable  *activatable,
+		    gpointer data);
+
+static void
+on_extension_removed(PeasExtensionSet *set,
+		      PeasPluginInfo   *info,
+			  PeasActivatable  *activatable,
+			  gpointer data);
+static void
 install_properties(GObjectClass *object_class)
 {
 	g_object_class_install_property(object_class,
@@ -398,6 +418,13 @@ install_properties(GObjectClass *object_class)
 					"Popup menu",
 					"Popup menu",
 					G_TYPE_OBJECT,
+					G_PARAM_READABLE));
+
+	g_object_class_install_property(object_class,
+				PROP_MENU_POPUP,
+				g_param_spec_pointer("playlist",
+					"playlist",
+					"Current playlist",
 					G_PARAM_READABLE));
 }
 
@@ -494,6 +521,14 @@ xmr_window_init(XmrWindow *window)
 	priv->pwd = NULL;
 	priv->switch_radio = FALSE;
 	priv->pb_cover = NULL;
+	priv->plugin_engine = xmr_plugin_engine_new();
+	priv->extensions = peas_extension_set_new(PEAS_ENGINE(priv->plugin_engine),
+						   PEAS_TYPE_ACTIVATABLE,
+						   "object", window,
+						   NULL);
+	peas_extension_set_foreach(priv->extensions,
+                              (PeasExtensionSetForeachFunc)on_extension_added,
+                              NULL);
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -545,6 +580,12 @@ xmr_window_init(XmrWindow *window)
 
 	g_signal_connect_after(window, "delete-event", G_CALLBACK(on_delete_event), NULL);
 
+	g_signal_connect(priv->extensions, "extension-added",
+			  G_CALLBACK(on_extension_added), NULL);
+
+	g_signal_connect(priv->extensions, "extension-removed",
+			  G_CALLBACK(on_extension_removed), NULL);
+
 	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 
 	load_settings(window);
@@ -593,6 +634,14 @@ xmr_window_dispose(GObject *obj)
 		g_object_unref(priv->pb_cover);
 		priv->pb_cover = NULL;
 	}
+
+	if (priv->extensions != NULL)
+	{
+		g_object_unref (priv->extensions);
+		priv->extensions = NULL;
+	}
+
+	peas_engine_garbage_collect(PEAS_ENGINE(priv->plugin_engine));
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->dispose(obj);
 }
@@ -659,6 +708,10 @@ xmr_window_get_property(GObject *object,
 
 	case PROP_MENU_POPUP:
 		g_value_set_object(value, priv->popup_menu);
+		break;
+
+	case PROP_PLAYLIST:
+		g_value_set_pointer(value, priv->playlist);
 		break;
 
 	default:
@@ -749,7 +802,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_PLAY:
-		xmr_player_play(priv->player);
+		xmr_window_play(window);
 		break;
 
 	case BUTTON_PAUSE:
@@ -783,6 +836,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 	case BUTTON_LYRIC:
 	case BUTTON_DOWNLOAD:
 	{
+		gint ret;
 		SongInfo *song = xmr_window_get_current_song(window);
 		gchar *command = NULL;
 		if (song == NULL)
@@ -798,7 +852,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		if (command == NULL)
 			g_error("No more memory\n");
 
-		system(command);
+		ret = system(command);
 
 		g_free(command);
 	}
@@ -1129,11 +1183,18 @@ set_skin(XmrWindow *window, const gchar *skin)
 			set_cover_image(window, priv->pb_cover);
 
 		// save to settings
-		xmr_settings_set_theme(priv->settings, skin);
-		if (priv->skin)
-			g_free(priv->skin);
+		{
+			SkinInfo *info = xmr_skin_info_new();
+			if (info == NULL)
+				g_error("No more memory !");
+			xmr_skin_get_info(xmr_skin, info);
+			xmr_settings_set_theme(priv->settings, info->name);
 
-		priv->skin = g_strdup(skin);
+			if (priv->skin)
+				g_free(priv->skin);
+
+			priv->skin = g_strdup(info->name);
+		}
 
 		gtk_widget_queue_draw(GTK_WIDGET(window));
 		g_signal_emit(window, signals[THEME_CHANGED], 0, skin);
@@ -1348,15 +1409,15 @@ thread_login(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 	gint result;
+	gchar *login_message = NULL;
 
-	result = xmr_service_login(priv->service, priv->usr, priv->pwd);
+	result = xmr_service_login(priv->service, priv->usr, priv->pwd, &login_message);
+
 	if (result != 0)
 	{
 		gchar *message;
 
-		message = g_strdup_printf(_("Login failed:\n%s"),
-						xmr_service_get_error_str(result)
-						);
+		message = g_strdup_printf(_("Login failed:\n%s"), login_message);
 
 		if (message == NULL){
 			g_error("No more memory??\n");
@@ -1366,18 +1427,22 @@ thread_login(XmrWindow *window)
 		xmr_message(GTK_WIDGET(window), message, _("Login Status"));
 		gdk_threads_leave();
 		g_free(message);
+
+		change_radio(window, "", priv->playlist_url);
 	}
 	else
 	{
 		xmr_settings_set_usr_info(priv->settings, priv->usr, priv->pwd);
 		// switch to siren radio
-		if (priv->switch_radio)
+		if (priv->switch_radio || priv->playlist_url == NULL)
 		{
 			gdk_threads_enter();
 			change_radio(window, _("私人电台"), NULL);
 			gdk_threads_leave();
 		}
 	}
+	xmr_debug("login status: %s", login_message);
+	g_free(login_message);
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
 
@@ -1660,7 +1725,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 
 	if (g_strcmp0(menu, _("_Gtk Theme")) == 0)
 	{
-		set_gtk_theme(window);
+		//set_gtk_theme(window);
 	}
 	else if(g_strcmp0(menu, GTK_STOCK_PREFERENCES) == 0)
 	{
@@ -1727,6 +1792,12 @@ load_settings(XmrWindow *window)
 
 	load_skin(window);
 
+	xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
+
+	xmr_settings_get_window_pos(priv->settings, &x, &y);
+	if (x !=- 1 && y != -1)
+		gtk_window_move(GTK_WINDOW(window), x, y);
+
 	xmr_settings_get_usr_info(priv->settings, &priv->usr, &priv->pwd);
 	if (xmr_settings_get_auto_login(priv->settings))
 	{
@@ -1736,20 +1807,20 @@ load_settings(XmrWindow *window)
 			xmr_window_login(window);
 		}
 	}
-
-	xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
-
-	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), radio_name);
-	if (radio_url && *radio_url != 0)
-		priv->playlist_url = g_strdup(radio_url);
 	else
-		priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
+	{
+		if (radio_url && *radio_url != 0)
+		{
+			priv->playlist_url = g_strdup(radio_url);
+			gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), radio_name);
+		}
+		else
+		{
+			priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
+		}
 
-	xmr_settings_get_window_pos(priv->settings, &x, &y);
-	if (x !=- 1 && y != -1)
-		gtk_window_move(GTK_WINDOW(window), x, y);
-
-	xmr_window_get_playlist(window);
+		xmr_window_get_playlist(window);
+	}
 
 	load_radio(window);
 
@@ -1775,7 +1846,7 @@ load_skin(XmrWindow *window)
 	list_file(SKINDIR, FALSE, append_skin, &priv->skin_list);
 	
 	// always set gtk theme first
-	set_gtk_theme(window);
+	// set_gtk_theme(window);
 
 	if (g_list_length(priv->skin_list) > 0)
 	{
@@ -1789,7 +1860,7 @@ load_skin(XmrWindow *window)
 			skin_info->data = window;
 			item = append_skin_to_menu(window, skin_info);
 
-			if (no_skin_match && g_strcmp0(skin_info->file, priv->skin) == 0)
+			if (no_skin_match && g_strcmp0(skin_info->name, priv->skin) == 0)
 			{
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
 	
@@ -2018,6 +2089,11 @@ init_pref_window(XmrWindow *window,
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
 				gtk_label_new(_("Radio")));
+
+	widget = peas_gtk_plugin_manager_new(NULL);
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
+				gtk_label_new(_("Plugins")));
 }
 
 static void
@@ -2186,4 +2262,22 @@ xmr_window_quit(XmrWindow *window)
 	xmr_settings_set_window_pos(window->priv->settings, x, y);
 
 	gtk_widget_destroy(GTK_WIDGET(window));
+}
+
+static void
+on_extension_added(PeasExtensionSet *set,
+		    PeasPluginInfo   *info,
+		    PeasActivatable  *activatable,
+		    gpointer data)
+{
+	peas_activatable_activate(activatable);
+}
+
+static void
+on_extension_removed(PeasExtensionSet *set,
+		      PeasPluginInfo   *info,
+		      PeasActivatable  *activatable,
+		      gpointer data)
+{
+	peas_activatable_deactivate(activatable);
 }
