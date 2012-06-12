@@ -16,6 +16,8 @@ add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 option(NLS	"Native language support"  ON)
+option(DEBUG "Generate debug information" OFF)
+option(WARN_AS_ERROR "Warning as error" ON)
 
 include(CheckIncludeFiles)
 include(FindPkgConfig)
@@ -61,7 +63,15 @@ set(plugindir ${libdir}/${package}/plugins)
 set(plugindatadir ${pkgdatadir}/plugins)
 set(PLUGIN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/plugins)
 
-#set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
+if (WARN_AS_ERROR)
+	set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
+endif(WARN_AS_ERROR)
+
+if (DEBUG)
+	set(CMAKE_C_FLAGS "-g ${CMAKE_C_FLAGS}")
+else (DEBUG)
+	set(CMAKE_C_FLAGS "-s -O2 ${CMAKE_C_FLAGS}")
+endif(DEBUG)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
