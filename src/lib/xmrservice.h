@@ -66,6 +66,9 @@ xmr_service_login(XmrService *xs,
 gboolean
 xmr_service_is_logged_in(XmrService *xs);
 
+void
+xmr_service_logout(XmrService *xs);
+
 /**
  * get private list
  */

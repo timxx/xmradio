@@ -30,6 +30,7 @@
 
 #define XMR_USER_AGENT	"XiaMiRadio/0.1"
 #define XMR_LOGIN_URL	"http://www.xiami.com/kuang/login"
+#define XMR_LOGOUT_URL	"http://www.xiami.com/member/logout"
 
 G_DEFINE_TYPE(XmrService, xmr_service, G_TYPE_OBJECT);
 
@@ -264,6 +265,23 @@ xmr_service_is_logged_in(XmrService *xs)
 	g_return_val_if_fail(xs != NULL, FALSE);
 
 	return xs->priv->logged;
+}
+
+void
+xmr_service_logout(XmrService *xs)
+{
+	GString *data;
+	g_return_if_fail(xs != NULL);
+
+	// not logged in, ignore
+	if (!xs->priv->logged)
+		return ;
+
+	data = g_string_new("");
+
+	xmr_service_get_url_data(xs, XMR_LOGOUT_URL, data);
+
+	g_string_free(data, TRUE);
 }
 
 gint
