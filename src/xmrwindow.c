@@ -1336,14 +1336,16 @@ thread_get_playlist(XmrWindow *window)
 		if (g_list_length(priv->playlist) > 0)
 		{
 			SongInfo *song = (SongInfo *)priv->playlist->data;
+
+			// should open & play in enter .. leave ?
+			gdk_threads_enter();
 			xmr_player_open(priv->player, song->location, NULL);
 			xmr_player_play(priv->player);
 
-			gdk_threads_enter();
 			xmr_window_set_track_info(window);
-			gdk_threads_leave();
 
 			g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
+			gdk_threads_leave();
 		}
 	}
 
@@ -1380,7 +1382,9 @@ thread_get_cover_image(XmrWindow *window)
 			break;
 		}
 
+		gdk_threads_enter();
 		pixbuf = gdk_pixbuf_from_memory(data->str, data->len);
+		gdk_threads_leave();
 		if (pixbuf == NULL)
 		{
 			xmr_debug("gdk_pixbuf_from_memory failed");
@@ -1425,10 +1429,10 @@ thread_login(XmrWindow *window)
 
 		gdk_threads_enter();
 		xmr_message(GTK_WIDGET(window), message, _("Login Status"));
-		gdk_threads_leave();
-		g_free(message);
-
 		change_radio(window, "", priv->playlist_url);
+		gdk_threads_leave();
+
+		g_free(message);
 	}
 	else
 	{
@@ -1499,17 +1503,20 @@ thread_update_radio_list(XmrWindow *window)
 				radio_info->logo = uri;
 
 				// save cover to local file
+				gdk_threads_enter();
 				write_memory_to_file(uri, data->str, data->len);
+				gdk_threads_leave();
 
 				// save to database
 				xmr_db_add_radio(db, radio_info, radio_style[i]);
 
+				gdk_threads_enter();
 				// append to chooser
 				xmr_radio = xmr_radio_new_with_info(uri,
 							radio_info->name, radio_info->url);
 
-				xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[i]),
-							xmr_radio);
+				xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[i]), xmr_radio);
+				gdk_threads_leave();
 			}
 
 			g_string_free(data, TRUE);
