@@ -24,6 +24,7 @@
 #include <curl/curl.h>
 #include <gst/gst.h>
 #include <dbus/dbus.h>
+#include <dbus/dbus-glib-lowlevel.h>
 
 #include "xmrapp.h"
 #include "config.h"

@@ -202,6 +202,9 @@ on_mouse_event(XmrRadio *radio, GdkEvent *event, gpointer data)
     case GDK_LEAVE_NOTIFY:
         gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(radio)), NULL);
         break;
+
+	default:
+		break;
     }
 
 	return FALSE;

@@ -19,6 +19,7 @@
  */
 
 #include <dbus/dbus.h>
+#include <dbus/dbus-glib-lowlevel.h>
 
 #include "xmrapp.h"
 #include "xmrwindow.h"
@@ -179,6 +180,9 @@ dbus_signal_filter(DBusConnection *connection,
 
 			case ActionNext:
 				xmr_window_play_next(window);
+				break;
+
+			case ActionNone:
 				break;
 			}
 		}

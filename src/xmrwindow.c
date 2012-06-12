@@ -500,7 +500,6 @@ xmr_window_init(XmrWindow *window)
 {
 	XmrWindowPrivate *priv;
 	gint i;
-	gchar *path = NULL;
 
 	window->priv = G_TYPE_INSTANCE_GET_PRIVATE(window, XMR_TYPE_WINDOW, XmrWindowPrivate);
 	priv = window->priv;
@@ -786,7 +785,6 @@ on_button_press(XmrWindow *window, GdkEventButton *event, gpointer data)
 static void
 on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 {
-	XmrButton *button = XMR_BUTTON(widget);
 	XmrWindow *window = XMR_WINDOW(gtk_widget_get_toplevel(widget));
 	XmrWindowPrivate *priv = window->priv;
 	glong id = (glong)data;
@@ -853,6 +851,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 			g_error("No more memory\n");
 
 		ret = system(command);
+		xmr_debug("call system: %d", ret);
 
 		g_free(command);
 	}
@@ -1732,7 +1731,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 
 	if (g_strcmp0(menu, _("_Gtk Theme")) == 0)
 	{
-		//set_gtk_theme(window);
+		set_gtk_theme(window);
 	}
 	else if(g_strcmp0(menu, GTK_STOCK_PREFERENCES) == 0)
 	{
@@ -2002,18 +2001,25 @@ hex_color_to_rgba(const gchar *hex_color,
 {
 	gfloat value = 0;
 	const gchar *p = hex_color;
+	gint a, b;
 
 	p++;	// skip '#'
 	// r
-	value = hex_to_int(*p++) * 16 + hex_to_int(*p++);
+	a = *p++;
+	b = *p++;
+	value = hex_to_int(a) * 16 + hex_to_int(b);
 	rgba->red = value/255.0;
 
 	// g
-	value = hex_to_int(*p++) * 16 + hex_to_int(*p++);
+	a = *p++;
+	b = *p++;
+	value = hex_to_int(a) * 16 + hex_to_int(b);
 	rgba->green = value/255.0;
 
 	// b
-	value = hex_to_int(*p++) * 16 + hex_to_int(*p);
+	a = *p++;
+	b = *p;
+	value = hex_to_int(a) * 16 + hex_to_int(b);
 	rgba->blue = value/255.0;
 
 	// currently just ignore transparency

@@ -351,7 +351,6 @@ static gboolean
 init_pipeline(XmrPlayer *player, GError **error)
 {
 	XmrPlayerPrivate *priv = player->priv;
-	GstElement *sink;
 
 	priv->playbin = gst_element_factory_make ("playbin2", NULL);
 	if (priv->playbin == NULL)
@@ -588,7 +587,6 @@ static void
 xmr_player_init(XmrPlayer *player)
 {
 	XmrPlayerPrivate *priv;
-	gint i;
 
 	player->priv = G_TYPE_INSTANCE_GET_PRIVATE(player, XMR_TYPE_PLAYER, XmrPlayerPrivate);
 	priv = player->priv;

@@ -33,7 +33,7 @@ gdk_pixbuf_from_memory(const gchar *buffer, gint len)
     if (loader == NULL)
         return NULL;
 
-    if (!gdk_pixbuf_loader_write(loader, buffer, len, NULL))
+    if (!gdk_pixbuf_loader_write(loader, (const guchar *)buffer, len, NULL))
 		return NULL;
 
     // forces the data to be parsed by the loader

@@ -458,7 +458,7 @@ parse_login_status(XmrService *xs, GString *data, gchar **message)
 			if (child)
 			{
 				value = xmlNodeGetContent(child);
-				*message = value;
+				*message = (gchar *)value;
 			}
 		}
 

@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "../src/xmrskin.h"
+#include "../src/xmrdebug.h"
 
 static void
 print_skin_info(SkinInfo *info);

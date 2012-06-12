@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 		gchar usr_name[32], usr_pwd[32];
 
 		g_print("Enter username: ");
-		scanf("%s", usr_name);
+		result = scanf("%s", usr_name);
 		g_print("Enter password: ");
 
 		tcgetattr(STDIN_FILENO, &term);
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 		term.c_lflag &= ~ECHO;
 		tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
-		scanf("%s", usr_pwd);
+		result = scanf("%s", usr_pwd);
 
 		tcsetattr(STDIN_FILENO, TCSANOW, &term_orig);
 		g_print("\n");

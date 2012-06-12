@@ -113,7 +113,7 @@ gdk_pixbuf_from_memory(const gchar *buffer, gint len)
     if (loader == NULL)
         return NULL;
 
-    if (!gdk_pixbuf_loader_write(loader, buffer, len, NULL))
+    if (!gdk_pixbuf_loader_write(loader, (const guchar *)buffer, len, NULL))
 		return NULL;
 
     // forces the data to be parsed by the loader
@@ -217,11 +217,11 @@ fill_skin_info(XmrSkin *skin, const gchar *file)
 	}
 
 	priv->skin_info->file		= g_strdup(file);
-	priv->skin_info->version	= (gchar *)xml_get_prop(node, "version");
-	priv->skin_info->name		= (gchar *)xml_get_prop(node, "name");
-	priv->skin_info->author		= (gchar *)xml_get_prop(node, "author");
-	priv->skin_info->url		= (gchar *)xml_get_prop(node, "url");
-	priv->skin_info->email		= (gchar *)xml_get_prop(node, "email");
+	priv->skin_info->version	= (gchar *)xml_get_prop(node, BAD_CAST "version");
+	priv->skin_info->name		= (gchar *)xml_get_prop(node, BAD_CAST "name");
+	priv->skin_info->author		= (gchar *)xml_get_prop(node, BAD_CAST "author");
+	priv->skin_info->url		= (gchar *)xml_get_prop(node, BAD_CAST "url");
+	priv->skin_info->email		= (gchar *)xml_get_prop(node, BAD_CAST "email");
 
 	return TRUE;
 }
@@ -332,7 +332,7 @@ xml_get_ui_node(XmrSkin *skin, const gchar *ui)
 	if (root == NULL)
 		return NULL;
 
-	child = xml_first_child(root, ui);
+	child = xml_first_child(root, BAD_CAST ui);
 
 	return child;
 }
@@ -359,18 +359,18 @@ get_name_value(XmrSkin *skin,
 	if (root == NULL)
 		return FALSE;
 
-	child = xml_first_child(root, name);
+	child = xml_first_child(root, BAD_CAST name);
 	if (child == NULL)
 	{
 		xmr_debug("No such element: %s", name);
 		return FALSE;
 	}
 
-	xml_value = xml_get_prop(child, attr);
+	xml_value = xml_get_prop(child, BAD_CAST attr);
 	if (xml_value == NULL)
 		return FALSE;
 
-	*value = xml_value;
+	*value = (gchar *)xml_value;
 
 	return TRUE;
 }
@@ -418,17 +418,17 @@ xmr_skin_get_image(XmrSkin *skin,
 
 	if (name == NULL) /* get root node image */
 	{
-		image = xml_get_prop(root, "image");
+		image = xml_get_prop(root, BAD_CAST "image");
 	}
 	else
 	{
-		child = xml_first_child(root, name);
+		child = xml_first_child(root, BAD_CAST name);
 		if (child == NULL)
 		{
 			xmr_debug("No such element: %s", name);
 			return pixbuf;
 		}
-		image = xml_get_prop(child, "image");
+		image = xml_get_prop(child, BAD_CAST "image");
 	}
 
 	if (image == NULL)
@@ -439,7 +439,7 @@ xmr_skin_get_image(XmrSkin *skin,
 
 	do
 	{
-		if (unzip_get_file_buffer(priv->zfile, image, &buffer, &len) <= 0)
+		if (unzip_get_file_buffer(priv->zfile, (const gchar *)image, &buffer, &len) <= 0)
 			break;
 
 		pixbuf = gdk_pixbuf_from_memory(buffer, len);
