@@ -120,6 +120,10 @@ gdk_pixbuf_from_memory(const gchar *buffer, gint len)
     gdk_pixbuf_loader_close(loader, NULL);
 
     pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
+	if (pixbuf != NULL)
+		g_object_ref(pixbuf);
+
+	g_object_unref(loader);
 
 	return pixbuf;
 }
