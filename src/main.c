@@ -144,6 +144,11 @@ int main(int argc, char **argv)
 	gdk_threads_init();
 	curl_global_init(CURL_GLOBAL_ALL);
 
+	// this make our XmrRadio always works
+	g_object_set(gtk_settings_get_default(),
+				"gtk-button-images", TRUE,
+				NULL); 
+
 	app = xmr_app_new();
 
 	g_application_run(G_APPLICATION(app), argc, argv);
