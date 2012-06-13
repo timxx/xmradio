@@ -299,6 +299,9 @@ append_skin(const gchar *skin,
 static GtkWidget *
 append_skin_to_menu(XmrWindow *window, SkinInfo *info);
 
+static void
+append_skin_to_pref(XmrWindow *window, SkinInfo *info);
+
 /**
  * set @widget fg color by parse @color_str
  */
@@ -363,6 +366,9 @@ on_extension_added(PeasExtensionSet *set,
 		    PeasPluginInfo   *info,
 		    PeasActivatable  *activatable,
 		    gpointer data);
+
+static void
+on_combo_box_changed(GtkComboBox *widget, XmrWindow *window);
 
 static void
 on_extension_removed(PeasExtensionSet *set,
@@ -750,8 +756,9 @@ on_draw(XmrWindow *window, cairo_t *cr, gpointer data)
 {
 	XmrWindowPrivate *priv = window->priv;
 
-	if (priv->gtk_theme || priv->cs_bkgnd == NULL)
-		return FALSE;
+	if (priv->gtk_theme || priv->cs_bkgnd == NULL){
+		return GTK_WIDGET_CLASS(xmr_window_parent_class)->draw(GTK_WIDGET(window), cr);
+	}
 
 	cairo_set_source_surface(cr, priv->cs_bkgnd, 0, 0);
 	cairo_paint(cr);
@@ -967,7 +974,7 @@ set_window_image(XmrWindow *window, GdkPixbuf *pixbuf)
 
 	gtk_widget_set_size_request(GTK_WIDGET(window), image_width, image_height);
 
-	gtk_widget_queue_draw(GTK_WIDGET(window));
+//	gtk_widget_queue_draw(GTK_WIDGET(window));
 }
 
 static void
@@ -1033,6 +1040,9 @@ set_gtk_theme(XmrWindow *window)
 	gtk_window_set_decorated(GTK_WINDOW(window), TRUE);
 	gtk_widget_set_size_request(GTK_WIDGET(window), 540, 250);
 	gtk_window_set_default_size(GTK_WINDOW(window), 540, 250);
+
+	// remove any existing shape
+	gtk_widget_shape_combine_region(GTK_WIDGET(window), NULL);
 
 	hide_children(window);
 
@@ -1195,7 +1205,7 @@ set_skin(XmrWindow *window, const gchar *skin)
 			priv->skin = g_strdup(info->name);
 		}
 
-		gtk_widget_queue_draw(GTK_WIDGET(window));
+//		gtk_widget_queue_draw(GTK_WIDGET(window));
 		g_signal_emit(window, signals[THEME_CHANGED], 0, skin);
 
 		if (xmr_player_playing(priv->player))
@@ -1282,7 +1292,7 @@ player_buffering(XmrPlayer *player,
 			guint progress,
 			XmrWindow *window)
 {
-	xmr_debug("Buffering: %d\n", progress);
+	//xmr_debug("Buffering: %d\n", progress);
 }
 
 static void
@@ -1729,21 +1739,21 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 	XmrWindowPrivate *priv = window->priv;
 	const gchar *menu = gtk_menu_item_get_label(item);
 
-	if (g_strcmp0(menu, _("_Gtk Theme")) == 0)
+	if (g_strcmp0(menu, _("_Gtk Theme")) == 0 && gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item)))
 	{
+		GtkWidget *box;
+		box = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
+		gtk_combo_box_set_active(GTK_COMBO_BOX(box), 0);
+
 		set_gtk_theme(window);
 	}
 	else if(g_strcmp0(menu, GTK_STOCK_PREFERENCES) == 0)
 	{
-		static GtkWidget *pref_window = NULL;
-
-		if (pref_window == NULL)
-		{
-			pref_window = (GtkWidget *)gtk_builder_get_object(priv->ui_pref, "window_pref");
-			init_pref_window(window, pref_window);
+		GtkWidget *pref_window = NULL;
+		pref_window = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "window_pref"));
+		if (pref_window){
+			gtk_widget_show_all(pref_window);
 		}
-
-		gtk_widget_show_all(pref_window);
 	}
 	else if(g_strcmp0(menu, GTK_STOCK_ABOUT) == 0)
 	{
@@ -1779,10 +1789,17 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 static void
 on_skin_menu_item_activate(GtkMenuItem *item, SkinInfo *skin)
 {
-	if (skin == NULL)
+	GtkWidget *box;
+	XmrWindow *window = (XmrWindow *)skin->data;
+
+	// only change skin when item was checked
+	if (skin == NULL || !gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item)))
 		return ;
 
-	set_skin(skin->data, skin->file);
+	box = GTK_WIDGET(gtk_builder_get_object(window->priv->ui_pref, "cb_skin"));
+	gtk_combo_box_set_active_id(GTK_COMBO_BOX(box), skin->file);
+
+	set_skin(window, skin->file);
 }
 
 static void
@@ -1792,6 +1809,11 @@ load_settings(XmrWindow *window)
 	gchar *radio_name = NULL;
 	gchar *radio_url = NULL;
 	gint x = -1, y = -1;
+	GtkWidget *pref_window;
+
+	pref_window = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "window_pref"));
+	init_pref_window(window, pref_window);
+	gtk_window_set_transient_for(GTK_WINDOW(pref_window), GTK_WINDOW(window));
 
 	// call before load_skin
 	priv->skin = xmr_settings_get_theme(priv->settings);
@@ -1858,6 +1880,10 @@ load_skin(XmrWindow *window)
 	{
 		GList *p = priv->skin_list;
 		gboolean no_skin_match = TRUE;
+		gint idx = 0;
+		GtkWidget *box;
+
+		box = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
 
 		while(p)
 		{
@@ -1865,16 +1891,24 @@ load_skin(XmrWindow *window)
 			SkinInfo *skin_info = (SkinInfo *)p->data;
 			skin_info->data = window;
 			item = append_skin_to_menu(window, skin_info);
+			append_skin_to_pref(window, skin_info);
 
 			if (no_skin_match && g_strcmp0(skin_info->name, priv->skin) == 0)
 			{
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
+				if (box)
+				{
+					// the first one always remains Gtk Theme
+					gtk_combo_box_set_active(GTK_COMBO_BOX(box), idx + 1);
+				}
 	
 				set_skin(window, skin_info->file);
 
 				no_skin_match = FALSE;
 			}
+
 			p = p->next;
+			idx ++;
 		}
 
 		if (no_skin_match)
@@ -1982,6 +2016,32 @@ append_skin_to_menu(XmrWindow *window, SkinInfo *info)
 	g_signal_connect(item, "activate", G_CALLBACK(on_skin_menu_item_activate), info);
 
 	return item;
+}
+
+static void
+append_skin_to_pref(XmrWindow *window, SkinInfo *info)
+{
+	XmrWindowPrivate *priv = window->priv;
+	GtkWidget *box = NULL;
+
+	g_return_if_fail(priv->ui_pref != NULL);
+
+	box = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
+	if (box == NULL)
+		return ;
+
+	if (info->name == NULL)
+	{
+		gchar *name = g_path_get_basename(info->file);
+		if (name == NULL)
+			return ;
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(box), info->file, name);
+		g_free(name);
+	}
+	else
+	{
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(box), info->file, info->name);
+	}
 }
 
 static gint
@@ -2098,15 +2158,19 @@ init_pref_window(XmrWindow *window,
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
 				gtk_label_new(_("Skin")));
 
-	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "grid_radio"));
-
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
-				gtk_label_new(_("Radio")));
-
 	widget = peas_gtk_plugin_manager_new(NULL);
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
 				gtk_label_new(_("Plugins")));
+
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
+	if (widget)
+	{
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(widget), "gtk", _("Gtk Theme"));
+		gtk_combo_box_set_active(GTK_COMBO_BOX(widget), 0);
+		g_signal_connect(widget, "changed",
+					G_CALLBACK(on_combo_box_changed), window);
+	}
 }
 
 static void
@@ -2293,4 +2357,91 @@ on_extension_removed(PeasExtensionSet *set,
 		      gpointer data)
 {
 	peas_activatable_deactivate(activatable);
+}
+
+static void
+on_combo_box_changed(GtkComboBox *combo_box, XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gint idx = 0;
+	GtkWidget *widget;
+	GList *item_list;
+	GtkWidget *item = NULL;
+
+	item_list = gtk_container_get_children(GTK_CONTAINER(priv->skin_menu));
+
+	idx= gtk_combo_box_get_active(combo_box);
+	item  = g_list_nth_data(item_list, idx);
+
+	if (idx == -1 || idx == 0 || idx - 1 >= g_list_length(priv->skin_list))
+	{
+		const gchar *label[] =
+		{
+			"label_version" , "label_author", "label_url", "label_email"
+		};
+		gint i;
+	
+		for(i=0; i<4; ++i)
+		{
+			widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, label[i]));
+			if (widget){
+				gtk_widget_hide(widget);
+			}
+		}
+
+		widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
+		if (widget){
+			gtk_widget_set_tooltip_text(widget, _("Gtk Theme"));
+		}
+		set_gtk_theme(window);
+	}
+	else
+	{
+		SkinInfo *info = g_list_nth_data(priv->skin_list, idx-1);
+
+		if (info == NULL)
+			return ;
+		widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "label_version"));
+		if (widget)
+		{
+			gtk_widget_show(widget);
+			gtk_label_set_text(GTK_LABEL(widget), info->version);
+		}
+
+		widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "label_author"));
+		if (widget)
+		{
+			gtk_widget_show(widget);
+			gtk_label_set_text(GTK_LABEL(widget), info->author);
+		}
+
+		widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "label_url"));
+		if (widget)
+		{
+			gtk_widget_show(widget);
+			gtk_button_set_label(GTK_BUTTON(widget), info->url);
+			gtk_link_button_set_uri(GTK_LINK_BUTTON(widget), info->url);
+		}
+
+		widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "label_email"));
+		if (widget)
+		{
+			gtk_widget_show(widget);
+			gtk_button_set_label(GTK_BUTTON(widget), info->email);
+			gtk_link_button_set_uri(GTK_LINK_BUTTON(widget), info->email);
+		}
+
+		widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
+		if (widget){
+			gtk_widget_set_tooltip_text(widget, info->file);
+		}
+
+		set_skin(window, info->file);
+	}
+
+	if (item){
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
+	}
+
+	g_list_free(item_list);
 }
