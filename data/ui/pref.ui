@@ -27,11 +27,15 @@
       <object class="GtkGrid" id="grid1">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="column_spacing">5</property>
+        <property name="row_homogeneous">True</property>
         <child>
           <object class="GtkLabel" id="label3">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="label" translatable="yes">Version: </property>
+            <property name="ellipsize">end</property>
+            <property name="single_line_mode">True</property>
           </object>
           <packing>
             <property name="left_attach">0</property>
@@ -45,6 +49,7 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="label" translatable="yes">URL: </property>
+            <property name="ellipsize">end</property>
           </object>
           <packing>
             <property name="left_attach">0</property>
@@ -58,6 +63,8 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="label" translatable="yes">Author: </property>
+            <property name="ellipsize">end</property>
+            <property name="single_line_mode">True</property>
           </object>
           <packing>
             <property name="left_attach">0</property>
@@ -71,6 +78,8 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="label" translatable="yes">Email: </property>
+            <property name="ellipsize">end</property>
+            <property name="single_line_mode">True</property>
           </object>
           <packing>
             <property name="left_attach">0</property>
@@ -83,6 +92,7 @@
           <object class="GtkLabel" id="label_version">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="selectable">True</property>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -95,6 +105,7 @@
           <object class="GtkLabel" id="label_author">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="selectable">True</property>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -104,7 +115,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLinkButton" id="lb_url">
+          <object class="GtkLinkButton" id="label_url">
             <property name="use_action_appearance">False</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
@@ -112,7 +123,6 @@
             <property name="has_tooltip">True</property>
             <property name="use_action_appearance">False</property>
             <property name="relief">none</property>
-            <property name="uri">http://glade.gnome.org</property>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -122,7 +132,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLinkButton" id="lb_email">
+          <object class="GtkLinkButton" id="label_email">
             <property name="use_action_appearance">False</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
@@ -130,7 +140,6 @@
             <property name="has_tooltip">True</property>
             <property name="use_action_appearance">False</property>
             <property name="relief">none</property>
-            <property name="uri">http://glade.gnome.org</property>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -144,68 +153,6 @@
         <property name="expand">False</property>
         <property name="fill">True</property>
         <property name="position">1</property>
-      </packing>
-    </child>
-  </object>
-  <object class="GtkGrid" id="grid_radio">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="halign">center</property>
-    <property name="valign">center</property>
-    <child>
-      <object class="GtkLabel" id="label1">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="label" translatable="yes">Style: </property>
-      </object>
-      <packing>
-        <property name="left_attach">0</property>
-        <property name="top_attach">0</property>
-        <property name="width">1</property>
-        <property name="height">1</property>
-      </packing>
-    </child>
-    <child>
-      <object class="GtkLabel" id="label2">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="label" translatable="yes">Radio: </property>
-      </object>
-      <packing>
-        <property name="left_attach">0</property>
-        <property name="top_attach">1</property>
-        <property name="width">1</property>
-        <property name="height">1</property>
-      </packing>
-    </child>
-    <child>
-      <object class="GtkComboBoxText" id="cb_style">
-        <property name="width_request">150</property>
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="entry_text_column">0</property>
-        <property name="id_column">1</property>
-      </object>
-      <packing>
-        <property name="left_attach">1</property>
-        <property name="top_attach">0</property>
-        <property name="width">1</property>
-        <property name="height">1</property>
-      </packing>
-    </child>
-    <child>
-      <object class="GtkComboBoxText" id="cb_radio">
-        <property name="width_request">150</property>
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="entry_text_column">0</property>
-        <property name="id_column">1</property>
-      </object>
-      <packing>
-        <property name="left_attach">1</property>
-        <property name="top_attach">1</property>
-        <property name="width">1</property>
-        <property name="height">1</property>
       </packing>
     </child>
   </object>
