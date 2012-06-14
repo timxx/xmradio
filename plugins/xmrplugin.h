@@ -31,18 +31,20 @@ enum
 	PROP_OBJECT
 };
 
-#define XMR_DEFINE_PLUGIN(TYPE_NAME, TypeName, type_name)	\
+#define XMR_DEFINE_PLUGIN(TYPE_NAME, TypeName, type_name, TYPE_CODE)	\
 	GType type_name##_get_type (void) G_GNUC_CONST;			\
 	static void impl_activate(PeasActivatable *plugin);			\
 	static void impl_deactivate (PeasActivatable *plugin);			\
 	static void peas_activatable_iface_init(PeasActivatableInterface *iface); \
  \
  G_DEFINE_DYNAMIC_TYPE_EXTENDED(TypeName,				\
-		 		 type_name,				\
-		 		 PEAS_TYPE_EXTENSION_BASE,		\
-				 0,					\
-				 G_IMPLEMENT_INTERFACE_DYNAMIC(PEAS_TYPE_ACTIVATABLE,\
-					 			peas_activatable_iface_init))				\
+			 type_name,				\
+			 PEAS_TYPE_EXTENSION_BASE,		\
+			 0,					\
+			 G_IMPLEMENT_INTERFACE_DYNAMIC(PEAS_TYPE_ACTIVATABLE,\
+				 peas_activatable_iface_init)\
+			 TYPE_CODE	\
+			 )				\
  \
  static void peas_activatable_iface_init(PeasActivatableInterface *iface) \
  {									\

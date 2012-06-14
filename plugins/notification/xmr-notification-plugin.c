@@ -44,7 +44,7 @@ typedef struct
 	PeasExtensionBaseClass parent_class;
 }XmrNotificationPluginClass;
 
-XMR_DEFINE_PLUGIN(XMR_TYPE_NOTIFICATION_PLUGIN, XmrNotificationPlugin, xmr_notification_plugin)
+XMR_DEFINE_PLUGIN(XMR_TYPE_NOTIFICATION_PLUGIN, XmrNotificationPlugin, xmr_notification_plugin,)
 
 #define NOTIFY_TIMEOUT 3000
 
