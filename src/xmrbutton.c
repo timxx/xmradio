@@ -234,8 +234,6 @@ on_draw(XmrButton *button, cairo_t *cr, gpointer data)
 	
 	cairo_surface_destroy(image);
 
-	gtk_widget_set_size_request(GTK_WIDGET(button), image_width, image_height);
-
 	return TRUE;
 }
 
@@ -304,10 +302,13 @@ xmr_button_set_image_from_pixbuf(XmrButton *button, GdkPixbuf *pixbuf)
 
 	width = gdk_pixbuf_get_width(pixbuf)/LAST_STATE;
 	height = gdk_pixbuf_get_height(pixbuf);
-	 
+	
+	xmr_button_unref_images(button);
+
 	for(i=0; i<LAST_STATE; i++)
 		priv->images[i] = gdk_pixbuf_new_subpixbuf(pixbuf, width*i, 0, width, height);
 
+	gtk_widget_set_size_request(GTK_WIDGET(button), width, height);
 	gtk_widget_queue_draw(GTK_WIDGET(button));
 }
 
