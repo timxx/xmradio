@@ -1,5 +1,5 @@
 /** 
- * notification.c
+ * xmr-notification-plugin.c
  *
  * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
 
