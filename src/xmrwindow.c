@@ -799,7 +799,10 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 	switch(id)
 	{
 	case BUTTON_CLOSE:
-		xmr_window_quit(window);
+		{
+			gboolean retv = FALSE;
+			g_signal_emit_by_name(window, "delete-event", NULL, &retv);
+		}
 		break;
 
 	case BUTTON_MINIMIZE:
@@ -2444,4 +2447,12 @@ on_combo_box_changed(GtkComboBox *combo_box, XmrWindow *window)
 	}
 
 	g_list_free(item_list);
+}
+
+gboolean
+xmr_window_playing(XmrWindow *window)
+{
+	g_return_val_if_fail(window != NULL, FALSE);
+
+	return xmr_player_playing(window->priv->player);
 }

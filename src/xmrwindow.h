@@ -80,6 +80,9 @@ xmr_window_get_current_song(XmrWindow *window);
 void
 xmr_window_quit(XmrWindow *window);
 
+gboolean
+xmr_window_playing(XmrWindow *window);
+
 G_END_DECLS
 
 #endif /* __XMR_WINDOW_H__ */
