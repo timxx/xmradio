@@ -13,7 +13,7 @@ Build-Depends: debhelper (>= 8.0.0), cmake,
          libxml2-dev, libnotify-dev,
          intltool (>= 0.35.0),
          pkg-config, cdbs, gnome-common,
-         appindicator3-0.1
+         libappindicator3-dev
 
 Package: xmradio
 Architecture: any
