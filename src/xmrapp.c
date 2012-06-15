@@ -46,7 +46,9 @@ typedef enum
 	ActionNone,
 	ActionPlay,
 	ActionPause,
-	ActionNext
+	ActionNext,
+	ActionLove,
+	ActionHate
 }
 PlayerAction;
 
@@ -180,6 +182,14 @@ dbus_signal_filter(DBusConnection *connection,
 
 			case ActionNext:
 				xmr_window_play_next(window);
+				break;
+				
+			case ActionLove:
+				xmr_window_love(window);
+				break;
+
+			case ActionHate:
+				xmr_window_hate(window);
 				break;
 
 			case ActionNone:

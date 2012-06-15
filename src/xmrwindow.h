@@ -83,6 +83,12 @@ xmr_window_quit(XmrWindow *window);
 gboolean
 xmr_window_playing(XmrWindow *window);
 
+void
+xmr_window_love(XmrWindow *window);
+
+void
+xmr_window_hate(XmrWindow *window);
+
 G_END_DECLS
 
 #endif /* __XMR_WINDOW_H__ */

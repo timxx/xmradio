@@ -375,6 +375,10 @@ on_extension_removed(PeasExtensionSet *set,
 		      PeasPluginInfo   *info,
 			  PeasActivatable  *activatable,
 			  gpointer data);
+
+static void
+like_current_song(XmrWindow *window, gboolean like);
+
 static void
 install_properties(GObjectClass *object_class)
 {
@@ -823,22 +827,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 
 	case BUTTON_LIKE:
 	case BUTTON_DISLIKE:
-	{
-		SongInfo *song;
-		if (!xmr_service_is_logged_in(priv->service))
-		{
-			g_warning("You should login first\n");
-			break;
-		}
-
-		if (priv->playlist == NULL || priv->playlist->data == NULL)
-			break;
-
-		song = (SongInfo *)priv->playlist->data;
-		xmr_service_like_song(priv->service, song->song_id, id == BUTTON_LIKE);
-		if (id == BUTTON_DISLIKE)
-			xmr_window_play_next(window);
-	}
+		like_current_song(window, id == BUTTON_LIKE);
 		break;
 
 	case BUTTON_LYRIC:
@@ -2455,4 +2444,39 @@ xmr_window_playing(XmrWindow *window)
 	g_return_val_if_fail(window != NULL, FALSE);
 
 	return xmr_player_playing(window->priv->player);
+}
+
+static void
+like_current_song(XmrWindow *window, gboolean like)
+{
+	XmrWindowPrivate *priv = window->priv;
+	SongInfo *song;
+
+	if (!xmr_service_is_logged_in(priv->service))
+	{
+		g_warning("You should login first\n");
+		return ;
+	}
+
+	song = xmr_window_get_current_song(window);
+	xmr_service_like_song(priv->service, song->song_id, like);
+
+	if (!like){
+	  xmr_window_play_next(window);
+	}
+}
+
+void
+xmr_window_love(XmrWindow *window)
+{
+	g_return_if_fail(window != NULL);
+	like_current_song(window, TRUE);
+}
+
+void
+xmr_window_hate(XmrWindow *window)
+{
+	g_return_if_fail(window != NULL);
+
+	like_current_song(window, FALSE);
 }
