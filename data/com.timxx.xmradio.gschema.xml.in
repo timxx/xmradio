@@ -37,10 +37,17 @@
 		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
-    <key name="active-plugins" type="as">
-      <default>['notification']</default>
-      <_summary>Active plugins</_summary>
-      <_description>List of active plugins.</_description>
-    </key>
+		<key name="active-plugins" type="as">
+		<default>['notification', 'indicator']</default>
+		<_summary>Active plugins</_summary>
+		<_description>List of active plugins.</_description>
+		</key>
+	</schema>
+	<schema id="com.timxx.xmradio.plugins.indicator" path="/apps/xmradio/plugins/indicator/">
+		<key name="hide-on-exit" type="b">
+		<default>true</default>
+		<_summary>Hide on exit</_summary>
+		<_description>Hide window when playing, instead default exit action</_description>
+		</key>
   </schema>
 </schemalist>
