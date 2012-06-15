@@ -1,0 +1,8 @@
+[Plugin]
+Module=indicator
+IAge=2
+Name=Indicator
+Description=Indicator
+Authors=Weitian Leung
+Copyright=Copyright © 2012 Weitian Leung<weitianleung@gmail.com>
+Website=https://github.com/timxx/xmradio
