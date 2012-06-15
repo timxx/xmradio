@@ -197,7 +197,7 @@ track_changed(XmrWindow *window,
 				new_track->song_name);
 
 #ifdef HAVE_APP_INDICATOR
-	app_indicator_set_title(APP_INDICATOR(plugin->indicator), tooltips);
+//	app_indicator_set_title(APP_INDICATOR(plugin->indicator), tooltips);
 #else
 	xmr_tray_icon_set_tooltips(XMR_TRAY_ICON(plugin->indicator), tooltips);
 #endif

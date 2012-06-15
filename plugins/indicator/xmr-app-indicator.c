@@ -23,14 +23,12 @@ G_DEFINE_TYPE(XmrAppIndicator, xmr_app_indicator, APP_INDICATOR_TYPE)
 
 struct _XmrAppIndicatorPrivate
 {
-	GtkWidget *main_window;
 	GtkWidget *popup_menu;
 };
 
 enum
 {
 	PROP_0,
-	PROP_MAIN_WINDOW,
 	PROP_POPUP_MENU
 };
 
@@ -45,10 +43,6 @@ xmr_app_indicator_get_property(GObject *object,
 
 	switch(prop_id)
 	{
-	case PROP_MAIN_WINDOW:
-		g_value_set_object(value, priv->main_window);
-		break;
-
 	case PROP_POPUP_MENU:
 		g_value_set_object(value, priv->popup_menu);
 		break;
@@ -70,10 +64,6 @@ xmr_app_indicator_set_property(GObject *object,
 
 	switch(prop_id)
 	{
-	case PROP_MAIN_WINDOW:
-		priv->main_window = g_value_get_object(value);
-		break;
-
 	case PROP_POPUP_MENU:
 		priv->popup_menu = g_value_get_object(value);
 		app_indicator_set_menu(APP_INDICATOR(indicator), GTK_MENU(priv->popup_menu));
@@ -94,7 +84,6 @@ xmr_app_indicator_init(XmrAppIndicator *indicator)
 
 	priv = indicator->priv;
 	priv->popup_menu = NULL;
-	priv->main_window = NULL;
 
 	app_indicator_set_status(APP_INDICATOR(indicator), APP_INDICATOR_STATUS_ACTIVE);
 }
@@ -106,15 +95,6 @@ xmr_app_indicator_class_init(XmrAppIndicatorClass *klass)
 
 	object_class->get_property = xmr_app_indicator_get_property;
 	object_class->set_property = xmr_app_indicator_set_property;
-
-	g_object_class_install_property(object_class,
-				PROP_MAIN_WINDOW,
-				g_param_spec_object("main-window",
-					"GtkWindow",
-					"GtkWindow object",
-					GTK_TYPE_WINDOW,
-					G_PARAM_READWRITE)
-				);
 
 	g_object_class_install_property(object_class,
 				PROP_POPUP_MENU,
@@ -135,7 +115,6 @@ xmr_app_indicator_new(GtkWidget *popup_menu)
 	return g_object_new(XMR_TYPE_APP_INDICATOR,
 				"category", "ApplicationStatus",
 				"icon-name", "xmradio",
-				"title", "xmradio",
 				"id", "xmradio",
 				"popup-menu", popup_menu,
 				NULL);
