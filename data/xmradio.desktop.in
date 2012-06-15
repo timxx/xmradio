@@ -9,7 +9,7 @@ Type=Application
 Categories=GTK;AudioVideo;Network;
 StartupNotify=true
 X-GNOME-Gettext-Domain=xmradio
-Actions=Play;Pause;Next;
+Actions=Play;Pause;Next;Love;Hate;
 
 [Desktop Action Play]
 _Name=Play
@@ -22,3 +22,11 @@ Exec=xmradio --pause
 [Desktop Action Next]
 _Name=Next
 Exec=xmradio --next
+
+[Desktop Action Love]
+_Name=Love
+Exec=xmradio --love
+
+[Desktop Action Hate]
+_Name=Hate
+Exec=xmradio --hate
