@@ -155,6 +155,11 @@ static const gchar *radio_style[]=
 	"风格电台", "星座电台", "年代电台"
 };
 
+static const gchar *radio_names[] =
+{
+	N_("私人电台"), N_("风格电台"), N_("星座电台"), N_("年代电台")
+};
+
 static void
 xmr_window_dispose(GObject *obj);
 
@@ -280,6 +285,12 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window);
 static void
 on_skin_menu_item_activate(GtkMenuItem *item, SkinInfo *skin);
 
+/**
+ * Radio Menu
+ */
+static void
+on_radio_menu_item_activate(GtkMenuItem *item, XmrWindow *window);
+
 static void
 load_settings(XmrWindow *window);
 
@@ -380,6 +391,17 @@ on_extension_removed(PeasExtensionSet *set,
 
 static void
 like_current_song(XmrWindow *window, gboolean like);
+
+/**
+ * @new_style:
+ * 0 - SiRen
+ * 1 - FengGe
+ * 2 - XingZuo
+ * 3 - NianDai
+ */
+static void
+change_radio_style(XmrWindow *window,
+			gint new_style);
 
 static void
 install_properties(GObjectClass *object_class)
@@ -889,56 +911,19 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 	
 	case BUTTON_SIREN:
-		if (!xmr_service_is_logged_in(priv->service))
-		{
-			priv->switch_radio = TRUE;
-			do_login(window);
-		}
-		else
-		{
-			// to avoid change radio from siren to siren
-			if (priv->playlist_url != NULL)
-				change_radio(window, _("私人电台"), NULL);
-		}
+		change_radio_style(window, 0);
 		break;
 
 	case BUTTON_FENGGE:
-		if (gtk_widget_get_visible(priv->chooser[0]))
-		{
-			gtk_widget_hide(priv->chooser[0]);
-		}
-		else
-		{
-			gtk_widget_show_all(priv->chooser[0]);
-			gtk_widget_hide(priv->chooser[1]);
-			gtk_widget_hide(priv->chooser[2]);
-		}
+		change_radio_style(window, 1);
 		break;
 
 	case BUTTON_XINGZUO:
-		if (gtk_widget_get_visible(priv->chooser[1]))
-		{
-			gtk_widget_hide(priv->chooser[1]);
-		}
-		else
-		{
-			gtk_widget_show_all(priv->chooser[1]);
-			gtk_widget_hide(priv->chooser[0]);
-			gtk_widget_hide(priv->chooser[2]);
-		}
+		change_radio_style(window, 2);
 		break;
 
 	case BUTTON_NIANDAI:
-		if (gtk_widget_get_visible(priv->chooser[2]))
-		{
-			gtk_widget_hide(priv->chooser[2]);
-		}
-		else
-		{
-			gtk_widget_show_all(priv->chooser[2]);
-			gtk_widget_hide(priv->chooser[1]);
-			gtk_widget_hide(priv->chooser[0]);
-		}
+		change_radio_style(window, 3);
 		break;
 	}
 }
@@ -1710,6 +1695,8 @@ create_popup_menu(XmrWindow *window)
 	XmrWindowPrivate *priv = window->priv;
 	GtkWidget *item = NULL;
 	GtkAccelGroup* accel_group;
+	GtkWidget *menu_radio;
+	gint i;
 
 	accel_group = gtk_accel_group_new();
 	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
@@ -1728,14 +1715,28 @@ create_popup_menu(XmrWindow *window)
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), priv->skin_menu);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
+	menu_radio = gtk_menu_new();
+
+	for(i=0; i<4; ++i)
+	{
+		item = gtk_menu_item_new_with_label(radio_names[i]);
+		gtk_menu_shell_append(GTK_MENU_SHELL(menu_radio), item);
+
+		g_signal_connect(item, "activate", G_CALLBACK(on_radio_menu_item_activate), window);
+	}
+
+	item = gtk_menu_item_new_with_mnemonic(_("_Radio"));
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), menu_radio);
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	item = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
 	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_PREFERENCES, accel_group);
 	gtk_image_menu_item_set_accel_group(GTK_IMAGE_MENU_ITEM(item), accel_group);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
-
-	item = gtk_separator_menu_item_new();
-	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ABOUT, accel_group);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
@@ -1820,6 +1821,22 @@ on_skin_menu_item_activate(GtkMenuItem *item, SkinInfo *skin)
 	gtk_combo_box_set_active_id(GTK_COMBO_BOX(box), skin->file);
 
 	set_skin(window, skin->file);
+}
+
+static void
+on_radio_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
+{
+	gint i;
+	const gchar *menu = gtk_menu_item_get_label(item);
+
+	for(i=0; i<4; ++i)
+	{
+		if (g_strcmp0(menu, radio_names[i]) == 0)
+		{
+			change_radio_style(window, i);
+			break;
+		}
+	}
 }
 
 static void
@@ -2507,4 +2524,33 @@ xmr_window_hate(XmrWindow *window)
 	g_return_if_fail(window != NULL);
 
 	like_current_song(window, FALSE);
+}
+
+static void
+change_radio_style(XmrWindow *window,
+			gint new_style)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gint i;
+
+	for(i=0; i<3; ++i){
+		gtk_widget_hide(priv->chooser[i]);
+	}
+
+	if (new_style == 0) // SiRen radio
+	{
+		if (!xmr_service_is_logged_in(priv->service))
+		{
+			priv->switch_radio = TRUE;
+			do_login(window);
+		}
+		else
+		{
+			// to avoid change radio from siren to siren
+			if (priv->playlist_url != NULL)
+				change_radio(window, _("私人电台"), NULL);
+		}
+	}
+	else
+		gtk_widget_show_all(priv->chooser[new_style - 1]);
 }
