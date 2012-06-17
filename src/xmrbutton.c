@@ -218,8 +218,8 @@ on_draw(XmrButton *button, cairo_t *cr, gpointer data)
 	GdkPixbuf *pixbuf = priv->images[priv->state];
 	gint image_width, image_height;
 
-	if (pixbuf == NULL)
-		return FALSE;
+	if (priv->type == XMR_BUTTON_NORMAL || pixbuf == NULL)
+		return GTK_WIDGET_CLASS(xmr_button_parent_class)->draw(GTK_WIDGET(button), cr);
 
 	image_width = gdk_pixbuf_get_width(pixbuf);
 	image_height = gdk_pixbuf_get_height(pixbuf);
