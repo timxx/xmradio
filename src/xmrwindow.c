@@ -98,7 +98,7 @@ struct _XmrWindowPrivate
 	GtkWidget	*chooser[3];
 
 	XmrPlayer *player;
-	XmrService *service;
+	XmrService *service; /* should only use for private radio */
 
 	GList *playlist;
 	gchar *playlist_url;	/* set NULL to get private list */
@@ -124,6 +124,8 @@ struct _XmrWindowPrivate
 
 	XmrPluginEngine		*plugin_engine;
 	PeasExtensionSet	*extensions;
+
+	GMutex*	mutex;
 };
 
 enum
@@ -539,6 +541,15 @@ xmr_window_init(XmrWindow *window)
                               (PeasExtensionSetForeachFunc)on_extension_added,
                               NULL);
 
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	priv->mutex = g_malloc(sizeof(GMutex));
+	if (priv->mutex == NULL)
+		g_error("g_malloc failed (%s, %d)\n", __FILE__, __LINE__);
+	g_mutex_init(priv->mutex);
+#else
+	priv->mutex = g_mutex_new();
+#endif
+
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
 	gtk_widget_add_events(GTK_WIDGET(window), GDK_BUTTON_PRESS_MASK);
@@ -680,6 +691,17 @@ xmr_window_finalize(GObject *obj)
 		g_free(priv->usr);
 	if (priv->pwd)
 		g_free(priv->pwd);
+
+	if (priv->mutex)
+	{
+#if GLIB_CHECK_VERSION(2, 32, 0)
+		g_mutex_clear(priv->mutex);
+		g_free(priv->mutex);
+#else
+		g_mutex_free(priv->mutex);
+#endif
+		priv->mutex = NULL;
+	}
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->finalize(obj);
 }
@@ -1320,12 +1342,28 @@ thread_get_playlist(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 	gint result = 1;
-	gboolean auto_play = g_list_length(priv->playlist) == 0;
+	gboolean auto_play;
+	
+	g_mutex_lock(priv->mutex);
+	auto_play = (g_list_length(priv->playlist) == 0);
+	g_mutex_unlock(priv->mutex);
 
-	if (priv->playlist_url == NULL){
+	if (priv->playlist_url == NULL)
+	{
+		g_mutex_unlock(priv->mutex);
 		result = xmr_service_get_track_list(priv->service, &priv->playlist);
-	}else{
-		result = xmr_service_get_track_list_by_style(priv->service, &priv->playlist, priv->playlist_url);
+		g_mutex_unlock(priv->mutex);
+	}
+	else
+	{
+		XmrService *service = NULL;
+
+		service = xmr_service_new();
+		if (service)
+		{
+			result = xmr_service_get_track_list_by_style(service, &priv->playlist, priv->playlist_url);
+			g_object_unref(service);
+		}
 	}
 
 	if (result != 0)
@@ -1334,20 +1372,19 @@ thread_get_playlist(XmrWindow *window)
 	}
 	else if (auto_play)
 	{
+		gdk_threads_enter();
 		if (g_list_length(priv->playlist) > 0)
 		{
 			SongInfo *song = (SongInfo *)priv->playlist->data;
 
-			// should open & play in enter .. leave ?
-			gdk_threads_enter();
 			xmr_player_open(priv->player, song->location, NULL);
 			xmr_player_play(priv->player);
 
 			xmr_window_set_track_info(window);
 
 			g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
-			gdk_threads_leave();
 		}
+		gdk_threads_leave();
 	}
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
@@ -1361,6 +1398,7 @@ thread_get_cover_image(XmrWindow *window)
 	XmrWindowPrivate *priv = window->priv;
 	GString *data = NULL;
 	GdkPixbuf *pixbuf = NULL;
+	XmrService *service = NULL;
 
 	do
 	{
@@ -1374,9 +1412,19 @@ thread_get_cover_image(XmrWindow *window)
 		if (data == NULL)
 			break;
 
+		service = xmr_service_new();
+		if (service == NULL)
+		{
+			xmr_debug("xmr_service_new failed\n");
+			break;
+		}
+
 		// always get first song info
+		g_mutex_lock(priv->mutex);
 		track = (SongInfo *)priv->playlist->data;
-		result = xmr_service_get_url_data(priv->service, track->album_cover, data);
+		g_mutex_unlock(priv->mutex);
+
+		result = xmr_service_get_url_data(service, track->album_cover, data);
 		if (result != 0)
 		{
 			xmr_debug("xmr_service_get_url_data failed: %d", result);
@@ -1404,6 +1452,10 @@ thread_get_cover_image(XmrWindow *window)
 	if (pixbuf) {
 		g_object_unref(pixbuf);
 	}
+	if (service) {
+		g_object_unref(service);
+	}
+
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
 
 	return NULL;
@@ -1416,7 +1468,9 @@ thread_login(XmrWindow *window)
 	gint result;
 	gchar *login_message = NULL;
 
+	g_mutex_lock(priv->mutex);
 	result = xmr_service_login(priv->service, priv->usr, priv->pwd, &login_message);
+	g_mutex_unlock(priv->mutex);
 
 	if (result != 0)
 	{
