@@ -189,6 +189,10 @@ xmr_button_set_type(XmrButton *button, XmrButtonType type)
 
 	button->priv->type = type;
 
+	if (type == XMR_BUTTON_NORMAL){
+		gtk_widget_set_size_request(GTK_WIDGET(button), 48, 48);
+	}
+
 	return old_type;
 }
 
