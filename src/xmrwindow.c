@@ -782,7 +782,13 @@ on_draw(XmrWindow *window, cairo_t *cr, gpointer data)
 {
 	XmrWindowPrivate *priv = window->priv;
 
-	if (priv->gtk_theme || priv->cs_bkgnd == NULL){
+	if (priv->gtk_theme || priv->cs_bkgnd == NULL)
+	{
+		cairo_set_source_rgb(cr, 128.0/255.0, 128.0/255.0, 128.0/255.0);
+		cairo_rectangle(cr, 0, 60, 500, 1);
+
+		cairo_fill(cr);
+
 		return GTK_WIDGET_CLASS(xmr_window_parent_class)->draw(GTK_WIDGET(window), cr);
 	}
 
@@ -1020,90 +1026,58 @@ static void
 set_gtk_theme(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
-	struct Pos { gint x, y;	};
+	struct Pos { gint x, y; };
 	gint i;
-
-	static struct Pos button_pos[LAST_BUTTON] =
-	{
-		{0, 0}, {0, 0},
-		{360, 100}, {360, 100}, {430, 100},
-		{170, 160}, {210, 160}, {250, 160},
-		{330, 170}, {385, 170}, {440, 170},
-		{110, 250}, {195, 250}, {280, 250}, {365, 250}
-	};
 
 	static struct Pos label_pos[LAST_LABEL] =
 	{
-		{60, 45}, {175, 90},
-		{175, 110}, {175, 140}
-	};
-
-	// for testing only
-	static gchar *stock_id[] =
-	{
-		"", "",
-		GTK_STOCK_MEDIA_PLAY, GTK_STOCK_MEDIA_PAUSE, GTK_STOCK_MEDIA_NEXT,
-		GTK_STOCK_ABOUT, GTK_STOCK_CANCEL, NULL,
-		NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL
-		
+		{270, 25}, {135, 80},
+		{135, 120}, {135, 160}
 	};
 
 	priv->gtk_theme = TRUE;
 
 	gtk_window_set_decorated(GTK_WINDOW(window), TRUE);
-	gtk_widget_set_size_request(GTK_WIDGET(window), 540, 250);
-	gtk_window_set_default_size(GTK_WINDOW(window), 540, 250);
+	gtk_widget_set_size_request(GTK_WIDGET(window), 500, 200);
 
 	// remove any existing shape
 	gtk_widget_shape_combine_region(GTK_WIDGET(window), NULL);
 
 	hide_children(window);
 
-	for(i=BUTTON_PLAY; i<LAST_BUTTON; ++i)
-	{
-		gtk_fixed_move(GTK_FIXED(priv->fixed),
-					priv->buttons[i],
-					button_pos[i].x, button_pos[i].y);
+	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->buttons[BUTTON_PLAY], 25, 5);
+	xmr_button_set_type(XMR_BUTTON(priv->buttons[BUTTON_PLAY]), XMR_BUTTON_NORMAL);
+	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_PLAY]), GTK_STOCK_MEDIA_PLAY);
 
-		xmr_button_set_type(XMR_BUTTON(priv->buttons[i]),
-						XMR_BUTTON_NORMAL);
+	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->buttons[BUTTON_PAUSE], 25, 5);
+	xmr_button_set_type(XMR_BUTTON(priv->buttons[BUTTON_PAUSE]), XMR_BUTTON_NORMAL);
+	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_PAUSE]), GTK_STOCK_MEDIA_PAUSE);
 
-		xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[i]),
-					stock_id[i]);
+	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->buttons[BUTTON_NEXT], 75, 5);
+	xmr_button_set_type(XMR_BUTTON(priv->buttons[BUTTON_NEXT]), XMR_BUTTON_NORMAL);
+	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_NEXT]), GTK_STOCK_MEDIA_NEXT);
+	gtk_widget_show(priv->buttons[BUTTON_NEXT]);
 
-		gtk_widget_show(priv->buttons[i]);
-	}
+	if (xmr_player_playing(priv->player))
+		gtk_widget_show(priv->buttons[BUTTON_PAUSE]);
+	else
+		gtk_widget_show(priv->buttons[BUTTON_PLAY]);
 
 	for(i=0; i<LAST_LABEL; ++i)
 	{
-		gtk_fixed_move(GTK_FIXED(priv->fixed),
-					priv->labels[i],
-					label_pos[i].x, label_pos[i].y);
-
+		gtk_fixed_move(GTK_FIXED(priv->fixed), priv->labels[i], label_pos[i].x, label_pos[i].y);
 		gtk_widget_show(priv->labels[i]);
+
+		set_widget_fg_color(priv->labels[i], NULL);
+		set_widget_font(priv->labels[i], NULL);
 	}
 
-	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, 60, 85);
+	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, 25, 80);
 	gtk_widget_show(priv->image);
-
-	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_LYRIC]), _("歌词"));
-	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_DOWNLOAD]), _("下载"));
-	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_SHARE]), _("分享"));
-
-	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_SIREN]), _("私人电台"));
-	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_FENGGE]), _("风格电台"));
-	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_XINGZUO]), _("星座电台"));
-	gtk_button_set_label(GTK_BUTTON(priv->buttons[BUTTON_NIANDAI]), _("年代电台"));
 
 	xmr_settings_set_theme(priv->settings, "");
 
 	gtk_widget_queue_draw(GTK_WIDGET(window));
-
-	if (xmr_player_playing(priv->player))
-		gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
-	else
-		gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 }
 
 static void
@@ -1920,7 +1894,7 @@ load_skin(XmrWindow *window)
 	list_file(SKINDIR, FALSE, append_skin, &priv->skin_list);
 	
 	// always set gtk theme first
-	// set_gtk_theme(window);
+	set_gtk_theme(window);
 
 	if (g_list_length(priv->skin_list) > 0)
 	{
@@ -1957,7 +1931,7 @@ load_skin(XmrWindow *window)
 			idx ++;
 		}
 
-		if (no_skin_match)
+		if (no_skin_match && !is_text_empty(priv->skin))
 		{
 			set_skin(window, ((SkinInfo *)priv->skin_list->data)->file);
 		}
