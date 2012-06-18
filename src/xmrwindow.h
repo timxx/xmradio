@@ -89,6 +89,12 @@ xmr_window_love(XmrWindow *window);
 void
 xmr_window_hate(XmrWindow *window);
 
+void
+xmr_window_login(XmrWindow *window);
+
+void
+xmr_window_logout(XmrWindow *window);
+
 G_END_DECLS
 
 #endif /* __XMR_WINDOW_H__ */

@@ -126,6 +126,8 @@ struct _XmrWindowPrivate
 	PeasExtensionSet	*extensions;
 
 	GMutex*	mutex;
+
+	GtkWidget *dialog_login;
 };
 
 enum
@@ -253,16 +255,22 @@ static gpointer
 thread_login(XmrWindow *window);
 
 static gpointer
+thread_logout(XmrWindow *window);
+
+static gpointer
 thread_update_radio_list(XmrWindow *window);
+
+static gpointer
+thread_like_song(XmrWindow *window);
+
+static gpointer
+thread_dislike_song(XmrWindow *window);
 
 static void
 xmr_window_get_playlist(XmrWindow *window);
 
 static void
 xmr_window_get_cover_image(XmrWindow *window);
-
-static void
-xmr_window_login(XmrWindow *window);
 
 static void
 xmr_window_set_track_info(XmrWindow *window);
@@ -336,11 +344,22 @@ static void
 init_pref_window(XmrWindow *window,
 			GtkWidget *pref);
 
+static void
+set_login_dialog_entry_editable(XmrWindow *window,
+			const gchar *entry_name,
+			gboolean editable);
+
+static void
+init_login_dialog(XmrWindow *window);
+
 /**
  * login to server
  */
 static void
 do_login(XmrWindow *window);
+
+static void
+do_logout(XmrWindow *window);
 
 
 /**
@@ -391,6 +410,7 @@ on_extension_removed(PeasExtensionSet *set,
 
 static void
 like_current_song(XmrWindow *window, gboolean like);
+
 
 /**
  * @new_style:
@@ -455,7 +475,7 @@ install_properties(GObjectClass *object_class)
 					G_PARAM_READABLE));
 
 	g_object_class_install_property(object_class,
-				PROP_MENU_POPUP,
+				PROP_PLAYLIST,
 				g_param_spec_pointer("playlist",
 					"playlist",
 					"Current playlist",
@@ -571,6 +591,8 @@ xmr_window_init(XmrWindow *window)
 #else
 	priv->mutex = g_mutex_new();
 #endif
+
+	priv->dialog_login = NULL;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -1302,6 +1324,7 @@ thread_get_playlist(XmrWindow *window)
 	XmrWindowPrivate *priv = window->priv;
 	gint result = 1;
 	gboolean auto_play;
+	GList *list = NULL;
 	
 	g_mutex_lock(priv->mutex);
 	auto_play = (g_list_length(priv->playlist) == 0);
@@ -1309,8 +1332,8 @@ thread_get_playlist(XmrWindow *window)
 
 	if (priv->playlist_url == NULL)
 	{
-		g_mutex_unlock(priv->mutex);
-		result = xmr_service_get_track_list(priv->service, &priv->playlist);
+		g_mutex_lock(priv->mutex);
+		result = xmr_service_get_track_list(priv->service, &list);
 		g_mutex_unlock(priv->mutex);
 	}
 	else
@@ -1320,9 +1343,16 @@ thread_get_playlist(XmrWindow *window)
 		service = xmr_service_new();
 		if (service)
 		{
-			result = xmr_service_get_track_list_by_style(service, &priv->playlist, priv->playlist_url);
+			result = xmr_service_get_track_list_by_style(service, &list, priv->playlist_url);
 			g_object_unref(service);
 		}
+	}
+
+	if (list != NULL)
+	{
+		g_mutex_lock(priv->mutex);
+		priv->playlist = g_list_concat(priv->playlist, list);
+		g_mutex_unlock(priv->mutex);
 	}
 
 	if (result != 0)
@@ -1468,6 +1498,20 @@ thread_login(XmrWindow *window)
 }
 
 static gpointer
+thread_logout(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+
+	g_mutex_lock(priv->mutex);
+	xmr_service_logout(priv->service);
+	g_mutex_unlock(priv->mutex);
+
+	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+
+	return NULL;
+}
+
+static gpointer
 thread_update_radio_list(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
@@ -1550,6 +1594,38 @@ thread_update_radio_list(XmrWindow *window)
 	return NULL;
 }
 
+static gpointer
+thread_like_song(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	SongInfo *song;
+
+	g_mutex_lock(priv->mutex);
+	song = xmr_window_get_current_song(window);
+	xmr_service_like_song(priv->service, song->song_id, TRUE);
+	g_mutex_unlock(priv->mutex);
+
+	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+
+	return NULL;
+}
+
+static gpointer
+thread_dislike_song(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	SongInfo *song;
+
+	g_mutex_lock(priv->mutex);
+	song = xmr_window_get_current_song(window);
+	xmr_service_like_song(priv->service, song->song_id, FALSE);
+	g_mutex_unlock(priv->mutex);
+
+	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+
+	return NULL;
+}
+
 static void
 xmr_window_get_playlist(XmrWindow *window)
 {
@@ -1570,13 +1646,23 @@ xmr_window_get_cover_image(XmrWindow *window)
 #endif
 }
 
-static void
+void
 xmr_window_login(XmrWindow *window)
 {
 #if GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_new("login", (GThreadFunc)thread_login, window);
 #else
 	g_thread_create((GThreadFunc)thread_login, window, FALSE, NULL);
+#endif
+}
+
+void
+xmr_window_logout(XmrWindow *window)
+{
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_new("logout", (GThreadFunc)thread_logout, window);
+#else
+	g_thread_create((GThreadFunc)thread_logout, window, FALSE, NULL);
 #endif
 }
 
@@ -2211,43 +2297,86 @@ init_pref_window(XmrWindow *window,
 }
 
 static void
+init_login_dialog(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+
+	GtkWidget *button_login;
+	GtkWidget *entry_usr, *entry_pwd;
+	GtkWidget *checkbox;
+
+	priv->ui_login = create_builder_with_file(UIDIR"/login.ui");
+	g_return_if_fail(priv->ui_login != NULL);
+
+	priv->dialog_login = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "dialog_login"));
+	gtk_window_set_transient_for(GTK_WINDOW(priv->dialog_login), GTK_WINDOW(window));
+
+	button_login = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "button_login"));
+
+	g_signal_connect(button_login, "button-release-event",
+				G_CALLBACK(on_login_dialog_button_login_clicked), window);
+
+	entry_usr = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_usr"));
+	entry_pwd = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_pwd"));
+	checkbox = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "cb_auto_login"));
+
+	gtk_entry_set_text(GTK_ENTRY(entry_usr), priv->usr);
+	gtk_entry_set_text(GTK_ENTRY(entry_pwd), priv->pwd);
+
+	g_settings_bind(G_SETTINGS(priv->settings), "auto-login",
+				checkbox, "active",
+				G_SETTINGS_BIND_DEFAULT);
+}
+
+static void
+set_login_dialog_entry_editable(XmrWindow *window,
+			const gchar *entry_name,
+			gboolean editable)
+{
+	GtkWidget *entry;
+
+	entry = GTK_WIDGET(gtk_builder_get_object(window->priv->ui_login, entry_name));
+	if (entry){
+		g_object_set(entry, "editable", editable, NULL);
+	}
+}
+
+static void
 do_login(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
-	static GtkWidget *dialog_login;
+	GtkWidget *button_login;
 
-	if (dialog_login == NULL)
-	{
-		GtkWidget *button_login;
-		GtkWidget *entry_usr, *entry_pwd;
-		GtkWidget *checkbox;
-
-		window->priv->ui_login = create_builder_with_file(UIDIR"/login.ui");
-		g_return_if_fail(window->priv->ui_login != NULL);
-
-		dialog_login = GTK_WIDGET(gtk_builder_get_object(window->priv->ui_login, "dialog_login"));
-		gtk_window_set_transient_for(GTK_WINDOW(dialog_login), GTK_WINDOW(window));
-
-		button_login = GTK_WIDGET(gtk_builder_get_object(window->priv->ui_login, "button_login"));
-
-		g_signal_connect(button_login, "button-release-event",
-					G_CALLBACK(on_login_dialog_button_login_clicked), window);
-
-		entry_usr = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_usr"));
-		entry_pwd = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_pwd"));
-		checkbox = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "cb_auto_login"));
-
-		gtk_entry_set_text(GTK_ENTRY(entry_usr), priv->usr);
-		gtk_entry_set_text(GTK_ENTRY(entry_pwd), priv->pwd);
-
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbox),
-					xmr_settings_get_auto_login(priv->settings)
-					);
-
+	if (priv->dialog_login == NULL){
+		init_login_dialog(window);
 	}
 
-	gtk_dialog_run(GTK_DIALOG(dialog_login));
-	gtk_widget_hide(dialog_login);
+	button_login = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "button_login"));
+	gtk_button_set_label(GTK_BUTTON(button_login), _("Login"));
+	set_login_dialog_entry_editable(window, "entry_usr", TRUE);
+	set_login_dialog_entry_editable(window, "entry_pwd", TRUE);
+
+	gtk_dialog_run(GTK_DIALOG(priv->dialog_login));
+	gtk_widget_hide(priv->dialog_login);
+}
+
+static void
+do_logout(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	GtkWidget *button_login;
+
+	if (priv->dialog_login == NULL){
+		init_login_dialog(window);
+	}
+
+	button_login = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "button_login"));
+	gtk_button_set_label(GTK_BUTTON(button_login), _("Logout"));
+	set_login_dialog_entry_editable(window, "entry_usr", FALSE);
+	set_login_dialog_entry_editable(window, "entry_pwd", FALSE);
+
+	gtk_dialog_run(GTK_DIALOG(priv->dialog_login));
+	gtk_widget_hide(priv->dialog_login);
 }
 
 static void
@@ -2283,15 +2412,22 @@ on_login_dialog_button_login_clicked(GtkButton *button,
 	XmrWindowPrivate *priv = window->priv;
 
 	static GtkWidget *entry_usr, *entry_pwd;
-	static GtkWidget *checkbox;
 
 	const gchar *usr, *pwd;
+
+	if (g_strcmp0(gtk_button_get_label(button),
+					_("Logout")) == 0)
+	{
+		xmr_window_logout(window);
+		change_radio(window, "", DEFAULT_RADIO_URL);
+
+		return FALSE;
+	}
 
 	if (entry_usr == NULL)
 	{
 		entry_usr = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_usr"));
 		entry_pwd = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "entry_pwd"));
-		checkbox = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "cb_auto_login"));
 	}
 
 	usr = gtk_entry_get_text(GTK_ENTRY(entry_usr));
@@ -2310,10 +2446,6 @@ on_login_dialog_button_login_clicked(GtkButton *button,
 
 	priv->usr = g_strdup(usr);
 	priv->pwd = g_strdup(pwd);
-
-	xmr_settings_set_auto_login(priv->settings,
-				gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbox))
-				);
 
 	xmr_window_login(window);
 
@@ -2495,16 +2627,18 @@ static void
 like_current_song(XmrWindow *window, gboolean like)
 {
 	XmrWindowPrivate *priv = window->priv;
-	SongInfo *song;
 
 	if (!xmr_service_is_logged_in(priv->service))
 	{
-		g_warning("You should login first\n");
+		do_login(window);
 		return ;
 	}
 
-	song = xmr_window_get_current_song(window);
-	xmr_service_like_song(priv->service, song->song_id, like);
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	g_thread_new("like", (GThreadFunc)(like ? thread_like_song : thread_dislike_song), window);
+#else
+	g_thread_create((GThreadFunc)(like ? thread_like_song : thread_dislike_song), window, FALSE, NULL);
+#endif
 
 	if (!like){
 	  xmr_window_play_next(window);
@@ -2549,6 +2683,8 @@ change_radio_style(XmrWindow *window,
 			// to avoid change radio from siren to siren
 			if (priv->playlist_url != NULL)
 				change_radio(window, _("私人电台"), NULL);
+			else
+				do_logout(window);
 		}
 	}
 	else
