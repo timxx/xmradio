@@ -38,6 +38,7 @@
 #include "xmrmarshal.h"
 #include "xmrapp.h"
 #include "xmrpluginengine.h"
+#include "xmrvolumebutton.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -128,7 +129,10 @@ struct _XmrWindowPrivate
 	GMutex*	mutex;
 
 	GtkWidget *dialog_login;
+
+	gboolean syncing_volume;
 };
+/* end of struct _XmrWindowPrivate */
 
 enum
 {
@@ -237,6 +241,11 @@ static void
 player_state_changed(XmrPlayer *player,
 			gint old_state,
 			gint new_state,
+			XmrWindow *window);
+
+static void
+player_volume_changed(XmrPlayer *player,
+			float volume,
 			XmrWindow *window);
 
 /**
@@ -424,6 +433,11 @@ change_radio_style(XmrWindow *window,
 			gint new_style);
 
 static void
+on_volume_button_value_changed(GtkScaleButton *button,
+			gdouble value,
+			XmrWindow *window);
+
+static void
 install_properties(GObjectClass *object_class)
 {
 	g_object_class_install_property(object_class,
@@ -593,6 +607,7 @@ xmr_window_init(XmrWindow *window)
 #endif
 
 	priv->dialog_login = NULL;
+	priv->syncing_volume = FALSE;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -605,7 +620,11 @@ xmr_window_init(XmrWindow *window)
 
 	for(i=0; i<LAST_BUTTON; ++i)
 	{
-		priv->buttons[i] = xmr_button_new(XMR_BUTTON_SKIN);
+		if (i == BUTTON_VOLUME){
+			priv->buttons[i] = xmr_volume_button_new(XMR_BUTTON_SKIN);
+		}else{
+			priv->buttons[i] = xmr_button_new(XMR_BUTTON_SKIN);
+		}
 		gtk_fixed_put(GTK_FIXED(priv->fixed), priv->buttons[i], 0, 0);
 
 		g_signal_connect(priv->buttons[i], "clicked",
@@ -637,6 +656,7 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->player, "tick", G_CALLBACK(player_tick), window);
 	g_signal_connect(priv->player, "buffering", G_CALLBACK(player_buffering), window);
 	g_signal_connect(priv->player, "state-changed", G_CALLBACK(player_state_changed), window);
+	g_signal_connect(priv->player, "volume-changed", G_CALLBACK(player_volume_changed), window);
 
 	for(i=0; i<3; ++i)
 	  g_signal_connect(priv->chooser[i], "radio-selected",
@@ -650,6 +670,14 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->extensions, "extension-removed",
 			  G_CALLBACK(on_extension_removed), NULL);
 
+	g_signal_connect(priv->buttons[BUTTON_VOLUME], "value-changed",
+			  G_CALLBACK(on_volume_button_value_changed),
+			  window);
+
+	g_settings_bind(G_SETTINGS(priv->settings),
+				"volume",
+				priv->buttons[BUTTON_VOLUME], "value",
+				G_SETTINGS_BIND_DEFAULT);
 	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 
 	load_settings(window);
@@ -947,6 +975,9 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 	case BUTTON_NIANDAI:
 		change_radio_style(window, 3);
 		break;
+
+	case BUTTON_VOLUME:
+		break;
 	}
 }
 
@@ -1126,9 +1157,6 @@ set_skin(XmrWindow *window, const gchar *skin)
 			break;
 		}
 
-		x = gdk_pixbuf_get_width(pixbuf);
-		y = gdk_pixbuf_get_height(pixbuf);
-
 		priv->gtk_theme = FALSE;
 
 		gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
@@ -1143,9 +1171,18 @@ set_skin(XmrWindow *window, const gchar *skin)
 			if (pixbuf == NULL)
 				continue ;
 
-			xmr_button_set_image_from_pixbuf(XMR_BUTTON(priv->buttons[i]), pixbuf);
+			if (i == BUTTON_VOLUME)
+			{
+				xmr_volume_button_set_image_from_pixbuf(XMR_VOLUME_BUTTON(priv->buttons[i]), pixbuf);
+				xmr_volume_button_set_type(XMR_VOLUME_BUTTON(priv->buttons[i]), XMR_BUTTON_SKIN);
+			}
+			else
+			{
+				xmr_button_set_image_from_pixbuf(XMR_BUTTON(priv->buttons[i]), pixbuf);
+				xmr_button_set_type(XMR_BUTTON(priv->buttons[i]), XMR_BUTTON_SKIN);
+			}
 			g_object_unref(pixbuf);
-			xmr_button_set_type(XMR_BUTTON(priv->buttons[i]), XMR_BUTTON_SKIN);
+
 
 			if (xmr_skin_get_position(xmr_skin, UI_MAIN, ui_main_buttons[i], &x, &y))
 			{
@@ -1200,7 +1237,7 @@ set_skin(XmrWindow *window, const gchar *skin)
 			priv->skin = g_strdup(info->name);
 		}
 
-//		gtk_widget_queue_draw(GTK_WIDGET(window));
+		gtk_widget_queue_draw(GTK_WIDGET(window));
 		g_signal_emit(window, signals[THEME_CHANGED], 0, skin);
 
 		if (xmr_player_playing(priv->player))
@@ -1306,6 +1343,16 @@ player_state_changed(XmrPlayer *player,
 		gtk_widget_hide(window->priv->buttons[BUTTON_PAUSE]);
 		gtk_widget_show(window->priv->buttons[BUTTON_PLAY]);
 	}
+}
+
+static void
+player_volume_changed(XmrPlayer *player,
+			float volume,
+			XmrWindow *window)
+{
+	window->priv->syncing_volume = TRUE;
+	gtk_scale_button_set_value(GTK_SCALE_BUTTON(window->priv->buttons[BUTTON_VOLUME]), volume);
+	window->priv->syncing_volume = FALSE;
 }
 
 static gboolean
@@ -2689,4 +2736,22 @@ change_radio_style(XmrWindow *window,
 	}
 	else
 		gtk_widget_show_all(priv->chooser[new_style - 1]);
+}
+
+static void
+on_volume_button_value_changed(GtkScaleButton *button,
+			gdouble value,
+			XmrWindow *window)
+{
+	if (!window->priv->syncing_volume) {
+		xmr_player_set_volume(window->priv->player, value);
+	}	
+}
+
+void
+xmr_window_set_volume(XmrWindow *window,
+			float value)
+{
+	g_return_if_fail(window != NULL);
+	xmr_player_set_volume(window->priv->player, value);
 }

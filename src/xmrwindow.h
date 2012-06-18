@@ -95,6 +95,10 @@ xmr_window_login(XmrWindow *window);
 void
 xmr_window_logout(XmrWindow *window);
 
+void
+xmr_window_set_volume(XmrWindow *window,
+			float value);
+
 G_END_DECLS
 
 #endif /* __XMR_WINDOW_H__ */
