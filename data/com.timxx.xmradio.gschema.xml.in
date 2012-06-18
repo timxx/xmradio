@@ -35,6 +35,11 @@
 			<_summary>password</_summary>
 			<_description>user password</_description>
 		</key>
+		<key name="volume" type="d" >
+			<default>1.0</default>
+			<_summary>Volume</_summary>
+			<_description>Volume level</_description>
+		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
 		<key name="active-plugins" type="as">
