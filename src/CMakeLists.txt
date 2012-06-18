@@ -33,6 +33,7 @@ set(XMRADIO_HEADERS
 	xmrsettings.h
 	xmrskin.h
 	xmrutil.h
+	xmrvolumebutton.h
 	xmrwindow.h
 )
 
@@ -50,6 +51,7 @@ set(XMRADIO_CORE_SOURCES
 	xmrradiochooser.c
 	xmrsettings.c
 	xmrutil.c
+	xmrvolumebutton.c
 	xmrwindow.c
 	${CMAKE_BINARY_DIR}/xmrmarshal.c
 )
