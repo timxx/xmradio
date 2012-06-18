@@ -277,6 +277,7 @@ xmr_service_logout(XmrService *xs)
 	if (!xs->priv->logged)
 		return ;
 
+	xs->priv->logged = FALSE;
 	data = g_string_new("");
 
 	xmr_service_get_url_data(xs, XMR_LOGOUT_URL, data);
