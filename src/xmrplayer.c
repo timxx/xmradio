@@ -753,15 +753,18 @@ xmr_player_set_volume(XmrPlayer *player,
 	g_return_if_fail( player != NULL);
 	g_return_if_fail (volume >= 0.0 && volume <= 1.0);
 
-	g_signal_handlers_block_by_func (player->priv->playbin, volume_notify_cb, player);
+	if (player->priv->playbin == NULL)
+		return ;
 
-	if (gst_element_implements_interface (player->priv->playbin, GST_TYPE_STREAM_VOLUME))
+	g_signal_handlers_block_by_func(player->priv->playbin, volume_notify_cb, player);
+
+	if (gst_element_implements_interface(player->priv->playbin, GST_TYPE_STREAM_VOLUME))
 		gst_stream_volume_set_volume(GST_STREAM_VOLUME(player->priv->playbin),
 					      GST_STREAM_VOLUME_FORMAT_CUBIC, volume);
 	else
 		g_object_set(player->priv->playbin, "volume", volume, NULL);
 
-	g_signal_handlers_unblock_by_func (player->priv->playbin, volume_notify_cb, player);
+	g_signal_handlers_unblock_by_func(player->priv->playbin, volume_notify_cb, player);
 
 	player->priv->cur_volume = volume;
 }
