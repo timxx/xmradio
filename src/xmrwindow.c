@@ -1364,7 +1364,7 @@ static gboolean
 thread_finish(GThread *thread)
 {
 #if GLIB_CHECK_VERSION(2, 32, 0)
-	g_thread_unref(thread);
+	g_thread_join(thread);
 #endif
 
 	return FALSE;
@@ -1525,7 +1525,12 @@ thread_login(XmrWindow *window)
 
 		gdk_threads_enter();
 		xmr_message(GTK_WIDGET(window), message, _("Login Status"));
-		change_radio(window, "", priv->playlist_url);
+		if (g_list_length(priv->playlist) == 0)
+		{
+			if (priv->playlist_url == NULL) {
+				change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
+			}
+		}
 		gdk_threads_leave();
 
 		g_free(message);
@@ -1534,11 +1539,28 @@ thread_login(XmrWindow *window)
 	{
 		xmr_settings_set_usr_info(priv->settings, priv->usr, priv->pwd);
 		// switch to siren radio
-		if (priv->switch_radio || priv->playlist_url == NULL)
+		if (priv->switch_radio)
 		{
 			gdk_threads_enter();
 			change_radio(window, _("私人电台"), NULL);
 			gdk_threads_leave();
+
+			priv->switch_radio = FALSE;
+		}
+		else
+		{
+			gchar *radio_name = NULL;
+			gchar *radio_url = NULL;
+
+			xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
+			if (g_strcmp0(priv->playlist_url, radio_url) != 0)
+			{
+				gdk_threads_enter();
+				change_radio(window, radio_name, radio_url);
+				gdk_threads_leave();
+			}
+			g_free(radio_name);
+			g_free(radio_url);
 		}
 	}
 	xmr_debug("login status: %s", login_message);
@@ -2006,6 +2028,8 @@ load_settings(XmrWindow *window)
 		if (priv->usr != NULL && priv->pwd != NULL &&
 			*priv->usr != 0 && *priv->pwd != 0)
 		{
+			if (!radio_url || *radio_url == 0)
+				priv->switch_radio = TRUE;
 			xmr_window_login(window);
 		}
 	}
