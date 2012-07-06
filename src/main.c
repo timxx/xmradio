@@ -145,6 +145,9 @@ int main(int argc, char **argv)
 		dbus_connection_setup_with_g_main(bus, NULL);
 
 		send_action(bus, player_action);
+
+		// exit directly
+		return 0;
 	}
 
 	xmr_debug_enable(debug);
