@@ -43,6 +43,8 @@
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
 #define DEFAULT_RADIO_URL	"http://www.xiami.com/kuang/xml/type/6/id/0"
+#define DEFAULT_RADIO_NAME	_("新歌电台")
+
 #define COVER_WIDTH	100
 #define COVER_HEIGHT 100
 
@@ -436,6 +438,9 @@ static void
 on_volume_button_value_changed(GtkScaleButton *button,
 			gdouble value,
 			XmrWindow *window);
+
+static gboolean
+emit_track_changed_idle(XmrWindow *window);
 
 static void
 install_properties(GObjectClass *object_class)
@@ -1608,9 +1613,7 @@ thread_update_radio_list(XmrWindow *window)
 				radio_info->logo = uri;
 
 				// save cover to local file
-				gdk_threads_enter();
 				write_memory_to_file(uri, data->str, data->len);
-				gdk_threads_leave();
 
 				// save to database
 				xmr_db_add_radio(db, radio_info, radio_style[i]);
@@ -1790,7 +1793,8 @@ xmr_window_play_next(XmrWindow *window)
 
 	xmr_window_set_track_info(window);
 
-	g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
+	//g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
+	g_idle_add((GSourceFunc)emit_track_changed_idle, window);
 
 	// get new playlist if only one song in playlist
 	if (g_list_length(priv->playlist) > 1)
@@ -2015,6 +2019,7 @@ load_settings(XmrWindow *window)
 		else
 		{
 			priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
+			gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), DEFAULT_RADIO_NAME);
 		}
 
 		xmr_window_get_playlist(window);
@@ -2466,7 +2471,7 @@ on_login_dialog_button_login_clicked(GtkButton *button,
 					_("Logout")) == 0)
 	{
 		xmr_window_logout(window);
-		change_radio(window, "", DEFAULT_RADIO_URL);
+		change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
 
 		return FALSE;
 	}
@@ -2754,4 +2759,16 @@ xmr_window_set_volume(XmrWindow *window,
 {
 	g_return_if_fail(window != NULL);
 	xmr_player_set_volume(window->priv->player, value);
+}
+
+static gboolean
+emit_track_changed_idle(XmrWindow *window)
+{
+	if (g_list_length(window->priv->playlist) > 0)
+	{
+		SongInfo *song = (SongInfo *)window->priv->playlist->data;
+		g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
+	}
+
+	return FALSE;
 }
