@@ -1,6 +1,15 @@
-option(ENABLE_APPINDICATOR "Enable app indicator" ON)
+PKG_CHECK_MODULES(APPINDICATOR "appindicator3-0.1")
+
+if (APPINDICATOR_FOUND)
+	option(ENABLE_APPINDICATOR "Enable app indicator" ON)
+else (APPINDICATOR_FOUND)
+	option(ENABLE_APPINDICATOR "Enable app indicator" OFF)
+endif (APPINDICATOR_FOUND)
+
 if(ENABLE_APPINDICATOR)
-	PKG_CHECK_MODULES(APPINDICATOR REQUIRED "appindicator3-0.1")
+	if (NOT APPINDICATOR_FOUND)
+		message(FATAL_ERROR "package 'appindicator3-0.1' not found")
+	endif(NOT APPINDICATOR_FOUND)
 
 	message(STATUS "Use app indicator")
 	set(INDICATOR_SOURCES
