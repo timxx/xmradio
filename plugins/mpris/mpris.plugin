@@ -1,0 +1,8 @@
+[Plugin]
+Module=mpris
+IAge=2
+Name=MPRIS D-Bus interface
+Description=Provides an implementation of the MPRIS D-Bus interface specification
+Authors=Weitian Leung
+Copyright=Copyright © 2012 Weitian Leung<weitianleung@gmail.com>
+Website=https://github.com/timxx/xmradio
