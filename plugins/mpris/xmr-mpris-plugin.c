@@ -312,6 +312,22 @@ get_playback_status(XmrMprisPlugin *plugin)
 }
 
 static GVariant *
+variant_for_metadata(const char *value, gboolean as_list)
+{
+	if (as_list)
+	{
+		const char *strv[] = {
+			value, NULL
+		};
+		return g_variant_new_strv(strv, -1);
+	}
+	else 
+	{
+		return g_variant_new_string(value);
+	}
+}
+
+static GVariant *
 build_metadata(XmrMprisPlugin *plugin)
 {
 	GVariantBuilder *builder;
@@ -332,7 +348,7 @@ build_metadata(XmrMprisPlugin *plugin)
 				g_variant_new("s", plugin->current_song->album_name));
 
     g_variant_builder_add(builder, "{sv}", "xesam:artist",
-				g_variant_new("s", plugin->current_song->artist_name));
+				variant_for_metadata(plugin->current_song->artist_name, TRUE));
 
     g_variant_builder_add(builder, "{sv}", "xesam:title",
 				g_variant_new("s", plugin->current_song->song_name));
