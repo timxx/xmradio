@@ -43,7 +43,7 @@
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
 		<key name="active-plugins" type="as">
-		<default>['notification', 'indicator']</default>
+		<default>['notification', 'indicator', 'mpris']</default>
 		<_summary>Active plugins</_summary>
 		<_description>List of active plugins.</_description>
 		</key>
