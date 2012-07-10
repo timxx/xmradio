@@ -95,6 +95,11 @@ xmr_skin_get_position(XmrSkin *skin,
 			const gchar *name,
 			gint *x, gint *y);
 
+gboolean
+xmr_skin_get_size(XmrSkin *skin,
+			const gchar *ui,
+			const gchar *name,
+			gint *w, gint *h);
 /**
  * @param name when @name is NULL,
  * #XmrSkin will return the root node image,

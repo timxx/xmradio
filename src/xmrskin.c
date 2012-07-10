@@ -399,6 +399,26 @@ xmr_skin_get_position(XmrSkin *skin,
 	return result;
 }
 
+gboolean
+xmr_skin_get_size(XmrSkin *skin,
+			const gchar *ui,
+			const gchar *name,
+			gint *w, gint *h)
+{
+	gchar *value = NULL;
+	gint result;
+
+	get_name_value(skin, ui, name, "size", &value);
+	if (value == NULL)
+		return FALSE;
+
+	result = pos_str_to_ii(value, w, h);
+
+	g_free(value);
+
+	return result;
+}
+
 GdkPixbuf *
 xmr_skin_get_image(XmrSkin *skin,
 			const gchar *ui,
