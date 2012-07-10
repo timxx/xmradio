@@ -39,6 +39,7 @@
 #include "xmrapp.h"
 #include "xmrpluginengine.h"
 #include "xmrvolumebutton.h"
+#include "xmrlabel.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -334,20 +335,6 @@ append_skin_to_menu(XmrWindow *window, SkinInfo *info);
 static void
 append_skin_to_pref(XmrWindow *window, SkinInfo *info);
 
-/**
- * set @widget fg color by parse @color_str
- */
-static void
-set_widget_fg_color(GtkWidget *widget,
-			const gchar *color_str);
-
-/**
- * set @widget font
- */
-static void
-set_widget_font(GtkWidget *widget,
-			const gchar *font_desc);
-
 static GtkBuilder *
 create_builder_with_file(const gchar *file);
 
@@ -638,7 +625,7 @@ xmr_window_init(XmrWindow *window)
 
 	for(i=0; i<LAST_LABEL; ++i)
 	{
-		priv->labels[i] = gtk_label_new("");
+		priv->labels[i] = xmr_label_new("");
 		gtk_fixed_put(GTK_FIXED(priv->fixed), priv->labels[i], 0, 0);
 	}
 
@@ -1109,10 +1096,11 @@ set_gtk_theme(XmrWindow *window)
 	for(i=0; i<LAST_LABEL; ++i)
 	{
 		gtk_fixed_move(GTK_FIXED(priv->fixed), priv->labels[i], label_pos[i].x, label_pos[i].y);
+		xmr_label_set_size(XMR_LABEL(priv->labels[i]), 120, 20);
 		gtk_widget_show(priv->labels[i]);
 
-		set_widget_fg_color(priv->labels[i], NULL);
-		set_widget_font(priv->labels[i], NULL);
+		xmr_label_set_color(XMR_LABEL(priv->labels[i]), NULL);
+		xmr_label_set_font(XMR_LABEL(priv->labels[i]), NULL);
 	}
 
 	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, 25, 80);
@@ -1203,15 +1191,21 @@ set_skin(XmrWindow *window, const gchar *skin)
 			{
 				gtk_fixed_move(GTK_FIXED(priv->fixed), priv->labels[i], x, y);
 				gtk_widget_show(priv->labels[i]);
+			
+				if (xmr_skin_get_size(xmr_skin, UI_MAIN, ui_main_labels[i], &x, &y)){
+					xmr_label_set_size(XMR_LABEL(priv->labels[i]), x, y);
+				} else {
+					xmr_label_set_size(XMR_LABEL(priv->labels[i]), -1, -1);
+				}
 			}
 
 			xmr_skin_get_color(xmr_skin, UI_MAIN, ui_main_labels[i], &value);
-			set_widget_fg_color(priv->labels[i], value);
+			xmr_label_set_color(XMR_LABEL(priv->labels[i]), value);
 			g_free(value);
 
 			value = NULL;
 			xmr_skin_get_font(xmr_skin, UI_MAIN, ui_main_labels[i], &value);
-			set_widget_font(priv->labels[i], value);
+			xmr_label_set_font(XMR_LABEL(priv->labels[i]), value);
 			g_free(value);
 		}
 
@@ -1284,6 +1278,7 @@ player_error(XmrPlayer *player,
 			XmrWindow *window)
 {
 	g_warning("Player error: %s\n", error->message);
+//	xmr_message(GTK_WIDGET(window), error->message, _("Player error"));
 }
 
 static void
@@ -1318,7 +1313,7 @@ player_tick(XmrPlayer *player,
 		g_error("Failed to alloc memory\n");
 	}
 
-	gtk_label_set_text(GTK_LABEL(window->priv->labels[LABEL_TIME]),
+	xmr_label_set_text(XMR_LABEL(window->priv->labels[LABEL_TIME]),
 				time);
 
 	g_free(time);
@@ -1377,6 +1372,8 @@ thread_get_playlist(XmrWindow *window)
 	gint result = 1;
 	gboolean auto_play;
 	GList *list = NULL;
+
+	xmr_debug("[BEGIN] thread_get_playlist");
 	
 	g_mutex_lock(priv->mutex);
 	auto_play = (g_list_length(priv->playlist) == 0);
@@ -1430,6 +1427,8 @@ thread_get_playlist(XmrWindow *window)
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
 
+	xmr_debug("[END] thread_get_playlist");
+
 	return NULL;
 }
 
@@ -1440,6 +1439,8 @@ thread_get_cover_image(XmrWindow *window)
 	GString *data = NULL;
 	GdkPixbuf *pixbuf = NULL;
 	XmrService *service = NULL;
+
+	xmr_debug("[BEGIN] thread_get_cover_image");
 
 	do
 	{
@@ -1498,6 +1499,7 @@ thread_get_cover_image(XmrWindow *window)
 	}
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+	xmr_debug("[END] thread_get_cover_image");
 
 	return NULL;
 }
@@ -1509,6 +1511,7 @@ thread_login(XmrWindow *window)
 	gint result;
 	gchar *login_message = NULL;
 
+	xmr_debug("[BEGIN] thread_login");
 	g_mutex_lock(priv->mutex);
 	result = xmr_service_login(priv->service, priv->usr, priv->pwd, &login_message);
 	g_mutex_unlock(priv->mutex);
@@ -1567,6 +1570,7 @@ thread_login(XmrWindow *window)
 	g_free(login_message);
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+	xmr_debug("[END] thread_login");
 
 	return NULL;
 }
@@ -1576,11 +1580,14 @@ thread_logout(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 
+	xmr_debug("[BEGIN] thread_logout");
+
 	g_mutex_lock(priv->mutex);
 	xmr_service_logout(priv->service);
 	g_mutex_unlock(priv->mutex);
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+	xmr_debug("[END] thread_logout");
 
 	return NULL;
 }
@@ -1594,6 +1601,7 @@ thread_update_radio_list(XmrWindow *window)
 	XmrService *service;
 	XmrDb *db = xmr_db_new();
 
+	xmr_debug("[BEGIN] thread_update_radio_list");
 	// use a new service rather than priv->service
 	// it will block other data receiving
 	service = xmr_service_new();
@@ -1662,6 +1670,7 @@ thread_update_radio_list(XmrWindow *window)
 	g_object_unref(db);
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+	xmr_debug("[END] thread_update_radio_list");
 
 	return NULL;
 }
@@ -1672,12 +1681,15 @@ thread_like_song(XmrWindow *window)
 	XmrWindowPrivate *priv = window->priv;
 	SongInfo *song;
 
+	xmr_debug("[BEGIN] thread_like_song");
+
 	g_mutex_lock(priv->mutex);
 	song = xmr_window_get_current_song(window);
 	xmr_service_like_song(priv->service, song->song_id, TRUE);
 	g_mutex_unlock(priv->mutex);
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+	xmr_debug("[END] thread_like_song");
 
 	return NULL;
 }
@@ -1688,12 +1700,14 @@ thread_dislike_song(XmrWindow *window)
 	XmrWindowPrivate *priv = window->priv;
 	SongInfo *song;
 
+	xmr_debug("[BEGIN] thread_dislike_song");
 	g_mutex_lock(priv->mutex);
 	song = xmr_window_get_current_song(window);
 	xmr_service_like_song(priv->service, song->song_id, FALSE);
 	g_mutex_unlock(priv->mutex);
 
 	g_idle_add((GSourceFunc)thread_finish, g_thread_self());
+	xmr_debug("[END] thread_dislike_song");
 
 	return NULL;
 }
@@ -1746,8 +1760,8 @@ xmr_window_set_track_info(XmrWindow *window)
 
 	xmr_window_get_cover_image(window);
 
-	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_SONG_NAME]), song->song_name);
-	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_ARTIST]), song->artist_name);
+	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_SONG_NAME]), song->song_name);
+	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_ARTIST]), song->artist_name);
 
 	gtk_widget_set_tooltip_text(priv->image, song->album_name);
 }
@@ -1812,6 +1826,8 @@ xmr_window_play_next(XmrWindow *window)
 	song = (SongInfo *)priv->playlist->data;
 	xmr_player_open(priv->player, song->location, NULL);
 	xmr_player_play(priv->player);
+
+	xmr_debug("play next song: %s", song->location);
 
 	xmr_window_set_track_info(window);
 
@@ -2038,12 +2054,12 @@ load_settings(XmrWindow *window)
 		if (radio_url && *radio_url != 0)
 		{
 			priv->playlist_url = g_strdup(radio_url);
-			gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), radio_name);
+			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), radio_name);
 		}
 		else
 		{
 			priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
-			gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), DEFAULT_RADIO_NAME);
+			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), DEFAULT_RADIO_NAME);
 		}
 
 		xmr_window_get_playlist(window);
@@ -2243,89 +2259,6 @@ append_skin_to_pref(XmrWindow *window, SkinInfo *info)
 	}
 }
 
-static gint
-hex_to_int(gchar ch)
-{
-	if (ch >= 'A' && ch <= 'F')
-		return ch - 'A' + 10;
-	if (ch >= 'a' && ch <= 'f')
-		return ch - 'a' + 10;
-
-	return ch - '0';
-}
-
-static void
-hex_color_to_rgba(const gchar *hex_color,
-			GdkRGBA *rgba)
-{
-	gfloat value = 0;
-	const gchar *p = hex_color;
-	gint a, b;
-
-	p++;	// skip '#'
-	// r
-	a = *p++;
-	b = *p++;
-	value = hex_to_int(a) * 16 + hex_to_int(b);
-	rgba->red = value/255.0;
-
-	// g
-	a = *p++;
-	b = *p++;
-	value = hex_to_int(a) * 16 + hex_to_int(b);
-	rgba->green = value/255.0;
-
-	// b
-	a = *p++;
-	b = *p;
-	value = hex_to_int(a) * 16 + hex_to_int(b);
-	rgba->blue = value/255.0;
-
-	// currently just ignore transparency
-	rgba->alpha = 1.0;
-}
-
-static void
-set_widget_fg_color(GtkWidget *widget,
-			const gchar *color_str)
-{
-	GdkRGBA rgba = { 0 };
-	gint COLOR_LEN = strlen("#FFFFFF");
-
-	if (color_str == NULL ||
-		strlen(color_str) != COLOR_LEN) // set to black color
-	{
-		rgba.alpha = 1.0;
-	}
-	else
-	{
-		hex_color_to_rgba(color_str, &rgba);
-	}
-
-	gtk_widget_override_color(widget,
-				GTK_STATE_FLAG_NORMAL,
-				&rgba);
-}
-
-static void
-set_widget_font(GtkWidget *widget,
-			const gchar *font_desc)
-{
-	PangoFontDescription * pfd;
-	if (font_desc == NULL){
-		pfd = pango_font_description_from_string("Sans 10");
-	}else{
-		pfd = pango_font_description_from_string(font_desc);
-	}
-
-	if (pfd)
-	{
-		gtk_widget_modify_font(widget, pfd);
-
-		pango_font_description_free(pfd);
-	}
-}
-
 static GtkBuilder *
 create_builder_with_file(const gchar *file)
 {
@@ -2472,7 +2405,7 @@ change_radio(XmrWindow *window,
 
 	priv->playlist_url = (url == NULL ? NULL : g_strdup(url));
 
-	gtk_label_set_text(GTK_LABEL(priv->labels[LABEL_RADIO]), name);
+	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), name);
 	xmr_window_get_playlist(window);
 
 	xmr_settings_set_radio(priv->settings, name, (url == NULL ? "" : url));
