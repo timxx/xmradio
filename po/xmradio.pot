@@ -1,0 +1,291 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: xmradio\n"
+"Report-Msgid-Bugs-To: https://github.com/timxx/xmradio\n"
+"POT-Creation-Date: 2012-07-11 10:24+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Window position"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "The last window position"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "UI theme"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Set null or leave empty to use gtk theme"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "radio url"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Radio url"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "radio name"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "auto login"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "user name"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "password"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "user password"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Volume"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Volume level"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Active plugins"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "List of active plugins."
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Hide on exit"
+msgstr ""
+
+#: com.timxx.xmradio.gschema.xml.in
+msgid "Hide window when playing, instead default exit action"
+msgstr ""
+
+#: xmradio.desktop.in
+msgid "xmradio"
+msgstr ""
+
+#: xmradio.desktop.in
+msgid "Music Player"
+msgstr ""
+
+#: xmradio.desktop.in
+msgid "XiaMi radio"
+msgstr ""
+
+#: xmradio.desktop.in
+msgid "Play"
+msgstr ""
+
+#: xmradio.desktop.in
+msgid "Pause"
+msgstr ""
+
+#: xmradio.desktop.in
+msgid "Next"
+msgstr ""
+
+#: xmradio.desktop.in
+#: plugins/indicator/xmr-indicator-plugin.c:129
+#: plugins/indicator/xmr-indicator-plugin.c:337
+msgid "Love"
+msgstr ""
+
+#: xmradio.desktop.in
+#: plugins/indicator/xmr-indicator-plugin.c:129
+#: plugins/indicator/xmr-indicator-plugin.c:337
+msgid "Hate"
+msgstr ""
+
+#: data/ui/about.ui:7
+msgid "About"
+msgstr ""
+
+#: data/ui/about.ui:12
+msgid "Copyright @ 2012 Weitian Leung"
+msgstr ""
+
+#: data/ui/about.ui:13
+msgid ""
+"XMRadio is a kind of Network Music Player for Linux\n"
+"For more information see www.xiami.com/radio"
+msgstr ""
+
+#: data/ui/login.ui:7 data/ui/login.ui:37
+msgid "Login Info"
+msgstr ""
+
+#: data/ui/login.ui:74
+msgid "User Name:"
+msgstr ""
+
+#: data/ui/login.ui:87
+msgid "Password:"
+msgstr ""
+
+#: data/ui/login.ui:140
+msgid "Auto Login"
+msgstr ""
+
+#: data/ui/pref.ui:36
+msgid "Version: "
+msgstr ""
+
+#: data/ui/pref.ui:51
+msgid "URL: "
+msgstr ""
+
+#: data/ui/pref.ui:65
+msgid "Author: "
+msgstr ""
+
+#: data/ui/pref.ui:80
+msgid "Email: "
+msgstr ""
+
+#: data/ui/pref.ui:163
+msgid "Preferences"
+msgstr ""
+
+#: plugins/indicator/xmr-indicator-plugin.c:120
+#: plugins/indicator/xmr-indicator-plugin.c:306
+msgid "Show"
+msgstr ""
+
+#: plugins/indicator/xmr-indicator-plugin.c:161
+msgid "Hide on exit when playing"
+msgstr ""
+
+#: src/main.c:53
+msgid "Enable debug output"
+msgstr ""
+
+#: src/main.c:54
+msgid "Play song"
+msgstr ""
+
+#: src/main.c:55
+msgid "Pause current song if playing"
+msgstr ""
+
+#: src/main.c:56
+msgid "Play next song"
+msgstr ""
+
+#: src/main.c:57
+msgid "Love current song"
+msgstr ""
+
+#: src/main.c:58
+msgid "Hate current song"
+msgstr ""
+
+#: src/main.c:59
+msgid "Show the application's version"
+msgstr ""
+
+#: src/main.c:111
+#, c-format
+msgid ""
+"%s\n"
+"Run '%s --help' to see a full list of available command line options.\n"
+msgstr ""
+
+#: src/xmrplayer.c:361
+msgid "Failed to create playbin2 element; check your GStreamer installation"
+msgstr ""
+
+#: src/xmrwindow.c:47
+msgid "新歌电台"
+msgstr ""
+
+#: src/xmrwindow.c:169 src/xmrwindow.c:641
+msgid "年代电台"
+msgstr ""
+
+#: src/xmrwindow.c:169 src/xmrwindow.c:640
+msgid "星座电台"
+msgstr ""
+
+#: src/xmrwindow.c:169 src/xmrwindow.c:1548 src/xmrwindow.c:2694
+msgid "私人电台"
+msgstr ""
+
+#: src/xmrwindow.c:169 src/xmrwindow.c:639
+msgid "风格电台"
+msgstr ""
+
+#: src/xmrwindow.c:682
+msgid "XMRadio"
+msgstr ""
+
+#: src/xmrwindow.c:1523
+#, c-format
+msgid ""
+"Login failed:\n"
+"%s"
+msgstr ""
+
+#: src/xmrwindow.c:1530
+msgid "Login Status"
+msgstr ""
+
+#: src/xmrwindow.c:1882 src/xmrwindow.c:1938
+msgid "_Gtk Theme"
+msgstr ""
+
+#: src/xmrwindow.c:1889
+msgid "_Skin"
+msgstr ""
+
+#: src/xmrwindow.c:1903
+msgid "_Radio"
+msgstr ""
+
+#: src/xmrwindow.c:2291
+msgid "Skin"
+msgstr ""
+
+#: src/xmrwindow.c:2296
+msgid "Plugins"
+msgstr ""
+
+#: src/xmrwindow.c:2301 src/xmrwindow.c:2572
+msgid "Gtk Theme"
+msgstr ""
+
+#: src/xmrwindow.c:2364 src/xmrwindow.c:2449
+msgid "Login"
+msgstr ""
+
+#: src/xmrwindow.c:2383 src/xmrwindow.c:2428
+msgid "Logout"
+msgstr ""
+
+#: src/xmrwindow.c:2448
+msgid "User name and password may not empty"
+msgstr ""
