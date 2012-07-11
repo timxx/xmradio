@@ -1279,6 +1279,7 @@ player_error(XmrPlayer *player,
 {
 	g_warning("Player error: %s\n", error->message);
 //	xmr_message(GTK_WIDGET(window), error->message, _("Player error"));
+	xmr_window_play_next(window);
 }
 
 static void
