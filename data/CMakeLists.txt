@@ -30,19 +30,19 @@ MACRO(TRANSLATE_XML infile outfile)
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${outfile}
 		COMMAND ${INTLTOOL_MERGE} -x -u
-		--no-translations
+		${i18ndir}
 		${infile} ${outfile}
 		DEPENDS ${infile}
 	)
 ENDMACRO(TRANSLATE_XML)
 
 add_custom_target(schemasfile ALL DEPENDS ${gsettings_SCHEMAS})
-translate_xml(${CMAKE_CURRENT_SOURCE_DIR}/com.timxx.xmradio.gschema.xml.in
-	${CMAKE_CURRENT_BINARY_DIR}/com.timxx.xmradio.gschema.xml)
+# translate_xml(${CMAKE_CURRENT_SOURCE_DIR}/com.timxx.xmradio.gschema.xml.in
+#	${CMAKE_CURRENT_BINARY_DIR}/com.timxx.xmradio.gschema.xml)
 
-install(SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/compile-schemas.cmake)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/com.timxx.xmradio.gschema.xml
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/com.timxx.xmradio.gschema.xml
 	DESTINATION ${prefix}/share/glib-2.0/schemas/)
+install(SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/compile-schemas.cmake)
 
 install(DIRECTORY ui DESTINATION ${pkgdatadir}
 	PATTERN .* EXCLUDE

@@ -2,57 +2,57 @@
 	<schema gettext-domain="xmradio" id="com.timxx.xmradio" path="/apps/xmradio/">
 		<key name="window-pos" type="(ii)">
 			<default>(-1,-1)</default>
-			<_summary>Window position</_summary>
-			<_description>The last window position</_description>
+			<summary>Window position</summary>
+			<description>The last window position</description>
 		</key>
 		<key name="theme" type="s">
 			<default>'pure'</default>
-			<_summary>UI theme</_summary>
-			<_description>Set null or leave empty to use gtk theme</_description>
+			<summary>UI theme</summary>
+			<description>Set null or leave empty to use gtk theme</description>
 		</key>
 		<key name="radio-url" type="s">
 			<default>''</default>
-			<_summary>radio url</_summary>
-			<_description>Radio url</_description>
+			<summary>radio url</summary>
+			<description>Radio url</description>
 		</key>
 		<key name="radio-name" type="s">
 			<default>''</default>
-			<_summary>radio name</_summary>
-			<_description>radio name</_description>
+			<summary>radio name</summary>
+			<description>radio name</description>
 		</key>
 		<key name="auto-login" type="b">
 			<default>false</default>
-			<_summary>auto login</_summary>
-			<_description>auto login</_description>
+			<summary>auto login</summary>
+			<description>auto login</description>
 		</key>
 		<key name="usr" type="s">
 			<default>''</default>
-			<_summary>user name</_summary>
-			<_description>user name</_description>
+			<summary>user name</summary>
+			<description>user name</description>
 		</key>
 		<key name="pwd" type="s">
 			<default>''</default>
-			<_summary>password</_summary>
-			<_description>user password</_description>
+			<summary>password</summary>
+			<description>user password</description>
 		</key>
 		<key name="volume" type="d" >
 			<default>1.0</default>
-			<_summary>Volume</_summary>
-			<_description>Volume level</_description>
+			<summary>Volume</summary>
+			<description>Volume level</description>
 		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
 		<key name="active-plugins" type="as">
 		<default>['notification', 'indicator', 'mpris']</default>
-		<_summary>Active plugins</_summary>
-		<_description>List of active plugins.</_description>
+		<summary>Active plugins</summary>
+		<description>List of active plugins.</description>
 		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins.indicator" path="/apps/xmradio/plugins/indicator/">
 		<key name="hide-on-exit" type="b">
 		<default>true</default>
-		<_summary>Hide on exit</_summary>
-		<_description>Hide window when playing, instead default exit action</_description>
+		<summary>Hide on exit</summary>
+		<description>Hide window when playing, instead default exit action</description>
 		</key>
   </schema>
 </schemalist>
