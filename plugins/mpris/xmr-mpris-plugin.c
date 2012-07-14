@@ -344,17 +344,21 @@ build_metadata(XmrMprisPlugin *plugin)
     g_variant_builder_add(builder, "{sv}", "mpris:length",
 				g_variant_new("x", plugin->duration / 1000));
 
-    g_variant_builder_add(builder, "{sv}", "xesam:album",
-				g_variant_new("s", plugin->current_song->album_name));
+	if (plugin->current_song->album_name)
+		g_variant_builder_add(builder, "{sv}", "xesam:album",
+					g_variant_new("s", plugin->current_song->album_name));
 
-    g_variant_builder_add(builder, "{sv}", "xesam:artist",
-				variant_for_metadata(plugin->current_song->artist_name, TRUE));
+	if (plugin->current_song->artist_name)
+		g_variant_builder_add(builder, "{sv}", "xesam:artist",
+					variant_for_metadata(plugin->current_song->artist_name, TRUE));
 
-    g_variant_builder_add(builder, "{sv}", "xesam:title",
-				g_variant_new("s", plugin->current_song->song_name));
+	if (plugin->current_song->song_name)
+		g_variant_builder_add(builder, "{sv}", "xesam:title",
+					g_variant_new("s", plugin->current_song->song_name));
 
-    g_variant_builder_add(builder, "{sv}", "xesam:url",
-				g_variant_new("s", plugin->current_song->location));
+	if (plugin->current_song->location)
+	  g_variant_builder_add(builder, "{sv}", "xesam:url",
+					g_variant_new("s", plugin->current_song->location));
 
 	v = g_variant_builder_end (builder);
 	g_variant_builder_unref (builder);
