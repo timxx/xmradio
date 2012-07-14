@@ -1293,7 +1293,12 @@ player_error(XmrPlayer *player,
 {
 	g_warning("Player error: %s\n", error->message);
 //	xmr_message(GTK_WIDGET(window), error->message, _("Player error"));
-	xmr_window_play_next(window);
+
+/*	window->priv->message.message = g_strdup(error->message);
+	window->priv->message.title = g_strdup(_("Player error"));
+
+	g_idle_add((GSourceFunc)show_message_idle, window);
+*/
 }
 
 static void
@@ -1428,7 +1433,11 @@ thread_get_playlist(XmrWindow *window)
 		gdk_threads_enter();
 		if (g_list_length(priv->playlist) > 0)
 		{
-			SongInfo *song = (SongInfo *)priv->playlist->data;
+			SongInfo *song;
+			
+			g_mutex_lock(priv->mutex);
+			song = priv->playlist->data;
+			g_mutex_unlock(priv->mutex);
 
 			xmr_player_open(priv->player, song->location, NULL);
 			xmr_player_play(priv->player);
@@ -1781,7 +1790,17 @@ static void
 xmr_window_set_track_info(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
-	SongInfo *song = (SongInfo *)priv->playlist->data;
+	SongInfo *song;
+
+	if (priv->playlist == NULL)
+		return ;
+
+	g_mutex_lock(priv->mutex);
+	song = song_info_copy((SongInfo *)priv->playlist->data);
+	g_mutex_unlock(priv->mutex);
+
+	if (song == NULL)
+		return ;
 
 	xmr_window_get_cover_image(window);
 
@@ -1789,6 +1808,8 @@ xmr_window_set_track_info(XmrWindow *window)
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_ARTIST]), song->artist_name);
 
 	gtk_widget_set_tooltip_text(priv->image, song->album_name);
+
+	song_info_free(song);
 }
 
 static void
@@ -1838,9 +1859,9 @@ xmr_window_play_next(XmrWindow *window)
 		goto no_more_track;
 	}
 
+	g_mutex_lock(priv->mutex);
 	data = priv->playlist->data;
 
-	g_mutex_lock(priv->mutex);
 	// remove current song
 	priv->playlist = g_list_remove(priv->playlist, data);
 	song_info_free(data);
