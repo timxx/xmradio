@@ -78,6 +78,12 @@ enum
 	LAST_LABEL
 };
 
+typedef struct
+{
+	gchar *message;
+	gchar *title;
+}Message;
+
 struct _XmrWindowPrivate
 {
 	gchar		*skin;
@@ -134,6 +140,8 @@ struct _XmrWindowPrivate
 	GtkWidget *dialog_login;
 
 	gboolean syncing_volume;
+
+	Message message;
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -429,6 +437,9 @@ on_volume_button_value_changed(GtkScaleButton *button,
 static gboolean
 emit_track_changed_idle(XmrWindow *window);
 
+static gboolean
+show_message_idle(XmrWindow *window);
+
 static void
 install_properties(GObjectClass *object_class)
 {
@@ -600,6 +611,9 @@ xmr_window_init(XmrWindow *window)
 
 	priv->dialog_login = NULL;
 	priv->syncing_volume = FALSE;
+
+	priv->message.message = NULL;
+	priv->message.title = NULL;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -1447,6 +1461,7 @@ thread_get_cover_image(XmrWindow *window)
 	{
 		SongInfo *track;
 		gint result;
+		gchar *url = NULL;
 
 		if (priv->playlist == NULL)
 			break;
@@ -1465,9 +1480,14 @@ thread_get_cover_image(XmrWindow *window)
 		// always get first song info
 		g_mutex_lock(priv->mutex);
 		track = (SongInfo *)priv->playlist->data;
+		url = g_strdup(track->album_cover);
 		g_mutex_unlock(priv->mutex);
 
-		result = xmr_service_get_url_data(service, track->album_cover, data);
+		if (url == NULL)
+			break;
+
+		result = xmr_service_get_url_data(service, url, data);
+		g_free(url);
 		if (result != 0)
 		{
 			xmr_debug("xmr_service_get_url_data failed: %d", result);
@@ -1527,8 +1547,12 @@ thread_login(XmrWindow *window)
 			g_error("No more memory??\n");
 		}
 
+		priv->message.message = g_strdup(message);
+		priv->message.title = g_strdup(_("Login Status"));
+		g_idle_add((GSourceFunc)show_message_idle, window);
+
 		gdk_threads_enter();
-		xmr_message(GTK_WIDGET(window), message, _("Login Status"));
+//		xmr_message(GTK_WIDGET(window), message, _("Login Status"));
 		if (g_list_length(priv->playlist) == 0)
 		{
 			if (priv->playlist_url == NULL) {
@@ -1816,9 +1840,11 @@ xmr_window_play_next(XmrWindow *window)
 
 	data = priv->playlist->data;
 
+	g_mutex_lock(priv->mutex);
 	// remove current song
 	priv->playlist = g_list_remove(priv->playlist, data);
 	song_info_free(data);
+	g_mutex_unlock(priv->mutex);
 
 	if (g_list_length(priv->playlist) == 0){
 		goto no_more_track;
@@ -2399,8 +2425,10 @@ change_radio(XmrWindow *window,
 	if (xmr_player_playing(priv->player))
 		xmr_player_pause(priv->player);
 
+	g_mutex_lock(priv->mutex);
 	g_list_free_full(priv->playlist, (GDestroyNotify)song_info_free);
 	priv->playlist = NULL;
+	g_mutex_unlock(priv->mutex);
 
 	g_free(priv->playlist_url);
 
@@ -2727,6 +2755,24 @@ emit_track_changed_idle(XmrWindow *window)
 		SongInfo *song = (SongInfo *)window->priv->playlist->data;
 		g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
 	}
+
+	return FALSE;
+}
+
+static gboolean
+show_message_idle(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+
+	gdk_threads_enter();
+	xmr_message(GTK_WIDGET(window), priv->message.message, priv->message.title);
+	gdk_threads_leave();
+
+	g_free(priv->message.message);
+	g_free(priv->message.title);
+
+	priv->message.message = NULL;
+	priv->message.title = NULL;
 
 	return FALSE;
 }
