@@ -41,7 +41,33 @@ song_info_free(SongInfo *si)
 		g_free(si->album_cover);
 		g_free(si->location);
 		g_free(si->grade);
+		g_free(si->artist_id);
+		g_free(si->artist_name);
 
 		g_free(si);
 	}
+}
+
+SongInfo *
+song_info_copy(SongInfo *si)
+{
+	SongInfo *new_si;
+
+	if (si == NULL)
+		return NULL;
+
+	new_si = g_new0(SongInfo, 1);
+	g_return_val_if_fail(new_si != NULL, NULL);
+
+	new_si->song_name = g_strdup(si->song_name);
+	new_si->song_id = g_strdup(si->song_id);
+	new_si->album_id = g_strdup(si->album_id);
+	new_si->album_name = g_strdup(si->album_name);
+	new_si->album_cover = g_strdup(si->album_cover);
+	new_si->location = g_strdup(si->location);
+	new_si->grade = g_strdup(si->grade);
+	new_si->artist_id = g_strdup(si->artist_id);
+	new_si->artist_name = g_strdup(si->artist_name);
+
+	return new_si;
 }

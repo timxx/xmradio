@@ -47,6 +47,9 @@ song_info_new();
 void
 song_info_free(SongInfo *si);
 
+SongInfo *
+song_info_copy(SongInfo *si);
+
 G_END_DECLS
 
 #endif /* __SONG_INFO_H__ */
