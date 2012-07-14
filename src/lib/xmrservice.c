@@ -240,8 +240,12 @@ xmr_service_login(XmrService *xs,
 
 		g_string_printf(post_data, "password=%s&email=%s", pwd, usr);
 
-		if (post_url_data(xs, XMR_LOGIN_URL, post_data, data) != CURLE_OK)
+		result = post_url_data(xs, XMR_LOGIN_URL, post_data, data);
+		if (result != CURLE_OK)
+		{
+			*message = g_strdup(curl_easy_strerror(result));
 			break;
+		}
 
 		result = parse_login_status(xs, data, message);
 	}
