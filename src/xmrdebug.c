@@ -69,5 +69,5 @@ xmr_debug_real(
 
 	va_end(args);
 
-	xmr_debug_print(func, file, line, newline, buffer);
+	xmr_debug_print(func, g_path_get_basename(file), line, newline, buffer);
 }
