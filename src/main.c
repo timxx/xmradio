@@ -55,7 +55,7 @@ const GOptionEntry options []  =
 	{"pause",	's', 0, G_OPTION_ARG_NONE,	&action_pause, N_("Pause current song if playing"), NULL},
 	{"next",	'n', 0, G_OPTION_ARG_NONE,	&action_next, N_("Play next song"), NULL},
 	{"love",	'l', 0, G_OPTION_ARG_NONE,	&action_love, N_("Love current song"), NULL},
-	{"hate",	'h', 0, G_OPTION_ARG_NONE,	&action_hate, N_("Hate current song"), NULL},
+	{"hate",	't', 0, G_OPTION_ARG_NONE,	&action_hate, N_("Hate current song"), NULL},
 	{"version", 'v', G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, print_version_and_exit, N_("Show the application's version"), NULL},
 	{ NULL }
 };
