@@ -37,7 +37,6 @@ struct _XmrLabelPrivate
 	GdkRGBA *current_color;
 
 	gint current_x;		/* label pos */
-	gint direction_x;	/* scroll direction */
 };
 
 enum
@@ -46,26 +45,13 @@ enum
 	PROP_LABEL
 };
 
-enum
-{
-	LEFT,
-	RIGHT,
-	UP,
-	DOWN
-};
-
 static void
 xmr_label_update_layout(XmrLabel *label);
 
 static gboolean
 hscroll_text_timeout(XmrLabel *label)
 {
-	if (label->priv->direction_x == LEFT) {
-		label->priv->current_x -= DEFAULT_SPEED;
-	} else { /* should be RIGHT */
-		label->priv->current_x += DEFAULT_SPEED;
-	}
-
+	label->priv->current_x -= DEFAULT_SPEED;
 	gtk_widget_queue_draw(GTK_WIDGET(label));
 
 	return TRUE;
@@ -227,14 +213,8 @@ xmr_label_draw(GtkWidget *widget, cairo_t *cr)
 
 	pango_layout_get_pixel_size(priv->layout, &width, &height);
 
-	if ((priv->current_x + width) <= allocation.width - 5)
-	{
-		priv->direction_x = RIGHT;
-	}
-	else if(priv->current_x >= 5)
-	{
-		priv->direction_x = LEFT;
-	}
+	if (priv->current_x + width <= 0)
+		priv->current_x = allocation.width;
 
 	cairo_move_to(cr, priv->current_x, (allocation.height - height) / 2);
 	gdk_cairo_set_source_rgba(cr, priv->current_color);
@@ -281,7 +261,6 @@ xmr_label_init(XmrLabel *label)
 	priv->text = NULL;
 	priv->layout = NULL;
 	priv->current_x = 0;
-	priv->direction_x = LEFT;
 
 	context = gtk_widget_get_style_context(GTK_WIDGET(label));
 
@@ -297,7 +276,6 @@ xmr_label_update_layout(XmrLabel *label)
 	gint width, height;
 
 	priv->current_x = 0;
-	priv->direction_x = LEFT;
 
 	if (priv->timeout_id != 0)
 	{
