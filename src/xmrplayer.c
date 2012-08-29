@@ -618,6 +618,7 @@ xmr_player_open(XmrPlayer	*player,
 			GError		**error)
 {
 	XmrPlayerPrivate *priv;
+	gchar *r_uri = NULL;
 
 	g_return_val_if_fail( player != NULL && uri != NULL, FALSE);
 	priv = player->priv;
@@ -628,9 +629,33 @@ xmr_player_open(XmrPlayer	*player,
 			return FALSE;
 	}
 
+	{
+		static const gchar * const prefix[] =
+		{
+			"http://", "file://" // we don't deal with others
+		};
+		gboolean prefix_ok = FALSE;
+		int i;
+
+		for (i=0; i<2; i++)
+		{
+			if (g_str_has_prefix(uri, prefix[i]))
+			{
+				prefix_ok = TRUE;
+				break ;
+			}
+		}
+
+		if (!prefix_ok) {
+			r_uri = g_strdup_printf("file://%s", uri);
+		} else {
+			r_uri = g_strdup(uri);
+		}
+	}
+
 	g_free (priv->prev_uri);
 	priv->prev_uri = priv->uri;
-	priv->uri = g_strdup (uri);
+	priv->uri = r_uri;
 
 	priv->stream_change_pending = TRUE;
 
