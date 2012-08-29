@@ -26,6 +26,7 @@ set(XMRADIO_HEADERS
 	xmrbutton.h
 	xmrdb.h
 	xmrdebug.h
+	xmrdownloader.h
 	xmrlabel.h
 	xmrplayer.h
 	xmrpluginengine.h
@@ -47,6 +48,7 @@ set(XMRADIO_CORE_SOURCES
 	xmrbutton.c
 	xmrdb.c
 	xmrdebug.c
+	xmrdownloader.c
 	xmrlabel.c
 	xmrpluginengine.c
 	xmrradio.c
