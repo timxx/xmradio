@@ -40,6 +40,7 @@
 #include "xmrpluginengine.h"
 #include "xmrvolumebutton.h"
 #include "xmrlabel.h"
+#include "xmrdownloader.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -142,6 +143,9 @@ struct _XmrWindowPrivate
 	gboolean syncing_volume;
 
 	Message message;
+
+	XmrDownloader *downloader;
+	gboolean wanted_play;		/* weather to play whene down finish */
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -459,6 +463,35 @@ static void
 fetch_cover_finish(XmrWindow *window,
 				   GdkPixbuf *pixbuf,
 				   gpointer data);
+
+// downloader signals
+static void
+download_finish(XmrDownloader *downloader,
+				const gchar *url,
+				const gchar *file,
+				XmrWindow *window);
+
+static void
+download_progress(XmrDownloader *downloader,
+				  const gchar *url,
+				  double progress,
+				  XmrWindow *window);
+
+static void
+download_failed(XmrDownloader *downloader,
+				const gchar *url,
+				const gchar *message,
+				XmrWindow *window);
+
+static gboolean
+is_track_downloaded(SongInfo *track);
+
+static gboolean
+is_file_exists(const gchar *file);
+
+// use @track info gen a local file name
+static gchar *
+make_track_file(SongInfo *track);
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -668,6 +701,9 @@ xmr_window_init(XmrWindow *window)
 	priv->message.message = NULL;
 	priv->message.title = NULL;
 
+	priv->downloader = xmr_downloader_new();
+	priv->wanted_play = FALSE;
+
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
 	gtk_widget_add_events(GTK_WIDGET(window), GDK_BUTTON_PRESS_MASK);
@@ -720,6 +756,10 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(window, "login-finish", G_CALLBACK(login_finish), NULL);
 	g_signal_connect(window, "fetch-playlist-finish", G_CALLBACK(fetch_playlist_finish), NULL);
 	g_signal_connect(window, "fetch-cover-finish", G_CALLBACK(fetch_cover_finish), NULL);
+
+	g_signal_connect(priv->downloader, "download-finish", G_CALLBACK(download_finish), window);
+	g_signal_connect(priv->downloader, "download-progress", G_CALLBACK(download_progress), window);
+	g_signal_connect(priv->downloader, "download-failed", G_CALLBACK(download_failed), window);
 
 	for(i=0; i<3; ++i)
 	  g_signal_connect(priv->chooser[i], "radio-selected",
@@ -794,6 +834,12 @@ xmr_window_dispose(GObject *obj)
 	{
 		g_object_unref (priv->extensions);
 		priv->extensions = NULL;
+	}
+
+	if (priv->downloader)
+	{
+		g_object_unref(priv->downloader);
+		priv->downloader = NULL;
 	}
 
 	peas_engine_garbage_collect(PEAS_ENGINE(priv->plugin_engine));
@@ -1823,19 +1869,33 @@ xmr_window_play_next(XmrWindow *window)
 	}
 
 	song = (SongInfo *)priv->playlist->data;
-	xmr_player_open(priv->player, song->location, NULL);
+	gchar *file = make_track_file(song);
+
+	if (is_track_downloaded(song))
+	{
+		priv->wanted_play = FALSE;
+	}
+	else
+	{
+		priv->wanted_play = TRUE;
+		xmr_downloader_add_task(priv->downloader, song->location, file);
+	}
+
+	// play directly even that song currently not downloaded
+	xmr_player_open(priv->player, file, NULL);
 	xmr_player_play(priv->player);
 
-	xmr_debug("play next song: %s", song->location);
+	xmr_debug("play next song: %s", file);
 
 	xmr_window_set_track_info(window);
 
-	//g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
 	g_idle_add((GSourceFunc)emit_track_changed_idle, window);
+
+	g_free(file);
 
 	// get new playlist if only one song in playlist
 	if (g_list_length(priv->playlist) > 1)
-	  return ;
+		return ;
 
 no_more_track:
 	xmr_window_get_playlist(window);
@@ -2485,13 +2545,13 @@ static gchar *
 radio_logo_url_to_uri(RadioInfo *radio)
 {
 	gchar *uri = NULL;
+	gchar *name = NULL;
 
 	g_return_val_if_fail(radio != NULL, NULL);
 
-	uri = g_strdup_printf("%s/%s",
-				xmr_radio_icon_dir(),
-				g_path_get_basename(radio->logo)
-				);
+	name = g_path_get_basename(radio->logo);
+	uri = g_strdup_printf("%s/%s", xmr_radio_icon_dir(), name);
+	g_free(name);
 
 	return uri;
 }
@@ -2823,15 +2883,23 @@ fetch_playlist_finish(XmrWindow *window,
 		if (g_list_length(priv->playlist) > 0)
 		{
 			SongInfo *song;
+			gchar *file;
 
 			song = priv->playlist->data;
+			file = make_track_file(song);
 
-			xmr_player_open(priv->player, song->location, NULL);
+			priv->wanted_play = TRUE;
+			xmr_downloader_add_task(priv->downloader, song->location, file);
+
+			xmr_player_open(priv->player, file, NULL);
 			xmr_player_play(priv->player);
 
-			xmr_window_set_track_info(window);
+			xmr_debug("playing song: %s", file);
 
-			g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
+			xmr_window_set_track_info(window);
+			g_idle_add((GSourceFunc)emit_track_changed_idle, window);
+
+			g_free(file);
 		}
 	}
 }
@@ -2847,3 +2915,138 @@ fetch_cover_finish(XmrWindow *window,
 
 	g_object_unref(pixbuf);
 }
+
+static void
+download_finish(XmrDownloader *downloader,
+				const gchar *url,
+				const gchar *file,
+				XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+
+	xmr_debug("%s -> %s downloaded", url, file);
+
+	if (priv->wanted_play)
+	{
+		if (priv->playlist && priv->playlist->data)
+		{
+			xmr_player_open(priv->player, file, NULL);
+			xmr_player_play(priv->player);
+
+			xmr_window_set_track_info(window);
+
+			g_signal_emit(window, signals[TRACK_CHANGED], 0, priv->playlist->data);
+		}
+
+		priv->wanted_play = FALSE;
+	}
+
+	// download next song
+	{
+		GList *p = priv->playlist;
+
+		while(p)
+		{
+			SongInfo *song = p->data;
+			gchar *file = make_track_file(song);
+
+			if (!is_file_exists(file))
+			{
+				xmr_downloader_add_task(priv->downloader, song->location, file);
+				g_free(file);
+				break;
+			}
+
+			g_free(file);
+
+			p = p->next;
+		}
+	}
+}
+
+static void
+download_progress(XmrDownloader *downloader,
+				  const gchar *url,
+				  double progress,
+				  XmrWindow *window)
+{
+	xmr_debug("Downloading %s - %.2lf%%", url, progress);
+}
+
+static void
+download_failed(XmrDownloader *downloader,
+				const gchar *url,
+				const gchar *message,
+				XmrWindow *window)
+{
+	xmr_debug("Failed to download [%s]:\n%s", url, message);
+	xmr_window_play_next(window);
+}
+
+static gboolean
+is_track_downloaded(SongInfo *track)
+{
+	gboolean ret = FALSE;
+	gchar *file = make_track_file(track);
+	if (!file) {
+		return FALSE;
+	}
+
+	// FIXME:
+	// do not consider whether is a valid MEDIA file
+	ret = g_file_test(file, G_FILE_TEST_EXISTS);
+
+	g_free(file);
+
+	return ret;
+}
+
+static gboolean
+is_file_exists(const gchar *file)
+{
+	return g_file_test(file, G_FILE_TEST_EXISTS);
+}
+
+static gchar *
+make_track_file(SongInfo *track)
+{
+	gchar *file = NULL;
+	gchar *name = NULL;
+	gchar *lname = g_path_get_basename(track->location);
+
+	if (track->artist_name == NULL)
+	{
+		if (track->song_name == NULL)
+			name = g_strdup_printf("%s", lname);
+		else
+			name = g_strdup_printf("%s.mp3", track->song_name);
+	}
+	else
+	{
+		if (track->song_name == NULL)
+			name = g_strdup_printf("%s", lname);
+		else
+			name = g_strdup_printf("%s - %s.mp3", track->artist_name, track->song_name);
+	}
+
+	g_free(lname);
+
+	// FIXME: should consider more condition
+	// just replace '/' to ' '
+	{
+		gchar *p = name;
+		while (p && *p)
+		{
+			if (*p == '/')
+				*p = ' ';
+			p++;
+		}
+	}
+
+	file = g_strdup_printf("%s/%s/%s", g_get_tmp_dir(), PACKAGE, name);
+
+	g_free(name);
+
+	return file;
+}
+

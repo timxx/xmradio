@@ -160,7 +160,13 @@ int main(int argc, char **argv)
 	// this make our XmrRadio always works
 	g_object_set(gtk_settings_get_default(),
 				"gtk-button-images", TRUE,
-				NULL); 
+				NULL);
+
+	{
+		gchar *dir = g_strdup_printf("%s/%s", g_get_tmp_dir(), PACKAGE);
+		g_mkdir_with_parents(dir, 0755);
+		g_free(dir);
+	}
 
 	app = xmr_app_new();
 
