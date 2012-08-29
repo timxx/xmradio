@@ -57,6 +57,17 @@ struct _XmrWindowClass
 	void (*radio_changed)(XmrWindow *window,
 				const gchar *name,
 				const gchar *url);
+
+	void (*login_finish)(XmrWindow *window,
+						 gboolean ok,
+						 const gchar *message);
+
+	void (*fetch_playlist_finish)(XmrWindow *window,
+								  gint status,
+								  GList *list);
+
+	void (*fetch_cover_finish)(XmrWindow *window,
+							   GdkPixbuf *pixbuf);
 };
 
 GType		xmr_window_get_type();
