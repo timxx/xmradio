@@ -78,6 +78,17 @@ track_changed(XmrWindow *window,
 }
 
 static void
+cover_image_changed(XmrWindow *window,
+					GdkPixbuf *pixbuf,
+					XmrNotificationPlugin *plugin)
+{
+	g_return_if_fail(plugin->notification != NULL);
+
+	notify_notification_set_image_from_pixbuf(plugin->notification, pixbuf);
+	notify_notification_show(plugin->notification, NULL);
+}
+
+static void
 impl_activate(PeasActivatable *activatable)
 {
 	XmrNotificationPlugin *plugin;
@@ -88,8 +99,8 @@ impl_activate(PeasActivatable *activatable)
 
 	if (window)
 	{
-		g_signal_connect(window, "track-changed",
-				G_CALLBACK(track_changed), plugin);
+		g_signal_connect(window, "track-changed", G_CALLBACK(track_changed), plugin);
+		g_signal_connect(window, "fetch-cover-finish", G_CALLBACK(cover_image_changed), plugin);
 
 		g_object_unref(window);
 	}
