@@ -59,6 +59,7 @@ xmr_debug_real(
 {
 	va_list args;
 	gchar buffer[1025];
+	gchar *name;
 
 	if (!enable_debug)
 		return;
@@ -69,5 +70,7 @@ xmr_debug_real(
 
 	va_end(args);
 
-	xmr_debug_print(func, g_path_get_basename(file), line, newline, buffer);
+	name = g_path_get_basename(file);
+	xmr_debug_print(func, name, line, newline, buffer);
+	g_free(name);
 }
