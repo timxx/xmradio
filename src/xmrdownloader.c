@@ -20,6 +20,7 @@
 
 #include <curl/curl.h>
 #include <glib/gi18n.h>
+#include <gdk/gdk.h>
 
 #include "xmrdownloader.h"
 #include "xmrmarshal.h"
@@ -109,7 +110,7 @@ download_thread(gpointer data)
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, my_write_func);
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, my_progress_func);
+	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, (curl_progress_callback)my_progress_func);
 	curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, task);
 
 	res = curl_easy_perform(curl);
