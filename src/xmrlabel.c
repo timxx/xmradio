@@ -213,8 +213,20 @@ xmr_label_draw(GtkWidget *widget, cairo_t *cr)
 
 	pango_layout_get_pixel_size(priv->layout, &width, &height);
 
-	if (priv->current_x + width <= 0)
+	if (width <= allocation.width)
+	{
+		if (priv->timeout_id != 0)
+		{
+			g_source_remove(priv->timeout_id);
+			priv->timeout_id = 0;
+		}
+
+		priv->current_x = 0;
+	}
+	else if (priv->current_x + width <= 0)
+	{
 		priv->current_x = allocation.width;
+	}
 
 	cairo_move_to(cr, priv->current_x, (allocation.height - height) / 2);
 	gdk_cairo_set_source_rgba(cr, priv->current_color);
