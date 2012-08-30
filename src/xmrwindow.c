@@ -47,7 +47,7 @@ G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 #define DEFAULT_RADIO_URL	"http://www.xiami.com/kuang/xml/type/6/id/0"
 #define DEFAULT_RADIO_NAME	_("新歌电台")
 
-#define DELAY_PLAY_INTERVAL (3 * 1000)
+#define DELAY_PLAY_INTERVAL (2 * 1000)
 
 #define COVER_WIDTH	100
 #define COVER_HEIGHT 100
@@ -101,6 +101,9 @@ struct _XmrWindowPrivate
 	GtkWidget	*fixed;			/* #GtkFixed */
 	GtkWidget	*popup_menu;	/* #GtkMenu */
 	GtkWidget	*skin_menu;
+
+	GtkWidget	*menu_login;
+	GtkWidget	*menu_logout;
 
 	/**
 	 * #XmrRadioChooser
@@ -171,6 +174,7 @@ enum
 	TRACK_CHANGED,
 	RADIO_CHANGED,
 	LOGIN_FINISH,
+	LOGOUT,
 	FETCH_PLAYLIST_FINISH,
 	FETCH_COVER_FINISH,
 	LAST_SIGNAL
@@ -458,6 +462,9 @@ login_finish(XmrWindow *window,
 			 gpointer data);
 
 static void
+on_logout(XmrWindow *window);
+
+static void
 fetch_playlist_finish(XmrWindow *window,
 					  gint status,
 					  GList *list,
@@ -619,6 +626,16 @@ create_signals(XmrWindowClass *klass)
 						 2,
 						 G_TYPE_BOOLEAN, G_TYPE_STRING);
 
+	signals[LOGOUT] =
+			g_signal_new("logout",
+						 G_OBJECT_CLASS_TYPE(object_class),
+						 G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE,
+						 G_STRUCT_OFFSET(XmrWindowClass, logout),
+						 NULL, NULL,
+						 g_cclosure_marshal_VOID__VOID,
+						 G_TYPE_NONE,
+						 0);
+
 	signals[FETCH_PLAYLIST_FINISH] =
 			g_signal_new("fetch-playlist-finish",
 						 G_OBJECT_CLASS_TYPE(object_class),
@@ -763,6 +780,7 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->player, "volume-changed", G_CALLBACK(player_volume_changed), window);
 
 	g_signal_connect(window, "login-finish", G_CALLBACK(login_finish), NULL);
+	g_signal_connect(window, "logout", G_CALLBACK(on_logout), NULL);
 	g_signal_connect(window, "fetch-playlist-finish", G_CALLBACK(fetch_playlist_finish), NULL);
 	g_signal_connect(window, "fetch-cover-finish", G_CALLBACK(fetch_cover_finish), NULL);
 
@@ -1628,6 +1646,10 @@ thread_logout(XmrWindow *window)
 	xmr_service_logout(priv->service);
 	g_mutex_unlock(priv->mutex);
 
+	gdk_threads_enter();
+	g_signal_emit(window, signals[LOGOUT], 0);
+	gdk_threads_leave();
+
 	xmr_debug("[END] thread_logout");
 
 	return NULL;
@@ -1978,12 +2000,26 @@ create_popup_menu(XmrWindow *window)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
+	priv->menu_login = item = gtk_menu_item_new_with_label(_("Login"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
+
+	priv->menu_logout = item = gtk_menu_item_new_with_label(_("Logout"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
+
+	item = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
 	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
 
 	gtk_widget_show_all(priv->popup_menu);
+
+	// do not show Logout menu
+	gtk_widget_hide(priv->menu_logout);
 }
 
 static void
@@ -2032,6 +2068,15 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 
 		gtk_dialog_run(GTK_DIALOG(dialog_about));
 		gtk_widget_hide(dialog_about);
+	}
+	else if ((GtkWidget *)item == priv->menu_login)
+	{
+		priv->switch_radio = FALSE;
+		do_login(window);
+	}
+	else if ((GtkWidget *)item == priv->menu_logout)
+	{
+		xmr_window_logout(window);
 	}
 	else if(g_strcmp0(menu, GTK_STOCK_QUIT) == 0)
 	{
@@ -2826,6 +2871,9 @@ login_finish(XmrWindow *window,
 		}
 
 		g_free(error_message);
+
+		gtk_widget_hide(priv->menu_logout);
+		gtk_widget_show(priv->menu_login);
 	}
 	else
 	{
@@ -2850,9 +2898,23 @@ login_finish(XmrWindow *window,
 			g_free(radio_name);
 			g_free(radio_url);
 		}
+
+		gtk_widget_hide(priv->menu_login);
+		gtk_widget_show(priv->menu_logout);
 	}
 
 	xmr_debug("login status: %s", message);
+}
+
+static void
+on_logout(XmrWindow *window)
+{
+	gtk_widget_hide(window->priv->menu_logout);
+	gtk_widget_show(window->priv->menu_login);
+
+	if (window->priv->playlist_url == NULL){
+		change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
+	}
 }
 
 static void

@@ -62,6 +62,8 @@ struct _XmrWindowClass
 						 gboolean ok,
 						 const gchar *message);
 
+	void (*logout)(XmrWindow *window);
+
 	void (*fetch_playlist_finish)(XmrWindow *window,
 								  gint status,
 								  GList *list);
