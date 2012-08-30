@@ -25,10 +25,12 @@
 #include <gst/gst.h>
 #include <dbus/dbus.h>
 #include <dbus/dbus-glib-lowlevel.h>
+#include <glib/gstdio.h>
 
 #include "xmrapp.h"
 #include "config.h"
 #include "xmrdebug.h"
+#include "xmrutil.h"
 
 static gboolean debug = FALSE;
 static gboolean action_play = FALSE;
@@ -74,12 +76,16 @@ PlayerAction;
 static void
 send_action(DBusConnection *bus, PlayerAction action);
 
+static void
+remove_file(const gchar *file, gpointer data);
+
 int main(int argc, char **argv)
 {
 	XmrApp *app;
 	GOptionContext *context;
 	GError *error = NULL;
 	PlayerAction player_action = ActionNone;
+	gchar *tmp_dir = NULL;
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_init(NULL);
@@ -162,16 +168,18 @@ int main(int argc, char **argv)
 				"gtk-button-images", TRUE,
 				NULL);
 
-	{
-		gchar *dir = g_strdup_printf("%s/%s", g_get_tmp_dir(), PACKAGE);
-		g_mkdir_with_parents(dir, 0755);
-		g_free(dir);
-	}
+	// ensure folder exists
+	tmp_dir = g_strdup_printf("%s/%s", g_get_tmp_dir(), PACKAGE);
+	g_mkdir_with_parents(tmp_dir, 0755);
 
 	app = xmr_app_new();
 
 	g_application_run(G_APPLICATION(app), argc, argv);
 
+	// remove ...
+	list_file(tmp_dir, FALSE, remove_file, NULL);
+
+	g_free(tmp_dir);
 	g_object_unref(app);
 
 	curl_global_cleanup();
@@ -196,4 +204,10 @@ send_action(DBusConnection *bus, PlayerAction action)
 	dbus_connection_send(bus, message, NULL);
 	
 	dbus_message_unref(message);
+}
+
+static void
+remove_file(const gchar *file, gpointer data)
+{
+	g_remove(file);
 }
