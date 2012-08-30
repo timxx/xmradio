@@ -69,7 +69,8 @@ track_changed(XmrWindow *window,
 			SongInfo *new_track,
 			XmrMprisPlugin *plugin)
 {
-	plugin->current_song = new_track;
+	song_info_free(plugin->current_song);
+	plugin->current_song = song_info_copy(new_track);
 }
 
 static void
@@ -607,6 +608,12 @@ impl_deactivate(PeasActivatable *activatable)
 	{
 		g_object_unref(plugin->connection);
 		plugin->connection = NULL;
+	}
+
+	if (plugin->current_song)
+	{
+		song_info_free(plugin->current_song);
+		plugin->current_song = NULL;
 	}
 
 	g_object_unref(plugin->window);
