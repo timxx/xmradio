@@ -47,6 +47,8 @@ G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 #define DEFAULT_RADIO_URL	"http://www.xiami.com/kuang/xml/type/6/id/0"
 #define DEFAULT_RADIO_NAME	_("新歌电台")
 
+#define DELAY_PLAY_INTERVAL (3 * 1000)
+
 #define COVER_WIDTH	100
 #define COVER_HEIGHT 100
 
@@ -113,6 +115,8 @@ struct _XmrWindowPrivate
 
 	GList *playlist;
 	gchar *playlist_url;	/* set NULL to get private list */
+
+	SongInfo *current_song;
 
 	XmrSettings *settings;
 	GList *skin_list;
@@ -492,6 +496,9 @@ is_file_exists(const gchar *file);
 // use @track info gen a local file name
 static gchar *
 make_track_file(SongInfo *track);
+
+static gboolean
+delay_play_timeout(XmrWindow *window);
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -704,6 +711,8 @@ xmr_window_init(XmrWindow *window)
 	priv->downloader = xmr_downloader_new();
 	priv->wanted_play = FALSE;
 
+	priv->current_song = NULL;
+
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
 	gtk_widget_add_events(GTK_WIDGET(window), GDK_BUTTON_PRESS_MASK);
@@ -882,6 +891,12 @@ xmr_window_finalize(GObject *obj)
 		g_mutex_free(priv->mutex);
 #endif
 		priv->mutex = NULL;
+	}
+
+	if (priv->current_song)
+	{
+		song_info_free(priv->current_song);
+		priv->current_song = NULL;
 	}
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->finalize(obj);
@@ -1526,11 +1541,9 @@ thread_get_cover_image(XmrWindow *window)
 
 	do
 	{
-		SongInfo *track;
 		gint result;
-		gchar *url = NULL;
 
-		if (priv->playlist == NULL)
+		if (priv->current_song == NULL)
 			break;
 
 		data = g_string_new("");
@@ -1544,17 +1557,7 @@ thread_get_cover_image(XmrWindow *window)
 			break;
 		}
 
-		// always get first song info
-		g_mutex_lock(priv->mutex);
-		track = (SongInfo *)priv->playlist->data;
-		url = g_strdup(track->album_cover);
-		g_mutex_unlock(priv->mutex);
-
-		if (url == NULL)
-			break;
-
-		result = xmr_service_get_url_data(service, url, data);
-		g_free(url);
+		result = xmr_service_get_url_data(service, priv->current_song->album_cover, data);
 		if (result != 0)
 		{
 			xmr_debug("xmr_service_get_url_data failed: %d", result);
@@ -1720,10 +1723,9 @@ thread_like_song(XmrWindow *window)
 
 	xmr_debug("[BEGIN] thread_like_song");
 
-	g_mutex_lock(priv->mutex);
 	song = xmr_window_get_current_song(window);
-	xmr_service_like_song(priv->service, song->song_id, TRUE);
-	g_mutex_unlock(priv->mutex);
+	if (song)
+		xmr_service_like_song(priv->service, song->song_id, TRUE);
 
 	xmr_debug("[END] thread_like_song");
 
@@ -1737,10 +1739,10 @@ thread_dislike_song(XmrWindow *window)
 	SongInfo *song;
 
 	xmr_debug("[BEGIN] thread_dislike_song");
-	g_mutex_lock(priv->mutex);
+
 	song = xmr_window_get_current_song(window);
-	xmr_service_like_song(priv->service, song->song_id, FALSE);
-	g_mutex_unlock(priv->mutex);
+	if (song)
+		xmr_service_like_song(priv->service, song->song_id, FALSE);
 
 	xmr_debug("[END] thread_dislike_song");
 
@@ -1791,12 +1793,7 @@ static void
 xmr_window_set_track_info(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
-	SongInfo *song;
-
-	if (priv->playlist == NULL)
-		return ;
-
-	song = song_info_copy((SongInfo *)priv->playlist->data);
+	SongInfo *song = priv->current_song;
 
 	if (song == NULL)
 		return ;
@@ -1807,8 +1804,6 @@ xmr_window_set_track_info(XmrWindow *window)
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_ARTIST]), song->artist_name);
 
 	gtk_widget_set_tooltip_text(priv->image, song->album_name);
-
-	song_info_free(song);
 }
 
 static void
@@ -1846,6 +1841,7 @@ xmr_window_play_next(XmrWindow *window)
 	XmrWindowPrivate *priv;
 	gpointer data;
 	SongInfo *song;
+	gchar *file;
 
 	g_return_if_fail( window != NULL );
 	priv = window->priv;
@@ -1863,33 +1859,38 @@ xmr_window_play_next(XmrWindow *window)
 	// remove current song
 	priv->playlist = g_list_remove(priv->playlist, data);
 	song_info_free(data);
+	song_info_free(priv->current_song);
+	priv->current_song = NULL;
 
 	if (g_list_length(priv->playlist) == 0){
 		goto no_more_track;
 	}
 
 	song = (SongInfo *)priv->playlist->data;
-	gchar *file = make_track_file(song);
+	priv->current_song = song_info_copy(song);
+
+	file = make_track_file(song);
 
 	if (is_track_downloaded(song))
 	{
 		priv->wanted_play = FALSE;
+		xmr_player_open(priv->player, file, NULL);
+		xmr_player_play(priv->player);
+
+		xmr_debug("play next song: %s", file);
+
+		xmr_window_set_track_info(window);
+
+		g_idle_add((GSourceFunc)emit_track_changed_idle, window);
 	}
 	else
 	{
+		xmr_window_pause(window);
 		priv->wanted_play = TRUE;
 		xmr_downloader_add_task(priv->downloader, song->location, file);
+
+		g_timeout_add(DELAY_PLAY_INTERVAL, (GSourceFunc)delay_play_timeout, window);
 	}
-
-	// play directly even that song currently not downloaded
-	xmr_player_open(priv->player, file, NULL);
-	xmr_player_play(priv->player);
-
-	xmr_debug("play next song: %s", file);
-
-	xmr_window_set_track_info(window);
-
-	g_idle_add((GSourceFunc)emit_track_changed_idle, window);
 
 	g_free(file);
 
@@ -1917,10 +1918,7 @@ xmr_window_get_current_song(XmrWindow *window)
 {
 	g_return_val_if_fail(window != NULL, NULL);
 
-	if (g_list_length(window->priv->playlist) == 0)
-		return NULL;
-
-	return (SongInfo *)window->priv->playlist->data;
+	return window->priv->current_song;
 }
 
 static void
@@ -2780,11 +2778,7 @@ xmr_window_set_volume(XmrWindow *window,
 static gboolean
 emit_track_changed_idle(XmrWindow *window)
 {
-	if (g_list_length(window->priv->playlist) > 0)
-	{
-		SongInfo *song = (SongInfo *)window->priv->playlist->data;
-		g_signal_emit(window, signals[TRACK_CHANGED], 0, song);
-	}
+	g_signal_emit(window, signals[TRACK_CHANGED], 0, window->priv->current_song);
 
 	return FALSE;
 }
@@ -2886,18 +2880,15 @@ fetch_playlist_finish(XmrWindow *window,
 			gchar *file;
 
 			song = priv->playlist->data;
+			song_info_free(priv->current_song);
+			priv->current_song = song_info_copy(song);
+
 			file = make_track_file(song);
 
 			priv->wanted_play = TRUE;
 			xmr_downloader_add_task(priv->downloader, song->location, file);
 
-			xmr_player_open(priv->player, file, NULL);
-			xmr_player_play(priv->player);
-
-			xmr_debug("playing song: %s", file);
-
-			xmr_window_set_track_info(window);
-			g_idle_add((GSourceFunc)emit_track_changed_idle, window);
+			g_timeout_add(DELAY_PLAY_INTERVAL, (GSourceFunc)delay_play_timeout, window);
 
 			g_free(file);
 		}
@@ -2926,10 +2917,13 @@ download_finish(XmrDownloader *downloader,
 
 	xmr_debug("%s -> %s downloaded", url, file);
 
-	if (priv->wanted_play)
+	if (priv->wanted_play && !xmr_window_playing(window))
 	{
 		if (priv->playlist && priv->playlist->data)
 		{
+			song_info_free(priv->current_song);
+			priv->current_song = song_info_copy(priv->playlist->data);
+
 			xmr_player_open(priv->player, file, NULL);
 			xmr_player_play(priv->player);
 
@@ -2970,7 +2964,7 @@ download_progress(XmrDownloader *downloader,
 				  double progress,
 				  XmrWindow *window)
 {
-	xmr_debug("Downloading %s - %.2lf%%", url, progress);
+	// xmr_debug("Downloading %s - %.2lf%%", url, progress);
 }
 
 static void
@@ -2980,7 +2974,8 @@ download_failed(XmrDownloader *downloader,
 				XmrWindow *window)
 {
 	xmr_debug("Failed to download [%s]:\n%s", url, message);
-	xmr_window_play_next(window);
+	if (!xmr_window_playing(window))
+		xmr_window_play_next(window);
 }
 
 static gboolean
@@ -3012,7 +3007,12 @@ make_track_file(SongInfo *track)
 {
 	gchar *file = NULL;
 	gchar *name = NULL;
-	gchar *lname = g_path_get_basename(track->location);
+	gchar *lname = NULL;
+
+	if (track == NULL)
+		return NULL;
+
+	lname = g_path_get_basename(track->location);
 
 	if (track->artist_name == NULL)
 	{
@@ -3048,5 +3048,27 @@ make_track_file(SongInfo *track)
 	g_free(name);
 
 	return file;
+}
+
+static gboolean
+delay_play_timeout(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	gchar *file = make_track_file(priv->current_song);
+
+	if (file == NULL)
+		return FALSE;
+
+	xmr_player_open(priv->player, file, NULL);
+	xmr_player_play(priv->player);
+
+	xmr_debug("playing song: %s", file);
+
+	xmr_window_set_track_info(window);
+	g_idle_add((GSourceFunc)emit_track_changed_idle, window);
+
+	g_free(file);
+
+	return FALSE;
 }
 
