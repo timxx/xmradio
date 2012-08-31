@@ -1,3 +1,27 @@
+xmradio (0.2.1~oneiric) oneiric; urgency=low
+
+  * 0.2.1
+
+ -- Weitian Leung <weitianleung@gmail.com>  Fri, 31 Aug 2012 09:26:17 +0800
+ 
+xmradio (0.2.1~precise) precise; urgency=low
+
+  * 0.2.1
+
+ -- Weitian Leung <weitianleung@gmail.com>  Fri, 31 Aug 2012 09:24:10 +0800
+ 
+xmradio (0.2.0-1~precise) precise; urgency=low
+
+  * 0.2 series
+
+ -- Weitian Leung <weitianleung@gmail.com>  Wed, 29 Aug 2012 19:46:26 +0800
+ 
+xmradio (0.2.0-1~oneiric) oneiric; urgency=low
+
+  * 0.2 series
+
+ -- Weitian Leung <weitianleung@gmail.com>  Wed, 29 Aug 2012 19:42:44 +0800
+
 xmradio (0.2.0~oneiric) oneiric; urgency=low
 
   * 0.2 series
