@@ -1,3 +1,17 @@
+xmradio (0.3.0~oneiric) oneiric; urgency=low
+
+  * 0.3.0
+    - 增加我的电台、虾米猜
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 29 Sep 2012 16:50:06 +0800
+ 
+xmradio (0.3.0~precise) precise; urgency=low
+
+  * 0.3.0
+    - 增加我的电台、虾米猜
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 29 Sep 2012 16:47:14 +0800
+ 
 xmradio (0.2.1~oneiric) oneiric; urgency=low
 
   * 0.2.1

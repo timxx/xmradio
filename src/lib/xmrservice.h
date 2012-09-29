@@ -71,9 +71,11 @@ xmr_service_logout(XmrService *xs);
 
 /**
  * get private list
+ * @type: 0 - MyRadio
+ *		  1 - XiaMi Cai
  */
 gint
-xmr_service_get_track_list(XmrService *xs, GList **list);
+xmr_service_get_track_list_by_id(XmrService *xs, GList **list, int type);
 
 /**
  * get by music style

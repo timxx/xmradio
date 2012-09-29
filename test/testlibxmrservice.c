@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 	g_free(message);
 
 	g_print("Getting private track list...\n\n");
-	result = xmr_service_get_track_list(XMR_SERVICE(service), &list);
+	result = xmr_service_get_track_list_by_id(XMR_SERVICE(service), &list, 0);
 	if (result != 0)
 	{
 		g_print("failed to get private track list\n");

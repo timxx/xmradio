@@ -117,7 +117,15 @@ struct _XmrWindowPrivate
 	XmrService *service; /* should only use for private radio */
 
 	GList *playlist;
-	gchar *playlist_url;	/* set NULL to get private list */
+	gchar *playlist_url;
+
+	/**
+	 * @brief radio_type
+	 * 0 - My radio
+	 * 1 - XiaMi Cai
+	 * 3 - Others
+	 */
+	gint radio_type;
 
 	SongInfo *current_song;
 
@@ -189,8 +197,10 @@ static const gchar *radio_style[]=
 
 static const gchar *radio_names[] =
 {
-	N_("私人电台"), N_("风格电台"), N_("星座电台"), N_("年代电台")
+	N_("私人电台"), N_("虾米猜"), N_("风格电台"), N_("星座电台"), N_("年代电台")
 };
+
+#define RADIO_COUNT 5
 
 //=======================================================================
 
@@ -729,6 +739,7 @@ xmr_window_init(XmrWindow *window)
 	priv->wanted_play = FALSE;
 
 	priv->current_song = NULL;
+	priv->radio_type = 2;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -1107,15 +1118,15 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_FENGGE:
-		change_radio_style(window, 1);
-		break;
-
-	case BUTTON_XINGZUO:
 		change_radio_style(window, 2);
 		break;
 
-	case BUTTON_NIANDAI:
+	case BUTTON_XINGZUO:
 		change_radio_style(window, 3);
+		break;
+
+	case BUTTON_NIANDAI:
+		change_radio_style(window, 4);
 		break;
 
 	case BUTTON_VOLUME:
@@ -1131,6 +1142,7 @@ radio_selected(XmrRadioChooser *chooser,
 	const gchar *name = xmr_radio_get_name(radio);
 	const gchar *url = xmr_radio_get_url(radio);
 
+	window->priv->radio_type = 2;
 	change_radio(window, name, url);
 }
 
@@ -1520,10 +1532,10 @@ thread_get_playlist(XmrWindow *window)
 
 	xmr_debug("[BEGIN] thread_get_playlist");
 
-	if (priv->playlist_url == NULL)
+	if (priv->radio_type != 2)
 	{
 		g_mutex_lock(priv->mutex);
-		result = xmr_service_get_track_list(priv->service, &list);
+		result = xmr_service_get_track_list_by_id(priv->service, &list, priv->radio_type);
 		g_mutex_unlock(priv->mutex);
 	}
 	else
@@ -1971,7 +1983,7 @@ create_popup_menu(XmrWindow *window)
 
 	menu_radio = gtk_menu_new();
 
-	for(i=0; i<4; ++i)
+	for(i=0; i<RADIO_COUNT; ++i)
 	{
 		item = gtk_menu_item_new_with_label(radio_names[i]);
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu_radio), item);
@@ -2106,7 +2118,7 @@ on_radio_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 	gint i;
 	const gchar *menu = gtk_menu_item_get_label(item);
 
-	for(i=0; i<4; ++i)
+	for(i=0; i<RADIO_COUNT; ++i)
 	{
 		if (g_strcmp0(menu, radio_names[i]) == 0)
 		{
@@ -2135,6 +2147,10 @@ load_settings(XmrWindow *window)
 	load_skin(window);
 
 	xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
+	if (g_strcmp0(radio_names[0], radio_name) == 0)
+		priv->radio_type = 0;
+	else if (g_strcmp0(radio_names[1], radio_name) == 0)
+		priv->radio_type = 1;
 
 	xmr_settings_get_window_pos(priv->settings, &x, &y);
 	if (x !=- 1 && y != -1)
@@ -2496,6 +2512,7 @@ change_radio(XmrWindow *window,
 			const gchar *url)
 {
 	XmrWindowPrivate *priv = window->priv;
+	const gchar *radio_name = name;
 
 	if (xmr_player_playing(priv->player))
 		xmr_player_pause(priv->player);
@@ -2507,12 +2524,17 @@ change_radio(XmrWindow *window,
 
 	priv->playlist_url = (url == NULL ? NULL : g_strdup(url));
 
-	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), name);
+	if (priv->radio_type == 0)
+		radio_name = radio_names[0];
+	else if (priv->radio_type == 1)
+		radio_name = radio_names[1];
+
+	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), radio_name);
 	xmr_window_get_playlist(window);
 
-	xmr_settings_set_radio(priv->settings, name, (url == NULL ? "" : url));
+	xmr_settings_set_radio(priv->settings, radio_name, (url == NULL ? "" : url));
 
-	g_signal_emit(window, signals[RADIO_CHANGED], 0, name, url);
+	g_signal_emit(window, signals[RADIO_CHANGED], 0, radio_name, url);
 }
 
 static gboolean
@@ -2530,6 +2552,7 @@ on_login_dialog_button_login_clicked(GtkButton *button,
 					_("Logout")) == 0)
 	{
 		xmr_window_logout(window);
+		priv->radio_type = 2;
 		change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
 
 		return FALSE;
@@ -2782,24 +2805,32 @@ change_radio_style(XmrWindow *window,
 		gtk_widget_hide(priv->chooser[i]);
 	}
 
-	if (new_style == 0) // SiRen radio
+	if (new_style == 0 || new_style == 1) // SiRen radio
 	{
 		if (!xmr_service_is_logged_in(priv->service))
 		{
 			priv->switch_radio = TRUE;
+			priv->radio_type = new_style;
 			do_login(window);
 		}
 		else
 		{
 			// to avoid change radio from siren to siren
-			if (priv->playlist_url != NULL)
-				change_radio(window, _("私人电台"), NULL);
+			if (priv->radio_type != new_style)
+			{
+				priv->radio_type = new_style;
+				change_radio(window, NULL, NULL);
+			}
 			else
+			{
 				do_logout(window);
+			}
 		}
 	}
 	else
-		gtk_widget_show_all(priv->chooser[new_style - 1]);
+	{
+		gtk_widget_show_all(priv->chooser[new_style - 2]);
+	}
 }
 
 static void
@@ -2865,7 +2896,7 @@ login_finish(XmrWindow *window,
 
 		if (g_list_length(priv->playlist) == 0)
 		{
-			if (priv->playlist_url == NULL) {
+			if (priv->radio_type != 2) {
 				change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
 			}
 		}
@@ -2881,8 +2912,7 @@ login_finish(XmrWindow *window,
 		// switch to siren radio
 		if (priv->switch_radio)
 		{
-			change_radio(window, _("私人电台"), NULL);
-
+			change_radio(window, NULL, NULL);
 			priv->switch_radio = FALSE;
 		}
 		else
@@ -2893,6 +2923,12 @@ login_finish(XmrWindow *window,
 			xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
 			if (g_strcmp0(priv->playlist_url, radio_url) != 0)
 			{
+				if (radio_url && *radio_url != 0)
+					priv->radio_type = 2;
+				else if (g_strcmp0(radio_name, radio_names[0]) == 0)
+					priv->radio_type = 0;
+				else if (g_strcmp0(radio_name, radio_names[1]) == 0)
+					priv->radio_type = 1;
 				change_radio(window, radio_name, radio_url);
 			}
 			g_free(radio_name);
@@ -2912,7 +2948,9 @@ on_logout(XmrWindow *window)
 	gtk_widget_hide(window->priv->menu_logout);
 	gtk_widget_show(window->priv->menu_login);
 
-	if (window->priv->playlist_url == NULL){
+	if (window->priv->radio_type != 2)
+	{
+		window->priv->radio_type = 2;
 		change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
 	}
 }

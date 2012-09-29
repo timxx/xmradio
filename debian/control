@@ -22,7 +22,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
          gstreamer0.10-plugins-base,
          gnome-icon-theme,
          gstreamer0.10-x
-Recommends: gstreamer0.10-ffmpeg 
+Recommends: gstreamer0.10-plugins-ugly, gstreamer0.10-fluendo-mp3
 Description: Xia Mi Radio for Linux
  xmradio is a tiny Internet Xia Mi Radio client for Linux, which
  supports many radio style, skin builtin and many other features.

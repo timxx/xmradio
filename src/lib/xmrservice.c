@@ -290,9 +290,9 @@ xmr_service_logout(XmrService *xs)
 }
 
 gint
-xmr_service_get_track_list(XmrService *xs, GList **list)
+xmr_service_get_track_list_by_id(XmrService *xs, GList **list, int type)
 {
-	gchar *url;
+	gchar *url = NULL;
 	gint result;
 
 	g_return_val_if_fail(xs != NULL, 1);
@@ -303,8 +303,16 @@ xmr_service_get_track_list(XmrService *xs, GList **list)
 		return 1;
 	}
 
-	url = g_strdup_printf("http://www.xiami.com/kuang/xml/type/8/id/%s",
-				xs->priv->usr_id);
+	switch(type)
+	{
+	case 0: // 我的电台
+		url = g_strdup_printf("http://www.xiami.com/radio/xml/type/4/id/%s", xs->priv->usr_id);
+		break;
+
+	case 1: // 虾米猜
+		url = g_strdup_printf("http://www.xiami.com/radio/xml/type/2/id/%s", xs->priv->usr_id);
+		break;
+	}
 
 	result = xmr_service_get_track_list_by_style(xs, list, url);
 
