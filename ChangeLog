@@ -1,0 +1,46 @@
+Version 0.3.0
+
+	* add "My Radio" and "Xiami Guess" channels.
+
+Version 0.2.1
+
+	* fix debian packaging.
+
+Version 0.2.0
+
+	* add login/logout menu items;
+	* delay play for 3000ms to download track;
+	* delete cache when exit;
+	* make a copy of current track.
+
+Version 0.1.0
+
+	* cache tracks rather than play online;
+	* check url prefix;
+	* cover support;
+	* add lyrics support.
+
+Version 0.1.0RC1
+
+	* new skin: penguin;
+	* translation support.
+
+Version	0.1.0Beta1
+
+	* add mpris plugin;
+	* appindicator support;
+	* add close button;
+	* add volume button;
+	* login/logout support;
+	* redesign gtk theme;
+	* fav/trash support;
+	* notification support;
+	* plugin support;
+	* add skin: black/mini;
+	* add radio chooser;
+	* add popup menu;
+	* add desktop file;
+	* add icons;
+	* add player;
+	* add icons, license;
+	* radio list support;
