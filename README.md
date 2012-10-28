@@ -33,6 +33,10 @@ make install
 
 [Install from marguerite's repo](http://software.opensuse.org/package/xmradio) (You have to click "unsupported distribution" link due to a s.o.o repo recognition error for 12.2)
 
-* Debian
+* Ubuntu PPA available(11.10 ~ 12.10)
 
-to be completed.
+sudo apt-add-repository ppa:timxx/xmradio
+
+sudo apt-get update
+
+sudo apt-get install xmradio
