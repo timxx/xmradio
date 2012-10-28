@@ -52,6 +52,60 @@ enum
 static guint signals[LAST_SIGNAL] = { 0 };
 
 //==========================================================================
+typedef struct
+{
+	XmrDownloader *downloader;
+	gchar *url;
+	double progress;
+}Progress;
+
+static gboolean
+emit_download_progress_idle(Progress *p)
+{
+	g_signal_emit(p->downloader, signals[DOWNLOAD_PROGRESS], 0, p->url, p->progress);
+	g_free(p->url);
+	g_free(p);
+
+	return FALSE;
+}
+
+typedef struct
+{
+	XmrDownloader *downloader;
+	gchar *url;
+	gchar *message;
+}DownloadFailed;
+
+static gboolean
+emit_download_failed_idle(DownloadFailed *d)
+{
+	g_signal_emit(d->downloader, signals[DOWNLOAD_FAILED], 0, d->url, d->message);
+
+	g_free(d->url);
+	g_free(d->message);
+	g_free(d);
+	return FALSE;
+}
+
+typedef struct
+{
+	XmrDownloader *downloader;
+	gchar *url;
+	gchar *file;
+}DownloadFinish;
+
+static gboolean
+emit_download_finish_idle(DownloadFinish *d)
+{
+	g_signal_emit(d->downloader, signals[DOWNLOAD_FINISH], 0, d->url, d->file);
+
+	g_free(d->url);
+	g_free(d->file);
+	g_free(d);
+
+	return FALSE;
+}
+//==========================================================================
 
 static size_t
 my_write_func(void *ptr, size_t size, size_t nmemb, FILE *stream)
@@ -66,7 +120,12 @@ my_progress_func(Task *task,
 				 double ultotal,
 				 double ulnow)
 {
-	g_signal_emit(task->downloader, signals[DOWNLOAD_PROGRESS], 0, task->url, now * 100.0 / total);
+	Progress *p = g_new(Progress, 1);
+	p->downloader = task->downloader;
+	p->url = g_strdup(task->url);
+	p->progress = now * 100.0 / total;
+
+	gdk_threads_add_idle((GSourceFunc)emit_download_progress_idle, p);
 
 	return 0;
 }
@@ -84,19 +143,26 @@ download_thread(gpointer data)
 
 	if(curl == NULL)
 	{
-		g_signal_emit(task->downloader, signals[DOWNLOAD_FAILED], 0, task->url, _("curl_easy_init failed"));
+		DownloadFailed *d = g_new(DownloadFailed, 1);
+		d->downloader = task->downloader;
+		d->url = g_strdup(task->url);
+		d->message = g_strdup(_("curl_easy_init failed"));
+
+		gdk_threads_add_idle((GSourceFunc)emit_download_failed_idle, d);
 		goto _exit;
 	}
 
 	fp = fopen(task->file, "w");
 	if (fp == NULL)
 	{
-		gchar *message;
+		DownloadFailed *d = g_new(DownloadFailed, 1);
 
-		message = g_strdup_printf(_("Unable to write file: %s"), task->file);
-		g_signal_emit(task->downloader, signals[DOWNLOAD_FAILED], 0, task->url, message);
+		d->downloader = task->downloader;
+		d->url = g_strdup(task->url);
+		d->message = g_strdup_printf(_("Unable to write file: %s"), task->file);
 
-		g_free(message);
+		gdk_threads_add_idle((GSourceFunc)emit_download_failed_idle, d);
+
 		goto _exit;
 	}
 
@@ -111,16 +177,22 @@ download_thread(gpointer data)
 
 	if (res == CURLE_OK)
 	{
-		g_signal_emit(task->downloader, signals[DOWNLOAD_FINISH], 0, task->url, task->file);
+		DownloadFinish *d = g_new(DownloadFinish, 1);
+		d->downloader = task->downloader;
+		d->url = g_strdup(task->url);
+		d->file = g_strdup(task->file);
+
+		gdk_threads_add_idle((GSourceFunc)emit_download_finish_idle, d);
 	}
 	else
 	{
-		gchar *message;
-		message = g_strdup_printf(_("curl_easy_perform failed: %s"), curl_easy_strerror(res));
+		DownloadFailed *d = g_new(DownloadFailed, 1);
 
-		g_signal_emit(task->downloader, signals[DOWNLOAD_FAILED], 0, task->url, message);
+		d->downloader = task->downloader;
+		d->url = g_strdup(task->url);
+		d->message = g_strdup_printf(_("curl_easy_perform failed: %s"), curl_easy_strerror(res));
 
-		g_free(message);
+		gdk_threads_add_idle((GSourceFunc)emit_download_failed_idle, d);
 	}
 
 _exit:
