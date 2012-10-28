@@ -66,9 +66,7 @@ my_progress_func(Task *task,
 				 double ultotal,
 				 double ulnow)
 {
-	gdk_threads_enter();
 	g_signal_emit(task->downloader, signals[DOWNLOAD_PROGRESS], 0, task->url, now * 100.0 / total);
-	gdk_threads_leave();
 
 	return 0;
 }
@@ -86,9 +84,7 @@ download_thread(gpointer data)
 
 	if(curl == NULL)
 	{
-		gdk_threads_enter();
 		g_signal_emit(task->downloader, signals[DOWNLOAD_FAILED], 0, task->url, _("curl_easy_init failed"));
-		gdk_threads_leave();
 		goto _exit;
 	}
 
@@ -98,9 +94,7 @@ download_thread(gpointer data)
 		gchar *message;
 
 		message = g_strdup_printf(_("Unable to write file: %s"), task->file);
-		gdk_threads_enter();
 		g_signal_emit(task->downloader, signals[DOWNLOAD_FAILED], 0, task->url, message);
-		gdk_threads_leave();
 
 		g_free(message);
 		goto _exit;
@@ -117,17 +111,14 @@ download_thread(gpointer data)
 
 	if (res == CURLE_OK)
 	{
-		gdk_threads_enter();
 		g_signal_emit(task->downloader, signals[DOWNLOAD_FINISH], 0, task->url, task->file);
-		gdk_threads_leave();
 	}
 	else
 	{
 		gchar *message;
 		message = g_strdup_printf(_("curl_easy_perform failed: %s"), curl_easy_strerror(res));
-		gdk_threads_enter();
+
 		g_signal_emit(task->downloader, signals[DOWNLOAD_FAILED], 0, task->url, message);
-		gdk_threads_leave();
 
 		g_free(message);
 	}

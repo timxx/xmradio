@@ -91,8 +91,6 @@ int main(int argc, char **argv)
 	g_thread_init(NULL);
 #endif
 
-	gdk_threads_init();
-
 	g_type_init();
 
 	setlocale(LC_ALL, NULL);
@@ -160,7 +158,6 @@ int main(int argc, char **argv)
 
 	gst_init(&argc, &argv);
 
-	gdk_threads_init();
 	curl_global_init(CURL_GLOBAL_ALL);
 
 	// this make our XmrRadio always works
@@ -172,7 +169,7 @@ int main(int argc, char **argv)
 	tmp_dir = g_strdup_printf("%s/%s", g_get_tmp_dir(), PACKAGE);
 	g_mkdir_with_parents(tmp_dir, 0755);
 
-	app = xmr_app_new();
+	app = xmr_app_instance();
 
 	g_application_run(G_APPLICATION(app), argc, argv);
 

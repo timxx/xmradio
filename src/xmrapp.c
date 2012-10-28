@@ -94,13 +94,20 @@ static void xmr_app_init(XmrApp *app)
 	app->priv->window = NULL;
 }
 
-XmrApp*	xmr_app_new()
+XmrApp*	xmr_app_instance()
 {
-	return g_object_new(XMR_TYPE_APP,
+	static XmrApp *app;
+
+	if (app == NULL)
+	{
+		app = g_object_new(XMR_TYPE_APP,
 			     "application-id", "com.timxx.XMRadio",
 				 "flags", G_APPLICATION_FLAGS_NONE,
 			     NULL
 				 );
+	}
+
+	return app;
 }
 
 static void
