@@ -32,6 +32,22 @@ struct _XmrDownloaderPrivate
 	GSList *tasks;
 
 	GMutex *mutex;
+
+	guint event_timer;
+	GAsyncQueue *event_queue;
+};
+
+typedef struct
+{
+	guint type;
+	gpointer event;
+}DownloaderEvent;
+
+enum
+{
+	EVENT_FINISH,
+	EVENT_PROGRESS,
+	EVENT_FAILED
 };
 
 typedef struct
@@ -54,56 +70,74 @@ static guint signals[LAST_SIGNAL] = { 0 };
 //==========================================================================
 typedef struct
 {
-	XmrDownloader *downloader;
 	gchar *url;
 	double progress;
 }Progress;
 
-static gboolean
-emit_download_progress_idle(Progress *p)
-{
-	g_signal_emit(p->downloader, signals[DOWNLOAD_PROGRESS], 0, p->url, p->progress);
-	g_free(p->url);
-	g_free(p);
-
-	return FALSE;
-}
-
 typedef struct
 {
-	XmrDownloader *downloader;
 	gchar *url;
 	gchar *message;
 }DownloadFailed;
 
-static gboolean
-emit_download_failed_idle(DownloadFailed *d)
-{
-	g_signal_emit(d->downloader, signals[DOWNLOAD_FAILED], 0, d->url, d->message);
-
-	g_free(d->url);
-	g_free(d->message);
-	g_free(d);
-	return FALSE;
-}
-
 typedef struct
 {
-	XmrDownloader *downloader;
 	gchar *url;
 	gchar *file;
 }DownloadFinish;
 
-static gboolean
-emit_download_finish_idle(DownloadFinish *d)
+static void
+post_event(XmrDownloader *downloader, guint type, gpointer event)
 {
-	g_signal_emit(d->downloader, signals[DOWNLOAD_FINISH], 0, d->url, d->file);
+	DownloaderEvent *e = g_new(DownloaderEvent, 1);
+	e->type = type;
+	e->event = event;
 
-	g_free(d->url);
-	g_free(d->file);
-	g_free(d);
+	g_async_queue_push(downloader->priv->event_queue, e);
+}
 
-	return FALSE;
+static gboolean
+event_poll(XmrDownloader *downloader)
+{
+	XmrDownloaderPrivate *priv = downloader->priv;
+	DownloaderEvent *e = g_async_queue_try_pop(priv->event_queue);
+	if (e == NULL)
+		return TRUE;
+
+	switch (e->type)
+	{
+	case EVENT_FINISH:
+		{
+			DownloadFinish *d = (DownloadFinish *)e->event;
+			g_signal_emit(downloader, signals[DOWNLOAD_FINISH], 0, d->url, d->file);
+
+			g_free(d->url);
+			g_free(d->file);
+		}
+		break;
+
+	case EVENT_PROGRESS:
+		{
+			Progress *p = (Progress *)e->event;
+			g_signal_emit(downloader, signals[DOWNLOAD_PROGRESS], 0, p->url, p->progress);
+			g_free(p->url);
+		}
+		break;
+
+	case EVENT_FAILED:
+		{
+			DownloadFailed *d = (DownloadFailed *)e->event;
+			g_signal_emit(downloader, signals[DOWNLOAD_FAILED], 0, d->url, d->message);
+
+			g_free(d->url);
+			g_free(d->message);
+		}
+		break;
+	}
+
+	g_free(e->event);
+	g_free(e);
+	return TRUE;
 }
 //==========================================================================
 
@@ -121,11 +155,10 @@ my_progress_func(Task *task,
 				 double ulnow)
 {
 	Progress *p = g_new(Progress, 1);
-	p->downloader = task->downloader;
 	p->url = g_strdup(task->url);
 	p->progress = now * 100.0 / total;
 
-	gdk_threads_add_idle((GSourceFunc)emit_download_progress_idle, p);
+	post_event(task->downloader, EVENT_PROGRESS, p);
 
 	return 0;
 }
@@ -144,11 +177,10 @@ download_thread(gpointer data)
 	if(curl == NULL)
 	{
 		DownloadFailed *d = g_new(DownloadFailed, 1);
-		d->downloader = task->downloader;
 		d->url = g_strdup(task->url);
 		d->message = g_strdup(_("curl_easy_init failed"));
 
-		gdk_threads_add_idle((GSourceFunc)emit_download_failed_idle, d);
+		post_event(task->downloader, EVENT_FAILED, d);
 		goto _exit;
 	}
 
@@ -157,12 +189,10 @@ download_thread(gpointer data)
 	{
 		DownloadFailed *d = g_new(DownloadFailed, 1);
 
-		d->downloader = task->downloader;
 		d->url = g_strdup(task->url);
 		d->message = g_strdup_printf(_("Unable to write file: %s"), task->file);
 
-		gdk_threads_add_idle((GSourceFunc)emit_download_failed_idle, d);
-
+		post_event(task->downloader, EVENT_FAILED, d);
 		goto _exit;
 	}
 
@@ -178,21 +208,19 @@ download_thread(gpointer data)
 	if (res == CURLE_OK)
 	{
 		DownloadFinish *d = g_new(DownloadFinish, 1);
-		d->downloader = task->downloader;
 		d->url = g_strdup(task->url);
 		d->file = g_strdup(task->file);
 
-		gdk_threads_add_idle((GSourceFunc)emit_download_finish_idle, d);
+		post_event(task->downloader, EVENT_FINISH, d);
 	}
 	else
 	{
 		DownloadFailed *d = g_new(DownloadFailed, 1);
 
-		d->downloader = task->downloader;
 		d->url = g_strdup(task->url);
 		d->message = g_strdup_printf(_("curl_easy_perform failed: %s"), curl_easy_strerror(res));
 
-		gdk_threads_add_idle((GSourceFunc)emit_download_failed_idle, d);
+		post_event(task->downloader, EVENT_FAILED, d);
 	}
 
 _exit:
@@ -240,6 +268,18 @@ xmr_downloader_dispose(GObject *obj)
 		g_mutex_free(priv->mutex);
 #endif
 		priv->mutex = NULL;
+	}
+
+	if (priv->event_timer)
+	{
+		g_source_remove(priv->event_timer);
+		priv->event_timer = 0;
+	}
+
+	if (priv->event_queue)
+	{
+		g_async_queue_unref(priv->event_queue);
+		priv->event_queue = NULL;
 	}
 
 	if (priv->tasks)
@@ -307,6 +347,9 @@ xmr_downloader_init(XmrDownloader *downloader)
 #endif
 
 	priv->tasks = NULL;
+
+	priv->event_queue = g_async_queue_new();
+	priv->event_timer = g_timeout_add(50, (GSourceFunc)event_poll, downloader);
 }
 
 XmrDownloader*	xmr_downloader_new()

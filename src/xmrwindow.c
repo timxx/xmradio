@@ -49,6 +49,7 @@ G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 #define DEFAULT_RADIO_NAME	_("新歌电台")
 
 #define DELAY_PLAY_INTERVAL (2 * 1000)
+#define XMR_EVENT_INTERVAL	100
 
 #define COVER_WIDTH	100
 #define COVER_HEIGHT 100
@@ -82,11 +83,47 @@ enum
 	LAST_LABEL
 };
 
+enum
+{
+	XMR_EVENT_LOGIN_FINISH,
+	XMR_EVENT_LOGOUT,
+	XMR_EVENT_PLAYLIST,
+	XMR_EVENT_COVER,
+	XMR_EVENT_APPEND_RADIO
+};
+
 typedef struct
 {
 	gchar *message;
 	gchar *title;
 }Message;
+
+typedef struct
+{
+	guint type;
+	gpointer event;
+}XmrEvent;
+
+typedef struct
+{
+	const gchar *uri;
+	gint idx;
+	RadioInfo *info;
+}AppendRadio;
+
+typedef struct
+{
+	XmrWindow *window;
+	gint result;
+	GList *list;
+}FetchPlaylist;
+
+typedef struct
+{
+	XmrWindow *window;
+	gboolean ok;
+	gchar *message;
+}LoginFinish;
 
 struct _XmrWindowPrivate
 {
@@ -163,10 +200,11 @@ struct _XmrWindowPrivate
 	XmrDownloader *downloader;
 	gboolean wanted_play;		/* weather to play whene down finish */
 
-	gboolean app_exit;	/* flag to indicate wether app exited */
-
 	GAsyncQueue *queue_fetch_playlist;
 	GAsyncQueue *queue_fetch_cover;
+	GAsyncQueue *queue_event;
+
+	guint xmr_event_timer;
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -523,41 +561,11 @@ make_track_file(SongInfo *track);
 static gboolean
 delay_play_timeout(XmrWindow *window);
 
-typedef struct
-{
-	const gchar *uri;
-	gint idx;
-	RadioInfo *info;
-}AppendRadio;
+static void
+xmr_event_send(XmrWindow *window, guint type, gpointer event);
 
 static gboolean
-append_radio_idle(AppendRadio *radio);
-
-static gboolean
-deal_cover_data_idle(GString *data);
-
-typedef struct
-{
-	XmrWindow *window;
-	gint result;
-	GList *list;
-}FetchPlaylist;
-
-static gboolean
-deal_fetch_playlist_idle(FetchPlaylist *p);
-
-typedef struct
-{
-	XmrWindow *window;
-	gboolean ok;
-	gchar *message;
-}LoginFinish;
-
-static gboolean
-login_finish_idle(LoginFinish *l);
-
-static gboolean
-emit_logout_idle(XmrWindow *window);
+xmr_event_poll(XmrWindow *window);
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -783,9 +791,10 @@ xmr_window_init(XmrWindow *window)
 	priv->current_song = NULL;
 	priv->radio_type = 2;
 
-	priv->app_exit = FALSE;
 	priv->queue_fetch_playlist = g_async_queue_new();
 	priv->queue_fetch_cover = g_async_queue_new();
+	priv->queue_event = g_async_queue_new();
+	priv->xmr_event_timer = g_timeout_add(XMR_EVENT_INTERVAL, (GSourceFunc)xmr_event_poll, window);
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -934,8 +943,6 @@ xmr_window_dispose(GObject *obj)
 		priv->downloader = NULL;
 	}
 
-	priv->app_exit = TRUE;
-
 	if (priv->queue_fetch_playlist)
 	{
 		while (g_async_queue_try_pop(priv->queue_fetch_playlist) != NULL)
@@ -953,6 +960,18 @@ xmr_window_dispose(GObject *obj)
 		
 		g_async_queue_unref(priv->queue_fetch_cover);
 		priv->queue_fetch_cover = NULL;
+	}
+
+	if (priv->xmr_event_timer != 0)
+	{
+		g_source_remove(priv->xmr_event_timer);
+		priv->xmr_event_timer = 0;
+	}
+
+	if (priv->queue_event)
+	{
+		g_async_queue_unref(priv->queue_event);
+		priv->queue_event = NULL;
 	}
 
 	peas_engine_garbage_collect(PEAS_ENGINE(priv->plugin_engine));
@@ -1598,7 +1617,7 @@ thread_get_playlist(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 
-	while (!priv->app_exit && priv->queue_fetch_playlist)
+	while (priv->queue_fetch_playlist)
 	{
 		gint result = 1;
 		GList *list = NULL;
@@ -1634,7 +1653,7 @@ thread_get_playlist(XmrWindow *window)
 			p->result = result;
 			p->list = list;
 
-			gdk_threads_add_idle((GSourceFunc)deal_fetch_playlist_idle, p);
+			xmr_event_send(window, XMR_EVENT_PLAYLIST, p);
 		}
 
 		xmr_debug("[END] thread_get_playlist");
@@ -1648,7 +1667,7 @@ thread_get_cover_image(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 
-	while (!priv->app_exit && priv->queue_fetch_cover)
+	while (priv->queue_fetch_cover)
 	{
 		XmrService *service = NULL;
 		gchar *url = NULL;
@@ -1692,7 +1711,7 @@ thread_get_cover_image(XmrWindow *window)
 				break;
 			}
 
-			gdk_threads_add_idle((GSourceFunc)deal_cover_data_idle, data);
+			xmr_event_send(window, XMR_EVENT_COVER, data);
 		}
 		while(0);
 
@@ -1726,7 +1745,7 @@ thread_login(XmrWindow *window)
 		l->ok = (result == 0);
 		l->message = login_message;
 
-		gdk_threads_add_idle((GSourceFunc)login_finish_idle, l);
+		xmr_event_send(window, XMR_EVENT_LOGIN_FINISH, l);
 	}
 
 	xmr_debug("[END] thread_login");
@@ -1745,7 +1764,7 @@ thread_logout(XmrWindow *window)
 	xmr_service_logout(priv->service);
 	g_mutex_unlock(priv->mutex);
 
-	gdk_threads_add_idle((GSourceFunc)emit_logout_idle, window);
+	xmr_event_send(window, XMR_EVENT_LOGOUT, NULL);
 
 	xmr_debug("[END] thread_logout");
 
@@ -1777,7 +1796,7 @@ thread_update_radio_list(XmrWindow *window)
 		result = xmr_service_get_radio_list(service, &list, style[i]);
 		if (result != 0)
 		{
-			g_print("xmr_service_get_radio_list: %d", result);
+			xmr_debug("xmr_service_get_radio_list: %d", result);
 			continue ;
 		}
 
@@ -1791,7 +1810,7 @@ thread_update_radio_list(XmrWindow *window)
 			result = xmr_service_get_url_data(service, radio_info->logo, data);
 			if (result != 0)
 			{
-				g_print("xmr_service_get_url_data: %d", result);
+				xmr_debug("xmr_service_get_url_data: %d", result);
 			}
 			else
 			{
@@ -1812,7 +1831,7 @@ thread_update_radio_list(XmrWindow *window)
 				append_radio->idx = i;
 				append_radio->info = radio_info;
 
-				gdk_threads_add_idle((GSourceFunc)append_radio_idle, append_radio);
+				xmr_event_send(window, XMR_EVENT_APPEND_RADIO, append_radio);
 			}
 
 			g_string_free(data, TRUE);
@@ -1842,7 +1861,11 @@ thread_like_song(XmrWindow *window)
 
 	song = xmr_window_get_current_song(window);
 	if (song)
+	{
+		g_mutex_lock(priv->mutex);
 		xmr_service_like_song(priv->service, song->song_id, TRUE);
+		g_mutex_unlock(priv->mutex);
+	}
 
 	xmr_debug("[END] thread_like_song");
 
@@ -1859,7 +1882,11 @@ thread_dislike_song(XmrWindow *window)
 
 	song = xmr_window_get_current_song(window);
 	if (song)
+	{
+		g_mutex_lock(priv->mutex);
 		xmr_service_like_song(priv->service, song->song_id, FALSE);
+		g_mutex_unlock(priv->mutex);
+	}
 
 	xmr_debug("[END] thread_dislike_song");
 
@@ -2728,8 +2755,6 @@ xmr_window_quit(XmrWindow *window)
 
 	xmr_settings_set_window_pos(window->priv->settings, x, y);
 
-	window->priv->app_exit = TRUE;
-
 	gtk_widget_destroy(GTK_WIDGET(window));
 }
 
@@ -2979,7 +3004,7 @@ login_finish(XmrWindow *window,
 
 		priv->message.message = g_strdup(error_message);
 		priv->message.title = g_strdup(_("Login Status"));
-		gdk_threads_add_idle((GSourceFunc)show_message_idle, window);
+		g_idle_add((GSourceFunc)show_message_idle, window);
 
 		if (g_list_length(priv->playlist) == 0)
 		{
@@ -3259,75 +3284,85 @@ delay_play_timeout(XmrWindow *window)
 	return FALSE;
 }
 
-static gboolean
-append_radio_idle(AppendRadio *radio)
+static void
+xmr_event_send(XmrWindow *window, guint type, gpointer event)
 {
-	XmrWindow *window = NULL;
-	XmrRadio *xmr_radio;
-	XmrApp *app = xmr_app_instance();
+	XmrEvent *e = g_new(XmrEvent, 1);
+	e->type = type;
+	e->event = event;
 
-	if (radio == NULL || app == NULL)
-		return FALSE;
-
-	g_object_get(app, "window", &window, NULL);
-	if (window == NULL)
-		return FALSE;
-
-	xmr_radio = xmr_radio_new_with_info(radio->uri, radio->info->name, radio->info->url);
-	xmr_radio_chooser_append(XMR_RADIO_CHOOSER(window->priv->chooser[radio->idx]), xmr_radio);
-
-	g_free(radio);
-
-	return FALSE;
+	g_async_queue_push(window->priv->queue_event, e);
 }
 
 static gboolean
-deal_cover_data_idle(GString *data)
+xmr_event_poll(XmrWindow *window)
 {
-	GdkPixbuf *pixbuf;
-	XmrWindow *window;
+	XmrWindowPrivate *priv = window->priv;
 
-	g_return_val_if_fail(data != NULL, FALSE);
+	XmrEvent *event = g_async_queue_try_pop(priv->queue_event);
+	if (event == NULL)
+		return TRUE;
 
-	pixbuf = gdk_pixbuf_from_memory(data->str, data->len);
-	if (pixbuf == NULL)
+	switch (event->type)
 	{
-		xmr_debug("gdk_pixbuf_from_memory failed");
-		return FALSE;
+	case XMR_EVENT_LOGIN_FINISH:
+		{
+			LoginFinish *l = (LoginFinish *)event->event;
+			g_signal_emit(window, signals[LOGIN_FINISH], 0, l->ok, l->message);
+
+			g_free(l->message);
+		}
+		break;
+
+	case XMR_EVENT_LOGOUT:
+		g_signal_emit(window, signals[LOGOUT], 0);
+		break;
+
+	case XMR_EVENT_PLAYLIST:
+		{
+			FetchPlaylist *p = (FetchPlaylist *)event->event;
+			g_signal_emit(window, signals[FETCH_PLAYLIST_FINISH], 0, p->result, p->list);
+		}
+		break;
+
+	case XMR_EVENT_COVER:
+		{
+			GdkPixbuf *pixbuf;
+			GString *data;
+
+			data = (GString *)event->event;
+
+			pixbuf = gdk_pixbuf_from_memory(data->str, data->len);
+			if (pixbuf == NULL)
+			{
+				xmr_debug("gdk_pixbuf_from_memory failed");
+				break;
+			}
+
+			g_signal_emit(window, signals[FETCH_COVER_FINISH], 0, pixbuf);
+	
+			g_string_free(data, TRUE);
+			g_object_unref(pixbuf);
+		}
+		break;
+
+	case XMR_EVENT_APPEND_RADIO:
+		{
+			XmrRadio *xmr_radio;
+			AppendRadio *radio = (AppendRadio *)event->event;
+
+			if (radio == NULL)
+				break;
+
+			xmr_radio = xmr_radio_new_with_info(radio->uri, radio->info->name, radio->info->url);
+			xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[radio->idx]), xmr_radio);
+		}
+		break;
 	}
 
-	g_object_get(xmr_app_instance(), "window", &window, NULL);
-	g_signal_emit(window, signals[FETCH_COVER_FINISH], 0, pixbuf);
+	if (event->type != XMR_EVENT_LOGOUT && event->type != XMR_EVENT_COVER)
+		g_free(event->event);
+	g_free(event);
 
-	g_string_free(data, TRUE);
-	g_object_unref(pixbuf);
-
-	return FALSE;
-}
-
-static gboolean
-deal_fetch_playlist_idle(FetchPlaylist *p)
-{
-	g_signal_emit(p->window, signals[FETCH_PLAYLIST_FINISH], 0, p->result, p->list);
-
-	g_free(p);
-
-	return FALSE;
-}
-
-static gboolean
-login_finish_idle(LoginFinish *l)
-{
-	g_signal_emit(l->window, signals[LOGIN_FINISH], 0, l->ok, l->message);
-
-	g_free(l->message);
-	g_free(l);
-	return FALSE;
-}
-
-static gboolean
-emit_logout_idle(XmrWindow *window)
-{
-	g_signal_emit(window, signals[LOGOUT], 0);
-	return FALSE;
+	return TRUE;
 }
