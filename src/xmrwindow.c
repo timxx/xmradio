@@ -433,8 +433,10 @@ init_login_dialog(XmrWindow *window);
 static void
 do_login(XmrWindow *window);
 
+/*
 static void
 do_logout(XmrWindow *window);
+*/
 
 
 /**
@@ -2600,7 +2602,7 @@ do_login(XmrWindow *window)
 	gtk_dialog_run(GTK_DIALOG(priv->dialog_login));
 	gtk_widget_hide(priv->dialog_login);
 }
-
+/*
 static void
 do_logout(XmrWindow *window)
 {
@@ -2619,7 +2621,7 @@ do_logout(XmrWindow *window)
 	gtk_dialog_run(GTK_DIALOG(priv->dialog_login));
 	gtk_widget_hide(priv->dialog_login);
 }
-
+*/
 static void
 change_radio(XmrWindow *window,
 			const gchar *name,
@@ -2934,10 +2936,6 @@ change_radio_style(XmrWindow *window,
 			{
 				priv->radio_type = new_style;
 				change_radio(window, NULL, NULL);
-			}
-			else
-			{
-				do_logout(window);
 			}
 		}
 	}
