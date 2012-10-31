@@ -89,7 +89,10 @@ enum
 	XMR_EVENT_LOGOUT,
 	XMR_EVENT_PLAYLIST,
 	XMR_EVENT_COVER,
-	XMR_EVENT_APPEND_RADIO
+	XMR_EVENT_APPEND_RADIO,
+	XMR_EVENT_PLAYER_EOS,
+	XMR_EVENT_PLAYER_STATE_CHANGED,
+	XMR_EVENT_PLAYER_TICK
 };
 
 typedef struct
@@ -1527,7 +1530,7 @@ player_eos(XmrPlayer *player,
 			gboolean early,
 			XmrWindow *window)
 {
-	xmr_window_play_next(window);
+	xmr_event_send(window, XMR_EVENT_PLAYER_EOS, NULL);
 }
 
 static void
@@ -1566,14 +1569,7 @@ player_tick(XmrPlayer *player,
 				mins_duration, secs_duration
 				);
 
-	if (time == NULL){
-		g_error("Failed to alloc memory\n");
-	}
-
-	xmr_label_set_text(XMR_LABEL(window->priv->labels[LABEL_TIME]),
-				time);
-
-	g_free(time);
+	xmr_event_send(window, XMR_EVENT_PLAYER_TICK, time);
 }
 
 static void
@@ -1590,16 +1586,7 @@ player_state_changed(XmrPlayer *player,
 			gint new_state,
 			XmrWindow *window)
 {
-	if (new_state == GST_STATE_PLAYING)
-	{
-		gtk_widget_hide(window->priv->buttons[BUTTON_PLAY]);
-		gtk_widget_show(window->priv->buttons[BUTTON_PAUSE]);
-	}
-	else if(new_state == GST_STATE_PAUSED)
-	{
-		gtk_widget_hide(window->priv->buttons[BUTTON_PAUSE]);
-		gtk_widget_show(window->priv->buttons[BUTTON_PLAY]);
-	}
+	xmr_event_send(window, XMR_EVENT_PLAYER_STATE_CHANGED, GINT_TO_POINTER(new_state));
 }
 
 static void
@@ -3288,6 +3275,7 @@ xmr_event_send(XmrWindow *window, guint type, gpointer event)
 	e->event = event;
 
 	g_async_queue_push(window->priv->queue_event, e);
+	g_main_context_wakeup(g_main_context_default());
 }
 
 static gboolean
@@ -3354,9 +3342,37 @@ xmr_event_poll(XmrWindow *window)
 			xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[radio->idx]), xmr_radio);
 		}
 		break;
+
+	case XMR_EVENT_PLAYER_EOS:
+		xmr_window_play_next(window);
+		break;
+
+	case XMR_EVENT_PLAYER_STATE_CHANGED:
+		{
+			gint new_state = GPOINTER_TO_INT(event->event);
+			if (new_state == GST_STATE_PLAYING)
+			{
+				gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
+				gtk_widget_show(priv->buttons[BUTTON_PAUSE]);
+			}
+			else if(new_state == GST_STATE_PAUSED)
+			{
+				gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
+				gtk_widget_show(priv->buttons[BUTTON_PLAY]);
+			}
+			event->event = NULL; // Do not free!!!
+		}
+		break;
+
+	case XMR_EVENT_PLAYER_TICK:
+		{
+			gchar *time = (gchar *)event->event;
+			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_TIME]), time);
+		}
+		break;
 	}
 
-	if (event->type != XMR_EVENT_LOGOUT && event->type != XMR_EVENT_COVER)
+	if (event->type != XMR_EVENT_COVER)
 		g_free(event->event);
 	g_free(event);
 
