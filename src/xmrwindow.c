@@ -1535,9 +1535,7 @@ player_error(XmrPlayer *player,
 			GError *error,
 			XmrWindow *window)
 {
-	g_warning("Player error(%d): %s\n", error->code, error->message);
-
-	xmr_window_play_next(window);
+	xmr_debug("Player error(%d): %s\n", error->code, error->message);
 }
 
 static void

@@ -35,6 +35,8 @@ struct _XmrDownloaderPrivate
 
 	guint event_timer;
 	GAsyncQueue *event_queue;
+
+	GThreadPool *thread_pool;
 };
 
 typedef struct
@@ -94,6 +96,7 @@ post_event(XmrDownloader *downloader, guint type, gpointer event)
 	e->event = event;
 
 	g_async_queue_push(downloader->priv->event_queue, e);
+	g_main_context_wakeup(g_main_context_default());
 }
 
 static gboolean
@@ -270,6 +273,12 @@ xmr_downloader_dispose(GObject *obj)
 		priv->mutex = NULL;
 	}
 
+	if (priv->thread_pool)
+	{
+		g_thread_pool_free(priv->thread_pool, FALSE, TRUE);
+		priv->thread_pool = NULL;
+	}
+
 	if (priv->event_timer)
 	{
 		g_source_remove(priv->event_timer);
@@ -347,6 +356,7 @@ xmr_downloader_init(XmrDownloader *downloader)
 #endif
 
 	priv->tasks = NULL;
+	priv->thread_pool = g_thread_pool_new((GFunc)download_thread, NULL, -1, FALSE, NULL);
 
 	priv->event_queue = g_async_queue_new();
 	priv->event_timer = g_timeout_add(50, (GSourceFunc)event_poll, downloader);
@@ -377,11 +387,17 @@ xmr_downloader_add_task(XmrDownloader *downloader,
 
 	priv->tasks = g_slist_prepend(priv->tasks, task);
 
-	// 暂不处理任务数量。。。
+	if (priv->thread_pool)
+	{
+		g_thread_pool_push(priv->thread_pool, task, NULL);
+	}
+	else
+	{
 #if GLIB_CHECK_VERSION(2, 32, 0)
-	g_thread_new("download", (GThreadFunc)download_thread, task);
+		g_thread_new("download", (GThreadFunc)download_thread, task);
 #else
-	g_thread_create((GThreadFunc)download_thread, task, FALSE, NULL);
+		g_thread_create((GThreadFunc)download_thread, task, FALSE, NULL);
 #endif
+	}
 }
 
