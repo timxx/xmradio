@@ -275,7 +275,7 @@ xmr_downloader_dispose(GObject *obj)
 
 	if (priv->thread_pool)
 	{
-		g_thread_pool_free(priv->thread_pool, FALSE, TRUE);
+		g_thread_pool_free(priv->thread_pool, TRUE, FALSE);
 		priv->thread_pool = NULL;
 	}
 
