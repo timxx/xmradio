@@ -48,11 +48,13 @@ G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 #define DEFAULT_RADIO_URL	"http://www.xiami.com/kuang/xml/type/6/id/0"
 #define DEFAULT_RADIO_NAME	_("新歌电台")
 
-#define DELAY_PLAY_INTERVAL (2 * 1000)
-#define XMR_EVENT_INTERVAL	100
+#define XMR_EVENT_INTERVAL	50
 
 #define COVER_WIDTH	100
 #define COVER_HEIGHT 100
+
+// 1Mb
+#define BUFFERING_FILE_SIZE	(1024 * 1024)
 
 enum
 {
@@ -201,13 +203,13 @@ struct _XmrWindowPrivate
 	Message message;
 
 	XmrDownloader *downloader;
-	gboolean wanted_play;		/* weather to play whene down finish */
 
 	GAsyncQueue *queue_fetch_playlist;
 	GAsyncQueue *queue_fetch_cover;
 	GAsyncQueue *queue_event;
 
 	guint xmr_event_timer;
+	guint buffering_timer;	/* show/hide buffering window */
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -509,9 +511,6 @@ on_volume_button_value_changed(GtkScaleButton *button,
 			XmrWindow *window);
 
 static gboolean
-emit_track_changed_idle(XmrWindow *window);
-
-static gboolean
 show_message_idle(XmrWindow *window);
 
 static void
@@ -563,14 +562,24 @@ is_file_exists(const gchar *file);
 static gchar *
 make_track_file(SongInfo *track);
 
-static gboolean
-delay_play_timeout(XmrWindow *window);
-
 static void
 xmr_event_send(XmrWindow *window, guint type, gpointer event);
 
 static gboolean
 xmr_event_poll(XmrWindow *window);
+
+/**
+ * Func to check downloading status
+ */
+static gboolean
+buffering_timeout(XmrWindow *window);
+
+static void
+start_buffering_timer(XmrWindow *window);
+
+static void
+stop_buffering_timer(XmrWindow *window);
+
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -791,7 +800,6 @@ xmr_window_init(XmrWindow *window)
 	priv->message.title = NULL;
 
 	priv->downloader = xmr_downloader_new();
-	priv->wanted_play = FALSE;
 
 	priv->current_song = NULL;
 	priv->radio_type = 2;
@@ -800,6 +808,8 @@ xmr_window_init(XmrWindow *window)
 	priv->queue_fetch_cover = g_async_queue_new();
 	priv->queue_event = g_async_queue_new();
 	priv->xmr_event_timer = g_timeout_add(XMR_EVENT_INTERVAL, (GSourceFunc)xmr_event_poll, window);
+	priv->buffering_timer = 0;
+	start_buffering_timer(window);
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -971,6 +981,12 @@ xmr_window_dispose(GObject *obj)
 	{
 		g_source_remove(priv->xmr_event_timer);
 		priv->xmr_event_timer = 0;
+	}
+
+	if (priv->buffering_timer != 0)
+	{
+		g_source_remove(priv->buffering_timer);
+		priv->buffering_timer = 0;
 	}
 
 	if (priv->queue_event)
@@ -1149,7 +1165,6 @@ static void
 on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 {
 	XmrWindow *window = XMR_WINDOW(gtk_widget_get_toplevel(widget));
-	XmrWindowPrivate *priv = window->priv;
 	glong id = (glong)data;
 
 	switch(id)
@@ -1170,7 +1185,7 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_PAUSE:
-		xmr_player_pause(priv->player);
+		xmr_window_pause(window);
 		break;
 
 	case BUTTON_NEXT:
@@ -2009,23 +2024,18 @@ xmr_window_play_next(XmrWindow *window)
 
 	if (is_track_downloaded(song))
 	{
-		priv->wanted_play = FALSE;
+		xmr_debug("play next song: %s", file);
 		xmr_player_open(priv->player, file, NULL);
 		xmr_player_play(priv->player);
-
-		xmr_debug("play next song: %s", file);
 	}
 	else
 	{
-		xmr_window_pause(window);
-		priv->wanted_play = TRUE;
 		xmr_downloader_add_task(priv->downloader, song->location, file);
-
-		g_timeout_add(DELAY_PLAY_INTERVAL, (GSourceFunc)delay_play_timeout, window);
+		start_buffering_timer(window);
 	}
 
 	xmr_window_set_track_info(window);
-	g_idle_add((GSourceFunc)emit_track_changed_idle, window);
+	g_signal_emit(window, signals[TRACK_CHANGED], 0, priv->current_song);
 
 	g_free(file);
 
@@ -2046,6 +2056,7 @@ xmr_window_pause(XmrWindow *window)
 	priv = window->priv;
 
 	xmr_player_pause(priv->player);
+	stop_buffering_timer(window);
 }
 
 SongInfo *
@@ -2616,7 +2627,7 @@ change_radio(XmrWindow *window,
 	const gchar *radio_name = name;
 
 	if (xmr_player_playing(priv->player))
-		xmr_player_pause(priv->player);
+		xmr_window_pause(window);
 
 	g_list_free_full(priv->playlist, (GDestroyNotify)song_info_free);
 	priv->playlist = NULL;
@@ -2949,14 +2960,6 @@ xmr_window_set_volume(XmrWindow *window,
 }
 
 static gboolean
-emit_track_changed_idle(XmrWindow *window)
-{
-	g_signal_emit(window, signals[TRACK_CHANGED], 0, window->priv->current_song);
-
-	return FALSE;
-}
-
-static gboolean
 show_message_idle(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
@@ -3080,11 +3083,7 @@ fetch_playlist_finish(XmrWindow *window,
 
 			file = make_track_file(song);
 
-			priv->wanted_play = TRUE;
 			xmr_downloader_add_task(priv->downloader, song->location, file);
-
-			g_timeout_add(DELAY_PLAY_INTERVAL, (GSourceFunc)delay_play_timeout, window);
-
 			g_free(file);
 		}
 	}
@@ -3111,24 +3110,6 @@ download_finish(XmrDownloader *downloader,
 	XmrWindowPrivate *priv = window->priv;
 
 	xmr_debug("%s -> %s downloaded", url, file);
-
-	if (priv->wanted_play && !xmr_window_playing(window))
-	{
-		if (priv->playlist && priv->playlist->data)
-		{
-			song_info_free(priv->current_song);
-			priv->current_song = song_info_copy(priv->playlist->data);
-
-			xmr_player_open(priv->player, file, NULL);
-			xmr_player_play(priv->player);
-
-			xmr_window_set_track_info(window);
-
-			g_signal_emit(window, signals[TRACK_CHANGED], 0, priv->playlist->data);
-		}
-
-		priv->wanted_play = FALSE;
-	}
 
 	// download next song
 	{
@@ -3185,6 +3166,20 @@ is_track_downloaded(SongInfo *track)
 	// FIXME:
 	// do not consider whether is a valid MEDIA file
 	ret = g_file_test(file, G_FILE_TEST_EXISTS);
+
+	do
+	{
+		struct stat st;
+		if (ret == FALSE)
+			break;
+
+		// check file size too
+		if (stat(file, &st) == -1)
+			break;
+
+		if (st.st_size >= BUFFERING_FILE_SIZE)
+			ret = TRUE;
+	} while (0);
 
 	g_free(file);
 
@@ -3243,28 +3238,6 @@ make_track_file(SongInfo *track)
 	g_free(name);
 
 	return file;
-}
-
-static gboolean
-delay_play_timeout(XmrWindow *window)
-{
-	XmrWindowPrivate *priv = window->priv;
-	gchar *file = make_track_file(priv->current_song);
-
-	if (file == NULL)
-		return FALSE;
-
-	xmr_player_open(priv->player, file, NULL);
-	xmr_player_play(priv->player);
-
-	xmr_debug("playing song: %s", file);
-
-	xmr_window_set_track_info(window);
-	g_idle_add((GSourceFunc)emit_track_changed_idle, window);
-
-	g_free(file);
-
-	return FALSE;
 }
 
 static void
@@ -3377,4 +3350,54 @@ xmr_event_poll(XmrWindow *window)
 	g_free(event);
 
 	return TRUE;
+}
+
+static gboolean
+buffering_timeout(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+
+	if (!xmr_window_playing(window))
+	{
+		if (priv->current_song != NULL && is_track_downloaded(priv->current_song))
+		{
+			gchar *file = make_track_file(priv->current_song);
+
+			xmr_debug("buffering ok...");
+			xmr_debug("play next song: %s", file);
+
+			xmr_player_open(priv->player, file, NULL);
+			xmr_player_play(priv->player);
+
+			g_free(file);
+
+			xmr_window_set_track_info(window);
+			g_signal_emit(window, signals[TRACK_CHANGED], 0, priv->current_song);
+		}
+		else
+		{
+			xmr_debug("buffering...");
+		}
+	}
+
+	return TRUE;
+}
+
+static void
+start_buffering_timer(XmrWindow *window)
+{
+	if (window->priv->buffering_timer == 0)
+	{
+		window->priv->buffering_timer = g_timeout_add(300, (GSourceFunc)buffering_timeout, window);
+	}
+}
+
+static void
+stop_buffering_timer(XmrWindow *window)
+{
+	if (window->priv->buffering_timer != 0)
+	{
+		g_source_remove(window->priv->buffering_timer);
+		window->priv->buffering_timer = 0;
+	}
 }
