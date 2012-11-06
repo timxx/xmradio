@@ -66,6 +66,14 @@ xmr_downloader_add_task(XmrDownloader *downloader,
 						const gchar *url,
 						const gchar *file);
 
+/**
+ * test whether task exists
+ */
+gboolean
+xmr_downloader_test_task(XmrDownloader *downloader,
+		const gchar *url,
+		const gchar *file);
+
 G_END_DECLS
 
 #endif /* __XMR_DOWNLOADER_H__ */

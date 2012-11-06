@@ -379,6 +379,11 @@ xmr_downloader_add_task(XmrDownloader *downloader,
 	g_return_if_fail(downloader != NULL && url != NULL && file != NULL);
 	priv = downloader->priv;
 
+	// task already exists
+	// just ignore it
+	if (xmr_downloader_test_task(downloader, url, file))
+		return ;
+
 	task = g_new0(Task, 1);
 
 	task->downloader = downloader;
@@ -401,3 +406,29 @@ xmr_downloader_add_task(XmrDownloader *downloader,
 	}
 }
 
+gboolean
+xmr_downloader_test_task(XmrDownloader *downloader,
+		const gchar *url,
+		const gchar *file)
+{
+	XmrDownloaderPrivate *priv;
+	GSList *p;
+
+	g_return_val_if_fail(downloader != NULL, FALSE);
+	priv = downloader->priv;
+
+	p = priv->tasks;
+	while (p)
+	{
+		Task *task = (Task *)p->data;
+
+		if (g_strcmp0(task->url, url) == 0 &&
+			g_strcmp0(task->file, file) == 0) {
+			return TRUE;
+		}
+
+		p = p->next;
+	}
+
+	return FALSE;
+}
