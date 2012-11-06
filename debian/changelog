@@ -1,3 +1,30 @@
+xmradio (0.3.1~quantal) quantal; urgency=low
+
+  * 0.3.1
+    - remove gdk_threads_xxx functions
+    - use buffering delay instead of time delay
+    - fix stop playing after a while
+
+ -- Weitian Leung <weitianleung@gmail.com>  Tue, 06 Nov 2012 18:45:11 +0800
+ 
+xmradio (0.3.1~precise) precise; urgency=low
+
+  * 0.3.1
+    - remove gdk_threads_xxx functions
+    - use buffering delay instead of time delay
+    - fix stop playing after a while
+
+ -- Weitian Leung <weitianleung@gmail.com>  Tue, 06 Nov 2012 18:44:29 +0800
+
+xmradio (0.3.1~oneiric) oneiric; urgency=low
+
+  * 0.3.1
+    - remove gdk_threads_xxx functions
+    - use buffering delay instead of time delay
+    - fix stop playing after a while
+
+ -- Weitian Leung <weitianleung@gmail.com>  Tue, 06 Nov 2012 18:39:44 +0800
+ 
 xmradio (0.3.0~oneiric) oneiric; urgency=low
 
   * 0.3.0
