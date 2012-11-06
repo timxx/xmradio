@@ -53,8 +53,8 @@ G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 #define COVER_WIDTH	100
 #define COVER_HEIGHT 100
 
-// 1Mb
-#define BUFFERING_FILE_SIZE	(1024 * 1024)
+// 512Kb
+#define BUFFERING_FILE_SIZE	(512 * 1024)
 
 enum
 {
@@ -1545,7 +1545,9 @@ player_eos(XmrPlayer *player,
 			gboolean early,
 			XmrWindow *window)
 {
-	xmr_event_send(window, XMR_EVENT_PLAYER_EOS, NULL);
+	if (!early) {
+		xmr_event_send(window, XMR_EVENT_PLAYER_EOS, NULL);
+	}
 }
 
 static void
@@ -1554,6 +1556,10 @@ player_error(XmrPlayer *player,
 			XmrWindow *window)
 {
 	xmr_debug("Player error(%d): %s\n", error->code, error->message);
+	// play next if "Stream contains no data" occurres
+	if (error->code == GST_STREAM_ERROR_TYPE_NOT_FOUND) {
+		xmr_event_send(window, XMR_EVENT_PLAYER_EOS, NULL);
+	}
 }
 
 static void
@@ -1996,6 +2002,8 @@ xmr_window_play_next(XmrWindow *window)
 
 	g_return_if_fail( window != NULL );
 	priv = window->priv;
+
+	xmr_player_close(priv->player);
 
 	// change to default cover image first
 	if (priv->pb_cover)
@@ -3177,8 +3185,7 @@ is_track_downloaded(SongInfo *track)
 		if (stat(file, &st) == -1)
 			break;
 
-		if (st.st_size >= BUFFERING_FILE_SIZE)
-			ret = TRUE;
+		ret = (st.st_size >= BUFFERING_FILE_SIZE);
 	} while (0);
 
 	g_free(file);
@@ -3388,7 +3395,7 @@ start_buffering_timer(XmrWindow *window)
 {
 	if (window->priv->buffering_timer == 0)
 	{
-		window->priv->buffering_timer = g_timeout_add(300, (GSourceFunc)buffering_timeout, window);
+		window->priv->buffering_timer = g_timeout_add(500, (GSourceFunc)buffering_timeout, window);
 	}
 }
 
