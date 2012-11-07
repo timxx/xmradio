@@ -3093,6 +3093,8 @@ fetch_playlist_finish(XmrWindow *window,
 
 			xmr_downloader_add_task(priv->downloader, song->location, file);
 			g_free(file);
+
+			start_buffering_timer(window);
 		}
 	}
 }
