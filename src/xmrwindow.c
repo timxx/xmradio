@@ -1165,6 +1165,7 @@ static void
 on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 {
 	XmrWindow *window = XMR_WINDOW(gtk_widget_get_toplevel(widget));
+	XmrWindowPrivate *priv = window->priv;
 	glong id = (glong)data;
 
 	switch(id)
@@ -1193,8 +1194,22 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_LIKE:
+		if (xmr_button_is_toggled(XMR_BUTTON(priv->buttons[BUTTON_LIKE])))
+		{
+			xmr_button_toggle_state_off(XMR_BUTTON(priv->buttons[BUTTON_LIKE]));
+		}
+		else
+		{
+			like_current_song(window, TRUE);
+			// should check if logged in
+			// and wait for like_current_song return state
+			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
+		}
+		break;
+
 	case BUTTON_DISLIKE:
-		like_current_song(window, id == BUTTON_LIKE);
+		like_current_song(window, FALSE);
+		xmr_button_toggle_state_off(XMR_BUTTON(priv->buttons[BUTTON_LIKE]));
 		break;
 
 	case BUTTON_LYRIC:
@@ -1961,6 +1976,15 @@ xmr_window_set_track_info(XmrWindow *window)
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_TIME]), "00:00/00:00");
 
 	gtk_widget_set_tooltip_text(priv->image, song->album_name);
+
+	// update fav button status
+	{
+		gint grade = (gint)g_strtod(song->grade, NULL);
+		if (grade > 0)
+			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
+		else
+			xmr_button_toggle_state_off(XMR_BUTTON(priv->buttons[BUTTON_LIKE]));
+	}
 }
 
 static void
