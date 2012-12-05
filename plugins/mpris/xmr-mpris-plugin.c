@@ -28,6 +28,7 @@
 #include "xmrwindow.h"
 #include "xmrplayer.h"
 #include "lib/songinfo.h"
+#include "xmrdebug.h"
 
 #include "mpris-spec.h"
 
@@ -93,7 +94,7 @@ player_tick(XmrPlayer	*player,
 				       &error);
 	if (error != NULL)
 	{
-		g_warning("Unable to set MPRIS Seeked signal: %s", error->message);
+		xmr_debug("Unable to set MPRIS Seeked signal: %s", error->message);
 		g_clear_error(&error);
 	}
 }
@@ -231,13 +232,13 @@ handle_result(GDBusMethodInvocation *invocation,
 	{
 		if (error != NULL)
 		{
-			g_print("mpris: returning error: %s\n", error->message);
+			xmr_debug("mpris: returning error: %s", error->message);
 			g_dbus_method_invocation_return_gerror(invocation, error);
 			g_error_free(error);
 		}
 		else
 		{
-			g_print("mpris: returning unknown error\n");
+			xmr_debug("mpris: returning unknown error");
 			g_dbus_method_invocation_return_error_literal(invocation,
 						G_DBUS_ERROR,
 						G_DBUS_ERROR_FAILED,
@@ -333,33 +334,33 @@ build_metadata(XmrMprisPlugin *plugin)
 {
 	GVariantBuilder *builder;
 	GVariant *v = NULL;
-
-	if (plugin->current_song == NULL)
-		return NULL;
-
+return NULL;
 	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
 
 	g_variant_builder_add(builder, "{sv}", "mpris:trackid",
 				g_variant_new ("o", "/org/mpris/MediaPlayer2/Track/track0"));
 
-    g_variant_builder_add(builder, "{sv}", "mpris:length",
+	g_variant_builder_add(builder, "{sv}", "mpris:length",
 				g_variant_new("x", plugin->duration / 1000));
 
-	if (plugin->current_song->album_name)
-		g_variant_builder_add(builder, "{sv}", "xesam:album",
-					g_variant_new("s", plugin->current_song->album_name));
-
-	if (plugin->current_song->artist_name)
-		g_variant_builder_add(builder, "{sv}", "xesam:artist",
-					variant_for_metadata(plugin->current_song->artist_name, TRUE));
-
-	if (plugin->current_song->song_name)
-		g_variant_builder_add(builder, "{sv}", "xesam:title",
-					g_variant_new("s", plugin->current_song->song_name));
-
-	if (plugin->current_song->location)
-	  g_variant_builder_add(builder, "{sv}", "xesam:url",
-					g_variant_new("s", plugin->current_song->location));
+	if (plugin->current_song != NULL)
+	{
+		if (plugin->current_song->album_name)
+			g_variant_builder_add(builder, "{sv}", "xesam:album",
+								  g_variant_new("s", plugin->current_song->album_name));
+		
+		if (plugin->current_song->artist_name)
+			g_variant_builder_add(builder, "{sv}", "xesam:artist",
+								  variant_for_metadata(plugin->current_song->artist_name, TRUE));
+		
+		if (plugin->current_song->song_name)
+			g_variant_builder_add(builder, "{sv}", "xesam:title",
+								  g_variant_new("s", plugin->current_song->song_name));
+		
+		if (plugin->current_song->location)
+			g_variant_builder_add(builder, "{sv}", "xesam:url",
+								  g_variant_new("s", plugin->current_song->location));
+	}
 
 	v = g_variant_builder_end (builder);
 	g_variant_builder_unref (builder);
@@ -377,7 +378,7 @@ get_player_property(GDBusConnection *connection,
 		     XmrMprisPlugin *plugin)
 {
 	if (g_strcmp0(object_path, MPRIS_OBJECT_NAME) != 0 ||
-	    g_strcmp0(interface_name, MPRIS_PLAYER_INTERFACE) != 0)
+		g_strcmp0(interface_name, MPRIS_PLAYER_INTERFACE) != 0)
 	{
 		g_set_error(error,
 					G_DBUS_ERROR,
@@ -497,13 +498,13 @@ static const GDBusInterfaceVTable player_vtable =
 static void
 name_acquired_cb(GDBusConnection *connection, const char *name, XmrMprisPlugin *plugin)
 {
-	g_print("successfully acquired dbus name %s\n", name);
+	xmr_debug("successfully acquired dbus name %s", name);
 }
 
 static void
 name_lost_cb (GDBusConnection *connection, const char *name, XmrMprisPlugin *plugin)
 {
-	g_print("lost dbus name %s\n", name);
+	xmr_debug("lost dbus name %s", name);
 }
 
 static void
@@ -525,7 +526,7 @@ impl_activate(PeasActivatable *activatable)
 	plugin->connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 	if (error != NULL)
 	{
-		g_warning("Unable to connect to D-Bus session bus: %s", error->message);
+		xmr_debug("Unable to connect to D-Bus session bus: %s", error->message);
 		return ;
 	}
 
@@ -533,7 +534,7 @@ impl_activate(PeasActivatable *activatable)
 	plugin->node_info = g_dbus_node_info_new_for_xml(mpris_introspection_xml, &error);
 	if (error != NULL)
 	{
-		g_warning("Unable to read MPRIS interface specificiation: %s", error->message);
+		xmr_debug("Unable to read MPRIS interface specificiation: %s", error->message);
 		return;
 	}
 
@@ -548,7 +549,7 @@ impl_activate(PeasActivatable *activatable)
 							     &error);
 	if (error != NULL)
 	{
-		g_warning ("unable to register MPRIS root interface: %s", error->message);
+		xmr_debug("unable to register MPRIS root interface: %s", error->message);
 		g_error_free (error);
 	}
 
@@ -563,7 +564,7 @@ impl_activate(PeasActivatable *activatable)
 							       &error);
 	if (error != NULL)
 	{
-		g_warning ("Unable to register MPRIS player interface: %s", error->message);
+		xmr_debug("Unable to register MPRIS player interface: %s", error->message);
 		g_error_free (error);
 	}
 
