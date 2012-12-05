@@ -334,7 +334,7 @@ build_metadata(XmrMprisPlugin *plugin)
 {
 	GVariantBuilder *builder;
 	GVariant *v = NULL;
-return NULL;
+
 	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
 
 	g_variant_builder_add(builder, "{sv}", "mpris:trackid",
