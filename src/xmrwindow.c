@@ -1165,7 +1165,6 @@ static void
 on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 {
 	XmrWindow *window = XMR_WINDOW(gtk_widget_get_toplevel(widget));
-	XmrWindowPrivate *priv = window->priv;
 	glong id = (glong)data;
 
 	switch(id)
@@ -1194,22 +1193,8 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_LIKE:
-		if (xmr_button_is_toggled(XMR_BUTTON(priv->buttons[BUTTON_LIKE])))
-		{
-			xmr_button_toggle_state_off(XMR_BUTTON(priv->buttons[BUTTON_LIKE]));
-		}
-		else
-		{
-			like_current_song(window, TRUE);
-			// should check if logged in
-			// and wait for like_current_song return state
-			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
-		}
-		break;
-
 	case BUTTON_DISLIKE:
-		like_current_song(window, FALSE);
-		xmr_button_toggle_state_off(XMR_BUTTON(priv->buttons[BUTTON_LIKE]));
+		like_current_song(window, id == BUTTON_LIKE);
 		break;
 
 	case BUTTON_LYRIC:
@@ -1852,7 +1837,7 @@ thread_update_radio_list(XmrWindow *window)
 				append_radio = g_new(AppendRadio, 1);
 				append_radio->uri = uri;
 				append_radio->idx = i;
-				append_radio->info = radio_info;
+                append_radio->info = radio_info_dup(radio_info);
 
 				xmr_event_send(window, XMR_EVENT_APPEND_RADIO, append_radio);
 			}
@@ -1976,15 +1961,6 @@ xmr_window_set_track_info(XmrWindow *window)
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_TIME]), "00:00/00:00");
 
 	gtk_widget_set_tooltip_text(priv->image, song->album_name);
-
-	// update fav button status
-	{
-		gint grade = (gint)g_strtod(song->grade, NULL);
-		if (grade > 0)
-			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
-		else
-			xmr_button_toggle_state_off(XMR_BUTTON(priv->buttons[BUTTON_LIKE]));
-	}
 }
 
 static void
@@ -3117,8 +3093,6 @@ fetch_playlist_finish(XmrWindow *window,
 
 			xmr_downloader_add_task(priv->downloader, song->location, file);
 			g_free(file);
-
-			start_buffering_timer(window);
 		}
 	}
 }
@@ -3346,6 +3320,8 @@ xmr_event_poll(XmrWindow *window)
 
 			xmr_radio = xmr_radio_new_with_info(radio->uri, radio->info->name, radio->info->url);
 			xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[radio->idx]), xmr_radio);
+
+            radio_info_free(radio->info);
 		}
 		break;
 
