@@ -38,3 +38,22 @@ radio_info_free(RadioInfo *ri)
 		g_free(ri);
 	}
 }
+
+RadioInfo *
+radio_info_dup(RadioInfo *ri)
+{
+    RadioInfo *n = NULL;
+    if (ri == NULL)
+        return NULL;
+
+    n = g_new(RadioInfo, 1);
+    if (n == NULL)
+        return NULL;
+
+    n->id = g_strdup(ri->id);
+    n->logo = g_strdup(ri->logo);
+    n->name = g_strdup(ri->name);
+    n->url = g_strdup(ri->url);
+
+    return n;
+}
