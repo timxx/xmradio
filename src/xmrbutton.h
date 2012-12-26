@@ -69,8 +69,17 @@ GtkWidget*	xmr_button_new(XmrButtonType type);
 XmrButtonType
 xmr_button_set_type(XmrButton *button, XmrButtonType type);
 
+/**
+ * toggle button state to @state
+ */
 XmrButtonState
-xmr_button_set_state(XmrButton *button, XmrButtonState state);
+xmr_button_toggle_state_on(XmrButton *button, XmrButtonState state);
+
+void
+xmr_button_toggle_state_off(XmrButton *button);
+
+gboolean
+xmr_button_is_toggled(XmrButton *button);
 
 void
 xmr_button_set_image_from_uri(XmrButton *button, const gchar *uri);

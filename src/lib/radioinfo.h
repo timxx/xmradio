@@ -39,6 +39,9 @@ radio_info_new();
 void
 radio_info_free(RadioInfo *ri);
 
+RadioInfo *
+radio_info_dup(RadioInfo *ri);
+
 G_END_DECLS
 
 #endif /* __RADIO_INFO_H__ */

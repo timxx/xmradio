@@ -28,6 +28,9 @@ struct _XmrButtonPrivate
 	GdkPixbuf *images[LAST_STATE];
 	XmrButtonState	state;	/* current state */
 
+	XmrButtonState toggle_state;
+	gboolean is_toggle_state;
+
 	GdkCursor *cursor;
 };
 
@@ -147,6 +150,8 @@ xmr_button_init(XmrButton *button)
 
 	priv->type = XMR_BUTTON_NORMAL;
 	priv->state = STATE_NORMAL;
+	priv->toggle_state = STATE_NORMAL;
+	priv->is_toggle_state = FALSE;
 	priv->cursor = gdk_cursor_new(GDK_HAND1);
 
 	for(i=0; i<LAST_STATE; ++i) 
@@ -197,7 +202,7 @@ xmr_button_set_type(XmrButton *button, XmrButtonType type)
 }
 
 XmrButtonState
-xmr_button_set_state(XmrButton *button, XmrButtonState state)
+xmr_button_toggle_state_on(XmrButton *button, XmrButtonState state)
 {
 	XmrButtonState old_state;
 
@@ -208,10 +213,29 @@ xmr_button_set_state(XmrButton *button, XmrButtonState state)
 	old_state = button->priv->state;
 
 	button->priv->state = state;
+	button->priv->toggle_state = state;
+	button->priv->is_toggle_state = TRUE;
 
 	gtk_widget_queue_draw(GTK_WIDGET(button));
 
 	return old_state;
+}
+
+void
+xmr_button_toggle_state_off(XmrButton *button)
+{
+	g_return_if_fail(button != NULL);
+
+	button->priv->is_toggle_state = FALSE;
+	gtk_widget_queue_draw(GTK_WIDGET(button));
+}
+
+gboolean
+xmr_button_is_toggled(XmrButton *button)
+{
+	g_return_val_if_fail(button != NULL, FALSE);
+
+	return button->priv->is_toggle_state;
 }
 
 static gboolean
@@ -267,7 +291,11 @@ on_button_mouse_event(XmrButton *button, GdkEvent *event, gpointer data)
 
     case GDK_LEAVE_NOTIFY:
         gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), NULL);
-		priv->state = STATE_NORMAL;
+		// restore toggle state
+		if (priv->is_toggle_state)
+			priv->state = priv->toggle_state;
+		else
+			priv->state = STATE_NORMAL;
         break;
 
     default:
