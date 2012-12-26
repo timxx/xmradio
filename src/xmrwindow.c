@@ -1837,7 +1837,7 @@ thread_update_radio_list(XmrWindow *window)
 				append_radio = g_new(AppendRadio, 1);
 				append_radio->uri = uri;
 				append_radio->idx = i;
-				append_radio->info = radio_info;
+                append_radio->info = radio_info_dup(radio_info);
 
 				xmr_event_send(window, XMR_EVENT_APPEND_RADIO, append_radio);
 			}
@@ -3320,6 +3320,8 @@ xmr_event_poll(XmrWindow *window)
 
 			xmr_radio = xmr_radio_new_with_info(radio->uri, radio->info->name, radio->info->url);
 			xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[radio->idx]), xmr_radio);
+
+            radio_info_free(radio->info);
 		}
 		break;
 
