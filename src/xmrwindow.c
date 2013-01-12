@@ -106,12 +106,12 @@ typedef struct
 typedef struct
 {
 	guint type;
-	gpointer event;
+	gpointer data;
 }XmrEvent;
 
 typedef struct
 {
-	const gchar *uri;
+	gchar *uri;
 	gint idx;
 	RadioInfo *info;
 }AppendRadio;
@@ -563,7 +563,7 @@ static gchar *
 make_track_file(SongInfo *track);
 
 static void
-xmr_event_send(XmrWindow *window, guint type, gpointer event);
+xmr_event_send(XmrWindow *window, guint type, gpointer data);
 
 static gboolean
 xmr_event_poll(XmrWindow *window);
@@ -1850,7 +1850,7 @@ thread_update_radio_list(XmrWindow *window)
 				xmr_db_add_radio(db, radio_info, radio_style[i]);
 
 				append_radio = g_new(AppendRadio, 1);
-				append_radio->uri = uri;
+				append_radio->uri = g_strdup(uri);
 				append_radio->idx = i;
 				append_radio->info = radio_info_dup(radio_info);
 
@@ -3274,11 +3274,11 @@ make_track_file(SongInfo *track)
 }
 
 static void
-xmr_event_send(XmrWindow *window, guint type, gpointer event)
+xmr_event_send(XmrWindow *window, guint type, gpointer data)
 {
 	XmrEvent *e = g_new(XmrEvent, 1);
 	e->type = type;
-	e->event = event;
+	e->data = data;
 
 	g_async_queue_push(window->priv->queue_event, e);
 	g_main_context_wakeup(g_main_context_default());
@@ -3297,7 +3297,7 @@ xmr_event_poll(XmrWindow *window)
 	{
 	case XMR_EVENT_LOGIN_FINISH:
 		{
-			LoginFinish *l = (LoginFinish *)event->event;
+			LoginFinish *l = (LoginFinish *)event->data;
 			g_signal_emit(window, signals[LOGIN_FINISH], 0, l->ok, l->message);
 
 			g_free(l->message);
@@ -3310,7 +3310,7 @@ xmr_event_poll(XmrWindow *window)
 
 	case XMR_EVENT_PLAYLIST:
 		{
-			FetchPlaylist *p = (FetchPlaylist *)event->event;
+			FetchPlaylist *p = (FetchPlaylist *)event->data;
 			g_signal_emit(window, signals[FETCH_PLAYLIST_FINISH], 0, p->result, p->list);
 		}
 		break;
@@ -3320,7 +3320,7 @@ xmr_event_poll(XmrWindow *window)
 			GdkPixbuf *pixbuf;
 			GString *data;
 
-			data = (GString *)event->event;
+			data = (GString *)event->data;
 
 			pixbuf = gdk_pixbuf_from_memory(data->str, data->len);
 			if (pixbuf == NULL)
@@ -3339,13 +3339,16 @@ xmr_event_poll(XmrWindow *window)
 	case XMR_EVENT_APPEND_RADIO:
 		{
 			XmrRadio *xmr_radio;
-			AppendRadio *radio = (AppendRadio *)event->event;
+			AppendRadio *radio = (AppendRadio *)event->data;
 
 			if (radio == NULL)
 				break;
 
 			xmr_radio = xmr_radio_new_with_info(radio->uri, radio->info->name, radio->info->url);
 			xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[radio->idx]), xmr_radio);
+
+			g_free(radio->uri);
+			radio_info_free(radio->info);
 		}
 		break;
 
@@ -3355,7 +3358,7 @@ xmr_event_poll(XmrWindow *window)
 
 	case XMR_EVENT_PLAYER_STATE_CHANGED:
 		{
-			gint new_state = GPOINTER_TO_INT(event->event);
+			gint new_state = GPOINTER_TO_INT(event->data);
 			if (new_state == GST_STATE_PLAYING)
 			{
 				gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
@@ -3366,20 +3369,20 @@ xmr_event_poll(XmrWindow *window)
 				gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 				gtk_widget_show(priv->buttons[BUTTON_PLAY]);
 			}
-			event->event = NULL; // Do not free!!!
+			event->data = NULL; // Do not free!!!
 		}
 		break;
 
 	case XMR_EVENT_PLAYER_TICK:
 		{
-			gchar *time = (gchar *)event->event;
+			gchar *time = (gchar *)event->data;
 			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_TIME]), time);
 		}
 		break;
 	}
 
 	if (event->type != XMR_EVENT_COVER)
-		g_free(event->event);
+		g_free(event->data);
 	g_free(event);
 
 	return TRUE;
