@@ -1194,13 +1194,15 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		break;
 
 	case BUTTON_LIKE:
+		// FIRST time click MARK as like
+		// SECOND time mark as NOT like
+		like_current_song(window, TRUE);
 		if (xmr_button_is_toggled(XMR_BUTTON(priv->buttons[BUTTON_LIKE])))
 		{
 			xmr_button_toggle_state_off(XMR_BUTTON(priv->buttons[BUTTON_LIKE]));
 		}
 		else
 		{
-			like_current_song(window, TRUE);
 			// should check if logged in
 			// and wait for like_current_song return state
 			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
