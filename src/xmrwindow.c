@@ -2927,6 +2927,7 @@ void
 xmr_window_love(XmrWindow *window)
 {
 	g_return_if_fail(window != NULL);
+	xmr_button_toggle_state_on(XMR_BUTTON(window->priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
 	like_current_song(window, TRUE);
 }
 
@@ -2935,6 +2936,7 @@ xmr_window_hate(XmrWindow *window)
 {
 	g_return_if_fail(window != NULL);
 
+	xmr_button_toggle_state_off(XMR_BUTTON(window->priv->buttons[BUTTON_LIKE]));
 	like_current_song(window, FALSE);
 }
 
