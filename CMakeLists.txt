@@ -68,6 +68,7 @@ if (WARN_AS_ERROR)
 endif(WARN_AS_ERROR)
 
 if (DEBUG)
+	set(_DEBUG TRUE)
 	set(CMAKE_C_FLAGS "-g ${CMAKE_C_FLAGS}")
 else (DEBUG)
 	set(CMAKE_C_FLAGS "-s -O2 ${CMAKE_C_FLAGS}")
