@@ -20,10 +20,12 @@
 #include <curl/curl.h>
 #include <libxml/parser.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "xmrservice.h"
 #include "songinfo.h"
 #include "radioinfo.h"
+#include "config.h"
 
 #define XMR_SERVICE_GET_PRIVATE(obj)	\
 	(G_TYPE_INSTANCE_GET_PRIVATE((obj), XMR_SERVICE_TYPE, XmrServicePrivate))
@@ -48,7 +50,9 @@ struct _XmrServicePrivate
 	gchar	*usr_id;
 	gchar	*usr_name;
 
-	CURL *curl;
+	CURL	*curl;
+	
+	gchar	*cookie;	// cookie file
 };
 
 /**
@@ -157,6 +161,12 @@ xmr_service_dispose(GObject *obj)
 		curl_easy_cleanup(priv->curl);
 		priv->curl = NULL;
 	}
+	
+	if (priv->cookie)
+	{
+		g_free(priv->cookie);
+		priv->cookie = NULL;
+	}
 
 	G_OBJECT_CLASS(xmr_service_parent_class)->dispose(obj);
 }
@@ -200,6 +210,12 @@ static void xmr_service_init(XmrService *xs)
 	priv->logged = FALSE;
 	priv->usr_id = NULL;
 	priv->usr_name = NULL;
+	priv->cookie = NULL;
+	{
+		gint fd = g_file_open_tmp(NULL, &priv->cookie, NULL);
+		if (fd != -1)
+			close(fd);
+	}
 
 	priv->curl = curl_easy_init();
 	if (priv->curl)
@@ -386,8 +402,13 @@ xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEDATA, data);
+	
+	if (priv->cookie)
+		curl_easy_setopt(priv->curl, CURLOPT_COOKIEFILE, priv->cookie);
 
-	//curl_easy_setopt(priv->curl, CURLOPT_VERBOSE, 1L);
+#ifdef _DEBUG
+	curl_easy_setopt(priv->curl, CURLOPT_VERBOSE, 1L);
+#endif
 
     ret = curl_easy_perform(priv->curl);
 
@@ -436,8 +457,13 @@ post_url_data(XmrService *xs, const gchar *url, GString *post_data, GString *dat
 
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEDATA, data);
+	
+	if (priv->cookie)
+		curl_easy_setopt(priv->curl, CURLOPT_COOKIEJAR, priv->cookie);
 
-    //curl_easy_setopt(priv->curl, CURLOPT_VERBOSE, 1L);
+#ifdef _DEBUG
+	curl_easy_setopt(priv->curl, CURLOPT_VERBOSE, 1L);
+#endif
 
 	result = curl_easy_perform(priv->curl);
 
