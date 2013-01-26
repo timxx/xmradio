@@ -65,6 +65,8 @@ new_task(XmrWaitingWndPrivate *priv, InfoType type, const gchar *info)
 			free_task(t);
 			break;
 		}
+		
+		p = p->next;
 	}
 	// prepend to the list
 	{

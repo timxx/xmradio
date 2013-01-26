@@ -42,11 +42,16 @@
 #include "xmrlabel.h"
 #include "xmrdownloader.h"
 #include "xmrapp.h"
+#include "xmrwaitingwnd.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
 #define DEFAULT_RADIO_URL	"http://www.xiami.com/kuang/xml/type/6/id/0"
 #define DEFAULT_RADIO_NAME	_("新歌电台")
+
+#define WAITING_INFO_LOGIN		_("Login...")
+#define WAITING_INFO_BUFFERING	_("Buffering...")
+#define WAITING_INFO_PLAYLIST	_("Getting playlist...")
 
 #define XMR_EVENT_INTERVAL	50
 
@@ -210,6 +215,8 @@ struct _XmrWindowPrivate
 
 	guint xmr_event_timer;
 	guint buffering_timer;	/* show/hide buffering window */
+	
+	GtkWidget *waiting_wnd;
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -800,6 +807,7 @@ xmr_window_init(XmrWindow *window)
 	priv->message.title = NULL;
 
 	priv->downloader = xmr_downloader_new();
+	priv->waiting_wnd = xmr_waiting_wnd_new(GTK_WINDOW(window));
 
 	priv->current_song = NULL;
 	priv->radio_type = 2;
@@ -809,7 +817,6 @@ xmr_window_init(XmrWindow *window)
 	priv->queue_event = g_async_queue_new();
 	priv->xmr_event_timer = g_timeout_add(XMR_EVENT_INTERVAL, (GSourceFunc)xmr_event_poll, window);
 	priv->buffering_timer = 0;
-	start_buffering_timer(window);
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -1205,7 +1212,8 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 		{
 			// should check if logged in
 			// and wait for like_current_song return state
-			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
+			if (xmr_service_is_logged_in(priv->service))
+				xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
 		}
 		break;
 
@@ -1923,6 +1931,7 @@ xmr_window_get_playlist(XmrWindow *window)
 {
 	if (window && window->priv->queue_fetch_playlist)
 	{
+		xmr_waiting_wnd_add_task(XMR_WAITING_WND(window->priv->waiting_wnd), INFO_PLAYLIST, WAITING_INFO_PLAYLIST);
 		g_async_queue_push(window->priv->queue_fetch_playlist, window);
 	}
 }
@@ -1945,6 +1954,9 @@ xmr_window_get_cover_image(XmrWindow *window)
 void
 xmr_window_login(XmrWindow *window)
 {
+	g_return_if_fail(window != NULL);
+
+	xmr_waiting_wnd_add_task(XMR_WAITING_WND(window->priv->waiting_wnd), INFO_LOGIN, WAITING_INFO_LOGIN);
 #if GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_new("login", (GThreadFunc)thread_login, window);
 #else
@@ -2315,7 +2327,10 @@ load_settings(XmrWindow *window)
 	}
 	else
 	{
-		if (radio_url && *radio_url != 0)
+		// user not login
+		// invalid radio url
+		// -> switch to default radio
+		if (priv->radio_type != 2 && radio_url && *radio_url != 0)
 		{
 			priv->playlist_url = g_strdup(radio_url);
 			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), radio_name);
@@ -2323,6 +2338,7 @@ load_settings(XmrWindow *window)
 		else
 		{
 			priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
+			priv->radio_type = 2;
 			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), DEFAULT_RADIO_NAME);
 		}
 
@@ -3104,7 +3120,7 @@ fetch_playlist_finish(XmrWindow *window,
 
 	if (status != 0)
 	{
-		xmr_debug("failed to get track list: %d", status);
+		xmr_debug("failed to get track list: %d (%s)", status, xmr_service_get_error_str(status));
 	}
 	else if (auto_play)
 	{
@@ -3305,6 +3321,7 @@ xmr_event_poll(XmrWindow *window)
 			g_signal_emit(window, signals[LOGIN_FINISH], 0, l->ok, l->message);
 
 			g_free(l->message);
+			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd));
 		}
 		break;
 
@@ -3316,6 +3333,7 @@ xmr_event_poll(XmrWindow *window)
 		{
 			FetchPlaylist *p = (FetchPlaylist *)event->data;
 			g_signal_emit(window, signals[FETCH_PLAYLIST_FINISH], 0, p->result, p->list);
+			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd));
 		}
 		break;
 
@@ -3402,7 +3420,9 @@ buffering_timeout(XmrWindow *window)
 		if (priv->current_song != NULL && is_track_downloaded(priv->current_song))
 		{
 			gchar *file = make_track_file(priv->current_song);
-
+			
+			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd));
+			
 			xmr_debug("buffering ok...");
 			xmr_debug("play next song: %s", file);
 
@@ -3413,9 +3433,14 @@ buffering_timeout(XmrWindow *window)
 
 			xmr_window_set_track_info(window);
 			g_signal_emit(window, signals[TRACK_CHANGED], 0, priv->current_song);
+			
+			priv->buffering_timer = 0;
+			return FALSE;
 		}
 		else
 		{
+			xmr_waiting_wnd_add_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING, WAITING_INFO_BUFFERING);
+
 			xmr_debug("buffering...");
 		}
 	}
