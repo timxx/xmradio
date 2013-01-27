@@ -82,8 +82,7 @@ on_xmr_window_delete(XmrWindow *window,
 			GdkEvent  *event,
 			XmrIndicatorPlugin *plugin)
 {
-	if (plugin->hide_on_exit &&
-		xmr_window_playing(window))
+	if (plugin->hide_on_exit)
 	{
 		return gtk_widget_hide_on_delete(GTK_WIDGET(window));
 	}
