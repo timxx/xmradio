@@ -43,6 +43,7 @@
 #include "xmrdownloader.h"
 #include "xmrapp.h"
 #include "xmrwaitingwnd.h"
+#include "icon_enter_xpm.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
 
@@ -143,6 +144,7 @@ struct _XmrWindowPrivate
 	GtkWidget	*buttons[LAST_BUTTON];	/* ui buttons */
 	GtkWidget	*labels[LAST_LABEL];
 	GtkWidget	*image;	/* album cover image */
+	GtkWidget	*search_box;
 
 	cairo_surface_t	*cs_bkgnd;	/* backgroud image surface */
 
@@ -241,6 +243,7 @@ enum
 	LOGOUT,
 	FETCH_PLAYLIST_FINISH,
 	FETCH_COVER_FINISH,
+	SEARCH_MUSIC,
 	LAST_SIGNAL
 };
 
@@ -587,6 +590,23 @@ start_buffering_timer(XmrWindow *window);
 static void
 stop_buffering_timer(XmrWindow *window);
 
+static void
+on_search_box_activate(GtkEntry  *entry,
+					   XmrWindow *window);
+
+static gboolean
+on_search_box_focus_in(GtkWidget *widget,
+					   GdkEvent  *event,
+					   gpointer   data);
+
+static gboolean
+on_search_box_focus_out(GtkWidget *widget,
+					   GdkEvent  *event,
+					   gpointer   data);
+
+static gint
+get_search_box_font_width(GtkWidget *search_box);
+
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -738,6 +758,17 @@ create_signals(XmrWindowClass *klass)
 						 G_TYPE_NONE,
 						 1,
 						 G_TYPE_POINTER);
+	
+	signals[SEARCH_MUSIC] =
+			g_signal_new("search-music",
+						 G_OBJECT_CLASS_TYPE(object_class),
+						 G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE,
+						 G_STRUCT_OFFSET(XmrWindowClass, search_music),
+						 NULL, NULL,
+						 g_cclosure_marshal_VOID__STRING,
+						 G_TYPE_NONE,
+						 1,
+						 G_TYPE_STRING);
 }
 
 static void 
@@ -793,8 +824,6 @@ xmr_window_init(XmrWindow *window)
 
 #if GLIB_CHECK_VERSION(2, 32, 0)
 	priv->mutex = g_malloc(sizeof(GMutex));
-	if (priv->mutex == NULL)
-		g_error("g_malloc failed (%s, %d)\n", __FILE__, __LINE__);
 	g_mutex_init(priv->mutex);
 #else
 	priv->mutex = g_mutex_new();
@@ -848,6 +877,12 @@ xmr_window_init(XmrWindow *window)
 
 	priv->image = gtk_image_new();
 	gtk_fixed_put(GTK_FIXED(priv->fixed), priv->image, 0, 0);
+	
+	priv->search_box = gtk_entry_new();
+	gtk_entry_set_placeholder_text(GTK_ENTRY(priv->search_box), _("Music search ..."));
+	gtk_entry_set_icon_from_stock(GTK_ENTRY(priv->search_box), GTK_ENTRY_ICON_SECONDARY, GTK_STOCK_FIND);
+
+	gtk_fixed_put(GTK_FIXED(priv->fixed), priv->search_box, 0, 0);
 
 	gtk_container_add(GTK_CONTAINER(window), priv->fixed);
 
@@ -875,6 +910,10 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->downloader, "download-finish", G_CALLBACK(download_finish), window);
 	g_signal_connect(priv->downloader, "download-progress", G_CALLBACK(download_progress), window);
 	g_signal_connect(priv->downloader, "download-failed", G_CALLBACK(download_failed), window);
+
+	g_signal_connect(priv->search_box, "activate", G_CALLBACK(on_search_box_activate), window);
+	g_signal_connect(priv->search_box, "focus-in-event", G_CALLBACK(on_search_box_focus_in), NULL);
+	g_signal_connect(priv->search_box, "focus-out-event", G_CALLBACK(on_search_box_focus_out), NULL);
 
 	for(i=0; i<3; ++i)
 	  g_signal_connect(priv->chooser[i], "radio-selected",
@@ -1362,7 +1401,7 @@ set_gtk_theme(XmrWindow *window)
 
 	static struct Pos label_pos[LAST_LABEL] =
 	{
-		{270, 25}, {135, 80},
+		{140, 20}, {135, 80},
 		{135, 120}, {135, 160}
 	};
 
@@ -1406,6 +1445,15 @@ set_gtk_theme(XmrWindow *window)
 
 	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, 25, 80);
 	gtk_widget_show(priv->image);
+	
+	{
+		gint size = get_search_box_font_width(priv->search_box);
+		gint chars = 200 / size + 1;
+
+		gtk_entry_set_width_chars(GTK_ENTRY(priv->search_box), chars);
+	}
+	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->search_box, 320, 15);
+	gtk_widget_show(priv->search_box);
 
 	xmr_settings_set_theme(priv->settings, "");
 
@@ -1522,6 +1570,22 @@ set_skin(XmrWindow *window, const gchar *skin)
 		priv->pb_cover = xmr_skin_get_image(xmr_skin, UI_MAIN, "cover");
 		if (priv->pb_cover && gtk_image_get_pixbuf(GTK_IMAGE(priv->image)) == NULL)
 			set_cover_image(window, priv->pb_cover);
+		
+		gtk_widget_hide(priv->search_box);
+		if (xmr_skin_get_position(xmr_skin, UI_MAIN, "search_box", &x, &y))
+		{
+			gtk_widget_show(priv->search_box);
+			gtk_entry_set_width_chars(GTK_ENTRY(priv->search_box), 15);
+			gtk_fixed_move(GTK_FIXED(priv->fixed), priv->search_box, x, y);
+		}
+		
+		if (xmr_skin_get_size(xmr_skin, UI_MAIN, "search_box", &x, &y))
+		{
+			gint size = get_search_box_font_width(priv->search_box);
+			gint chars = x / size + 1;
+	
+			gtk_entry_set_width_chars(GTK_ENTRY(priv->search_box), chars);
+		}
 
 		// save to settings
 		{
@@ -3465,4 +3529,61 @@ stop_buffering_timer(XmrWindow *window)
 		g_source_remove(window->priv->buffering_timer);
 		window->priv->buffering_timer = 0;
 	}
+}
+
+static void
+on_search_box_activate(GtkEntry  *entry,
+					   XmrWindow *window)
+{
+	const gchar *text;
+
+	if (gtk_entry_get_text_length(entry) == 0)
+		return ;
+
+	text = gtk_entry_get_text(entry);
+	
+	xmr_debug("search music: %s", text);
+	
+	g_signal_emit(window, signals[SEARCH_MUSIC], 0, text);
+}
+
+static gboolean
+on_search_box_focus_in(GtkWidget *widget,
+					   GdkEvent  *event,
+					   gpointer   data)
+{
+	GdkPixbuf *pixbuf = gdk_pixbuf_new_from_xpm_data((const gchar **)icon_enter_xpm);
+	
+	gtk_entry_set_icon_from_pixbuf(GTK_ENTRY(widget), GTK_ENTRY_ICON_SECONDARY, pixbuf);
+	
+	g_object_unref(pixbuf);
+
+	return FALSE;
+}
+
+static gboolean
+on_search_box_focus_out(GtkWidget *widget,
+					   GdkEvent  *event,
+					   gpointer   data)
+{
+	gtk_entry_set_icon_from_stock(GTK_ENTRY(widget), GTK_ENTRY_ICON_SECONDARY, GTK_STOCK_FIND);
+
+	return FALSE;
+}
+
+static gint
+get_search_box_font_width(GtkWidget *search_box)
+{
+	GtkStyleContext *ctx = gtk_widget_get_style_context(search_box);
+	const PangoFontDescription *desc = gtk_style_context_get_font(ctx, GTK_STATE_FLAG_NORMAL);
+	gint size = pango_font_description_get_size(desc);
+	if (PANGO_SCALE != 0)
+	{
+		if (!pango_font_description_get_size_is_absolute(desc))
+			size /= PANGO_SCALE;
+	}
+	if (size == 0)
+		size = 11;
+
+	return size;
 }

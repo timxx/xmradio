@@ -70,6 +70,9 @@ struct _XmrWindowClass
 
 	void (*fetch_cover_finish)(XmrWindow *window,
 							   GdkPixbuf *pixbuf);
+	
+	void (*search_music)(XmrWindow *window,
+						 const gchar *keyword);
 };
 
 GType		xmr_window_get_type();
