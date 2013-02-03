@@ -264,8 +264,14 @@ xmr_waiting_wnd_show(XmrWaitingWnd *wnd)
 		gtk_window_move(GTK_WINDOW(wnd), x, y);
 	}
 	
-	gtk_widget_show(GTK_WIDGET(wnd));
-	gtk_widget_queue_draw(GTK_WIDGET(wnd));
+	// only do this when parent visible
+	if ((gtk_widget_get_state_flags(GTK_WIDGET(wnd->priv->parent)) != GTK_STATE_FLAG_BACKDROP) &&
+			gtk_widget_get_visible(GTK_WIDGET(wnd->priv->parent))
+		)
+	{
+		gtk_widget_show(GTK_WIDGET(wnd));
+		gtk_widget_queue_draw(GTK_WIDGET(wnd));
+	}
 }
 
 void
