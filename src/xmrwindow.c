@@ -44,8 +44,9 @@
 #include "xmrapp.h"
 #include "xmrwaitingwnd.h"
 #include "icon_enter_xpm.h"
+#include "xmrlist.h"
 
-G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW);
+G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW)
 
 #define DEFAULT_RADIO_URL	"http://www.xiami.com/kuang/xml/type/6/id/0"
 #define DEFAULT_RADIO_NAME	_("新歌电台")
@@ -152,6 +153,7 @@ struct _XmrWindowPrivate
 	GtkWidget	*popup_menu;	/* #GtkMenu */
 	GtkWidget	*skin_menu;
 
+	GtkWidget	*menu_playlist;
 	GtkWidget	*menu_login;
 	GtkWidget	*menu_logout;
 
@@ -219,6 +221,8 @@ struct _XmrWindowPrivate
 	guint buffering_timer;	/* show/hide buffering window */
 	
 	GtkWidget *waiting_wnd;
+
+	GtkWidget *xmr_searchlist;
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -402,6 +406,9 @@ on_skin_menu_item_activate(GtkMenuItem *item, SkinInfo *skin);
  */
 static void
 on_radio_menu_item_activate(GtkMenuItem *item, XmrWindow *window);
+
+// static void
+// on_playlist_menu_item_activate(GtkMenuItem *item, XmrWindow *window);
 
 static void
 load_settings(XmrWindow *window);
@@ -606,6 +613,12 @@ on_search_box_focus_out(GtkWidget *widget,
 
 static gint
 get_search_box_font_width(GtkWidget *search_box);
+
+static void
+update_playlist_menu_items(XmrWindow *window);
+
+static void
+on_track_changed(XmrWindow *window, SongInfo *new_track);
 
 //=========================================================================
 static void
@@ -837,6 +850,8 @@ xmr_window_init(XmrWindow *window)
 
 	priv->downloader = xmr_downloader_new();
 	priv->waiting_wnd = xmr_waiting_wnd_new(GTK_WINDOW(window));
+	
+	priv->xmr_searchlist = NULL;
 
 	priv->current_song = NULL;
 	priv->radio_type = 2;
@@ -906,6 +921,7 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(window, "logout", G_CALLBACK(on_logout), NULL);
 	g_signal_connect(window, "fetch-playlist-finish", G_CALLBACK(fetch_playlist_finish), NULL);
 	g_signal_connect(window, "fetch-cover-finish", G_CALLBACK(fetch_cover_finish), NULL);
+	g_signal_connect(window, "track-changed", G_CALLBACK(on_track_changed), NULL);
 
 	g_signal_connect(priv->downloader, "download-finish", G_CALLBACK(download_finish), window);
 	g_signal_connect(priv->downloader, "download-progress", G_CALLBACK(download_progress), window);
@@ -2216,6 +2232,12 @@ create_popup_menu(XmrWindow *window)
 	item = gtk_menu_item_new_with_mnemonic(_("_Radio"));
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), menu_radio);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+	
+	priv->menu_playlist = gtk_menu_new();
+	
+	item = gtk_menu_item_new_with_mnemonic(_("Playlist"));
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), priv->menu_playlist);
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
@@ -2349,6 +2371,12 @@ on_radio_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 		}
 	}
 }
+
+//static void
+//on_playlist_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
+//{
+	
+//}
 
 static void
 load_settings(XmrWindow *window)
@@ -3205,6 +3233,9 @@ fetch_playlist_finish(XmrWindow *window,
 			start_buffering_timer(window);
 		}
 	}
+	
+	// update POPUP playlist menu items
+	update_playlist_menu_items(window);
 }
 
 static void
@@ -3586,4 +3617,55 @@ get_search_box_font_width(GtkWidget *search_box)
 		size = 11;
 
 	return size;
+}
+
+static void
+update_playlist_menu_items(XmrWindow *window)
+{
+	XmrWindowPrivate *priv = window->priv;
+	GList *p;
+	gboolean is_first = TRUE;
+	
+	// remove all items
+	{
+		GList* items = gtk_container_get_children(GTK_CONTAINER(priv->menu_playlist));
+		while(g_list_length(items) > 0)
+		{
+			GtkWidget *item = g_list_nth_data(items, 0);
+			items = g_list_remove(items, item);
+			
+			// g_signal_handlers_disconnect_by_func(item, on_playlist_menu_item_activate, window);
+			gtk_widget_destroy(item);
+		}
+	}
+
+	p = priv->playlist;
+	while (p)
+	{
+		GtkWidget *item;
+		SongInfo *info = (SongInfo *)p->data;
+		gchar *label = g_strdup_printf("%s - %s", info->artist_name, info->song_name);
+		item = gtk_check_menu_item_new_with_label(label);
+		g_free(label);
+		
+		if (is_first)
+		{
+			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), TRUE);
+			is_first = FALSE;
+		}
+		gtk_menu_shell_append(GTK_MENU_SHELL(priv->menu_playlist), item);
+
+		// g_signal_connect(item, "activate", G_CALLBACK(on_playlist_menu_item_activate), window);
+		// FIXME
+		// Should user only see that playlist or can user select one to play?
+		gtk_widget_set_sensitive(item, FALSE);
+		gtk_widget_show(item);
+		p = p->next;
+	}
+}
+
+static void
+on_track_changed(XmrWindow *window, SongInfo *new_track)
+{
+	update_playlist_menu_items(window);
 }
