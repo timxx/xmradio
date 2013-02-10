@@ -1,0 +1,8 @@
+[Plugin]
+Module=autocollect
+IAge=2
+Name=AutoCollect
+Description=Auto collect your fav songs
+Authors=Weitian Leung
+Copyright=Copyright © 2013 Weitian Leung<weitianleung@gmail.com>
+Website=https://github.com/timxx/xmradio

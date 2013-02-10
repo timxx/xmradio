@@ -43,16 +43,38 @@
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
 		<key name="active-plugins" type="as">
-		<default>['notification', 'indicator', 'mpris']</default>
-		<summary>Active plugins</summary>
-		<description>List of active plugins.</description>
+			<default>['notification', 'indicator', 'mpris']</default>
+			<summary>Active plugins</summary>
+			<description>List of active plugins.</description>
 		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins.indicator" path="/apps/xmradio/plugins/indicator/">
 		<key name="hide-on-exit" type="b">
-		<default>true</default>
-		<summary>Hide on exit</summary>
-		<description>Hide window when playing, instead default exit action</description>
+			<default>true</default>
+			<summary>Hide on exit</summary>
+			<description>Hide window when playing, instead default exit action</description>
+		</key>
+	</schema>
+  	<schema id="com.timxx.xmradio.plugins.autocollect" path="/apps/xmradio/plugins/autocollect/">
+		<key name="auto-like" type="b">
+			<default>true</default>
+			<summary>Auto set like</summary>
+			<description>Auto set like when playing time percent greater than specified</description>
+		</key>
+		<key name="auto-hate" type="b">
+			<default>true</default>
+			<summary>Auto set hate</summary>
+			<description>Auto set hate when playing time percent little than specified</description>
+		</key>
+		<key name="like-percent" type="i">
+			<default>90</default>
+			<summary>auto-like percentage</summary>
+			<description>auto-like percentage</description>
+		</key>
+		<key name="hate-percent" type="i">
+			<default>5</default>
+			<summary>auto-hate percentage</summary>
+			<description>auto-hate percentage</description>
 		</key>
   </schema>
 </schemalist>
