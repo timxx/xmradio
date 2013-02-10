@@ -248,6 +248,7 @@ enum
 	FETCH_PLAYLIST_FINISH,
 	FETCH_COVER_FINISH,
 	SEARCH_MUSIC,
+	PLAYLIST_CHANGED,
 	LAST_SIGNAL
 };
 
@@ -618,7 +619,7 @@ static void
 update_playlist_menu_items(XmrWindow *window);
 
 static void
-on_track_changed(XmrWindow *window, SongInfo *new_track);
+on_playlist_changed(XmrWindow *window, gpointer data);
 
 //=========================================================================
 static void
@@ -782,6 +783,16 @@ create_signals(XmrWindowClass *klass)
 						 G_TYPE_NONE,
 						 1,
 						 G_TYPE_STRING);
+	
+	signals[PLAYLIST_CHANGED] =
+			g_signal_new("playlist-changed",
+						 G_OBJECT_CLASS_TYPE(object_class),
+						 G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE,
+						 G_STRUCT_OFFSET(XmrWindowClass, playlist_changed),
+						 NULL, NULL,
+						 g_cclosure_marshal_VOID__VOID,
+						 G_TYPE_NONE,
+						 0);
 }
 
 static void 
@@ -921,7 +932,7 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(window, "logout", G_CALLBACK(on_logout), NULL);
 	g_signal_connect(window, "fetch-playlist-finish", G_CALLBACK(fetch_playlist_finish), NULL);
 	g_signal_connect(window, "fetch-cover-finish", G_CALLBACK(fetch_cover_finish), NULL);
-	g_signal_connect(window, "track-changed", G_CALLBACK(on_track_changed), NULL);
+	g_signal_connect(window, "playlist-changed", G_CALLBACK(on_playlist_changed), NULL);
 
 	g_signal_connect(priv->downloader, "download-finish", G_CALLBACK(download_finish), window);
 	g_signal_connect(priv->downloader, "download-progress", G_CALLBACK(download_progress), window);
@@ -2138,6 +2149,8 @@ xmr_window_play_next(XmrWindow *window)
 	song_info_free(data);
 	song_info_free(priv->current_song);
 	priv->current_song = NULL;
+	
+	g_signal_emit(window, signals[PLAYLIST_CHANGED], 0);
 
 	if (g_list_length(priv->playlist) == 0){
 		goto no_more_track;
@@ -3104,6 +3117,88 @@ xmr_window_set_volume(XmrWindow *window,
 }
 
 static gboolean
+test_conflict(GList *list, SongInfo *info)
+{
+	GList *p = list;
+	
+	while (p)
+	{
+		SongInfo *si = (SongInfo *)p->data;
+
+		if (g_strcmp0(info->song_name, si->song_name) == 0 &&
+			g_strcmp0(info->artist_name, si->artist_name) == 0 &&
+			g_strcmp0(info->album_name, si->album_name) == 0)
+		{
+			return TRUE;
+		}
+		p = p->next;
+	}
+	
+	return FALSE;
+}
+
+gboolean
+xmr_window_add_song(XmrWindow *window,
+					SongInfo *info)
+{
+	XmrWindowPrivate *priv;
+
+	g_return_val_if_fail(window != NULL && info != NULL, FALSE);
+	priv = window->priv;
+	
+	if (!test_conflict(priv->playlist, info))
+	{
+		priv->playlist = g_list_append(priv->playlist, song_info_copy(info));
+		g_signal_emit(window, signals[PLAYLIST_CHANGED], 0);
+		
+		return TRUE;
+	}
+	
+	return FALSE;
+}
+
+gboolean
+xmr_window_add_song_and_play(XmrWindow *window,
+							 SongInfo *info)
+{
+	XmrWindowPrivate *priv;
+
+	g_return_val_if_fail(window != NULL && info != NULL, FALSE);
+	priv = window->priv;
+	
+	if (!test_conflict(priv->playlist, info))
+	{
+		xmr_window_pause(window);
+		
+		// insert into second place
+		priv->playlist = g_list_insert(priv->playlist, song_info_copy(info), 1);
+		xmr_window_play_next(window);
+		
+		return TRUE;
+	}
+	
+	return FALSE;
+}
+
+void
+xmr_window_set_search_result(XmrWindow *window,
+							 GList *list,
+							 const gchar *from,
+							 const gchar *link)
+{
+	XmrWindowPrivate *priv;
+
+	g_return_if_fail(window != NULL && list != NULL);
+	priv = window->priv;
+	
+	if (priv->xmr_searchlist == NULL)
+		priv->xmr_searchlist = xmr_list_new(XMR_SEARCH_LIST, GTK_WINDOW(window));
+	
+	xmr_list_append(XMR_LIST(priv->xmr_searchlist), list, from, link);
+	gtk_widget_show_all(priv->xmr_searchlist);
+}
+
+static gboolean
 show_message_idle(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
@@ -3206,8 +3301,10 @@ fetch_playlist_finish(XmrWindow *window,
 	XmrWindowPrivate *priv = window->priv;
 	gboolean auto_play = g_list_length(priv->playlist) == 0;
 
-	if (list != NULL){
+	if (list != NULL)
+	{
 		priv->playlist = g_list_concat(priv->playlist, list);
+		g_signal_emit(window, signals[PLAYLIST_CHANGED], 0);
 	}
 
 	if (status != 0)
@@ -3233,9 +3330,6 @@ fetch_playlist_finish(XmrWindow *window,
 			start_buffering_timer(window);
 		}
 	}
-	
-	// update POPUP playlist menu items
-	update_playlist_menu_items(window);
 }
 
 static void
@@ -3665,7 +3759,7 @@ update_playlist_menu_items(XmrWindow *window)
 }
 
 static void
-on_track_changed(XmrWindow *window, SongInfo *new_track)
+on_playlist_changed(XmrWindow *window, gpointer data)
 {
 	update_playlist_menu_items(window);
 }

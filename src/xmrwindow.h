@@ -73,6 +73,8 @@ struct _XmrWindowClass
 	
 	void (*search_music)(XmrWindow *window,
 						 const gchar *keyword);
+	
+	void (*playlist_changed)(XmrWindow *window);
 };
 
 GType		xmr_window_get_type();
@@ -114,6 +116,29 @@ xmr_window_logout(XmrWindow *window);
 void
 xmr_window_set_volume(XmrWindow *window,
 			float value);
+
+/**
+ * @brief xmr_window_add_song
+ * @param window
+ * @param info
+ * @return FALSE if failed to add
+ */
+gboolean
+xmr_window_add_song(XmrWindow *window,
+					SongInfo *info);
+
+gboolean
+xmr_window_add_song_and_play(XmrWindow *window,
+							 SongInfo *info);
+
+/**
+ * you should free your @list
+ */
+void
+xmr_window_set_search_result(XmrWindow *window,
+							 GList *list,
+							 const gchar *from,
+							 const gchar *link);
 
 G_END_DECLS
 

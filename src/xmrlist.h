@@ -18,6 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * XmrList is a list window, use for music search,
+ * or display current playlist
+ */
+
 #ifndef __XMR_LIST_H__
 #define __XMR_LIST_H__
 
@@ -57,7 +62,13 @@ typedef enum
 }XmrListType;
 
 GtkWidget*
-xmr_list_new(XmrListType type);
+xmr_list_new(XmrListType type, GtkWindow *parent);
+
+void
+xmr_list_append(XmrList *list, GList *song_list, const gchar *from, const gchar *link);
+
+void
+xmr_list_clear(XmrList *list);
 
 G_END_DECLS
 
