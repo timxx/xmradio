@@ -1,0 +1,8 @@
+[Plugin]
+Module=xmsearch
+IAge=2
+Name=XMSearch
+Description=Search music from www.xiami.com
+Authors=Weitian Leung
+Copyright=Copyright © 2013 Weitian Leung<weitianleung@gmail.com>
+Website=https://github.com/timxx/xmradio
