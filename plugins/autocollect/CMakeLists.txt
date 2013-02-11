@@ -12,7 +12,6 @@ include_directories(${GSTREAMER_INCLUDE_DIRS})
 add_library(autocollect SHARED ${PLUGIN_SOURCES})
 target_link_libraries(autocollect
 	${LIBPEAS_LIBRARIES}
-	${LIBNOTIFY_LIBRARIES}
 )
 
 install(TARGETS autocollect LIBRARY DESTINATION ${plugindir})
