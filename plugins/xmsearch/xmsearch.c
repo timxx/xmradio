@@ -212,6 +212,7 @@ get_song_id_info(const gchar *id)
 			q--;
 		
 		info->album_cover = g_strndup(p, q - p);
+		info->song_id = g_strdup(id);
 	}while (0);
 
 	decode_url(id);
