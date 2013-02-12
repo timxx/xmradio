@@ -1,3 +1,33 @@
+xmradio (0.4.0-1~raring) raring; urgency=low
+
+  * 0.4.0
+    - Add music search
+    - Add waiting info
+    - Add 'red heart'
+    - Bug fix
+
+ -- Weitian Leung <weitianleung@gmail.com>  Tue, 12 Feb 2013 21:45:31 +0800
+
+xmradio (0.4.0-1~precise) precise; urgency=low
+
+  * 0.4.0
+    - Add music search
+    - Add waiting info
+    - Add 'red heart'
+    - Bug fix
+
+ -- Weitian Leung <weitianleung@gmail.com>  Tue, 12 Feb 2013 21:44:36 +0800
+
+xmradio (0.4.0-1~oneiric) oneiric; urgency=low
+
+  * 0.4.0
+    - Add music search
+    - Add waiting info
+    - Add 'red heart'
+    - Bug fix
+
+ -- Weitian Leung <weitianleung@gmail.com>  Tue, 12 Feb 2013 21:43:45 +0800
+
 xmradio (0.4.0~raring) raring; urgency=low
 
   * 0.4.0

@@ -41,7 +41,7 @@ typedef struct
 struct _XmrWaitingWndPrivate
 {
 	GSList *tasks;
-	
+
 	GtkWindow *parent;
 };
 
@@ -240,6 +240,9 @@ xmr_waiting_wnd_add_task(XmrWaitingWnd *wnd,
 void
 xmr_waiting_wnd_show(XmrWaitingWnd *wnd)
 {
+	GdkWindow *gdk_window;
+	gboolean is_iconify = TRUE;
+
 	g_return_if_fail(wnd != NULL);
 	
 	if (wnd->priv->parent == NULL)
@@ -265,9 +268,10 @@ xmr_waiting_wnd_show(XmrWaitingWnd *wnd)
 	}
 	
 	// only do this when parent visible
-	if ((gtk_widget_get_state_flags(GTK_WIDGET(wnd->priv->parent)) != GTK_STATE_FLAG_BACKDROP) &&
-			gtk_widget_get_visible(GTK_WIDGET(wnd->priv->parent))
-		)
+	gdk_window = gtk_widget_get_window(GTK_WIDGET(wnd->priv->parent));
+	is_iconify = gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_ICONIFIED;
+
+	if (!is_iconify && gtk_widget_get_visible(GTK_WIDGET(wnd->priv->parent)))
 	{
 		gtk_widget_show(GTK_WIDGET(wnd));
 		gtk_widget_queue_draw(GTK_WIDGET(wnd));
