@@ -1,10 +1,14 @@
 # List of source files which contain translatable strings.
 [encoding: UTF-8]
-@REL_SOURCE_ROOT@/data/com.timxx.xmradio.gschema.xml.in
-@REL_SOURCE_ROOT@/data/xmradio.desktop.in
-@REL_SOURCE_ROOT@/data/ui/about.ui
-@REL_SOURCE_ROOT@/data/ui/login.ui
-@REL_SOURCE_ROOT@/data/pref.ui
-@REL_SOURCE_ROOT@/plugins/indicator/xmr-indicator-plugin.c
-@REL_SOURCE_ROOT@/src/main.c
-@REL_SOURCE_ROOT@/src/xmrplayer.c
+@REL_SOURCE_ROOT@data/xmradio.desktop.in
+@REL_SOURCE_ROOT@plugins/autocollect/xmr-auto-collect.ui
+@REL_SOURCE_ROOT@data/ui/about.ui
+@REL_SOURCE_ROOT@data/ui/login.ui
+@REL_SOURCE_ROOT@data/pref.ui
+@REL_SOURCE_ROOT@src/xmrplayer.c
+@REL_SOURCE_ROOT@src/main.c
+@REL_SOURCE_ROOT@src/xmrlist.c
+@REL_SOURCE_ROOT@src/xmrdownloader.c
+@REL_SOURCE_ROOT@src/xmrwindow.c
+@REL_SOURCE_ROOT@plugins/indicator/xmr-indicator-plugin.c
+@REL_SOURCE_ROOT@plugins/xmsearch/xmsearch.c
