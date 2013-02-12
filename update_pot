@@ -1,0 +1,17 @@
+#!/bin/bash
+
+find -name "*.c" | xargs xgettext -k_ -o po/c.pot --from-code=utf-8
+find -name "*.ui" | xargs xgettext -o po/ui.pot --from-code=utf-8 -LGlade
+intltool-extract --quiet --type=gettext/ini data/xmradio.desktop.in
+xgettext -kN_ -o po/desktop.pot data/xmradio.desktop.in.h
+rm data/xmradio.desktop.in.h
+
+# merge all above pot files into xmradio.pot
+cat po/ui.pot > po/xmradio.pot
+echo "" >> po/xmradio.pot
+tail --lines=+20 po/desktop.pot >> po/xmradio.pot
+echo "" >> po/xmradio.pot
+tail --lines=+20 po/c.pot >> po/xmradio.pot
+
+# remove temp files
+rm po/c.pot po/ui.pot po/desktop.pot
