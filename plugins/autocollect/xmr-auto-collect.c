@@ -181,7 +181,8 @@ player_tick(XmrPlayer *player,
 			else
 			{
 				if (plugin->auto_like && plugin->play_percent >= plugin->like_percent)
-					xmr_window_love(window);
+					if (!xmr_window_is_current_song_marked(window))
+						xmr_window_love(window);
 			
 				if (plugin->auto_hate && plugin->play_percent < plugin->hate_percent)
 					xmr_window_hate(window);

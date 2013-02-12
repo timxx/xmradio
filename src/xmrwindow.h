@@ -140,6 +140,9 @@ xmr_window_set_search_result(XmrWindow *window,
 							 const gchar *from,
 							 const gchar *link);
 
+gboolean
+xmr_window_is_current_song_marked(XmrWindow *window);
+
 G_END_DECLS
 
 #endif /* __XMR_WINDOW_H__ */

@@ -3198,6 +3198,14 @@ xmr_window_set_search_result(XmrWindow *window,
 	gtk_widget_show_all(priv->xmr_searchlist);
 }
 
+gboolean
+xmr_window_is_current_song_marked(XmrWindow *window)
+{
+	g_return_val_if_fail (window != NULL, FALSE);
+	
+	return xmr_button_is_toggled(XMR_BUTTON(window->priv->buttons[BUTTON_LIKE]));
+}
+
 static gboolean
 show_message_idle(XmrWindow *window)
 {
