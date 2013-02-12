@@ -62,7 +62,7 @@
 			<description>Auto set like when playing time percent greater than specified</description>
 		</key>
 		<key name="auto-hate" type="b">
-			<default>true</default>
+			<default>false</default>
 			<summary>Auto set hate</summary>
 			<description>Auto set hate when playing time percent little than specified</description>
 		</key>
