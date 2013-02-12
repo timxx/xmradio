@@ -79,7 +79,7 @@ xmr_waiting_wnd_hide(XmrWaitingWnd *wnd);
  * @param wnd
  */
 void
-xmr_waiting_wnd_next_task(XmrWaitingWnd *wnd);
+xmr_waiting_wnd_next_task(XmrWaitingWnd *wnd, InfoType type);
 
 G_END_DECLS
 

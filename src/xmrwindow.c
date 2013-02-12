@@ -3510,7 +3510,7 @@ xmr_event_poll(XmrWindow *window)
 			g_signal_emit(window, signals[LOGIN_FINISH], 0, l->ok, l->message);
 
 			g_free(l->message);
-			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd));
+			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_LOGIN);
 		}
 		break;
 
@@ -3522,7 +3522,7 @@ xmr_event_poll(XmrWindow *window)
 		{
 			FetchPlaylist *p = (FetchPlaylist *)event->data;
 			g_signal_emit(window, signals[FETCH_PLAYLIST_FINISH], 0, p->result, p->list);
-			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd));
+			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_PLAYLIST);
 		}
 		break;
 
@@ -3610,7 +3610,7 @@ buffering_timeout(XmrWindow *window)
 		{
 			gchar *file = make_track_file(priv->current_song);
 			
-			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd));
+			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING);
 			
 			xmr_debug("buffering ok...");
 			xmr_debug("play next song: %s", file);

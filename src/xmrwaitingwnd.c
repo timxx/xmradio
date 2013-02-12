@@ -283,7 +283,7 @@ xmr_waiting_wnd_hide(XmrWaitingWnd *wnd)
 }
 
 void
-xmr_waiting_wnd_next_task(XmrWaitingWnd *wnd)
+xmr_waiting_wnd_next_task(XmrWaitingWnd *wnd, InfoType type)
 {
 	g_return_if_fail(wnd != NULL);
 	
@@ -291,13 +291,33 @@ xmr_waiting_wnd_next_task(XmrWaitingWnd *wnd)
 	if (wnd->priv->tasks && wnd->priv->tasks->data)
 	{
 		Task *t = (Task *)wnd->priv->tasks->data;
-		wnd->priv->tasks = g_slist_remove(wnd->priv->tasks, t);
-		free_task(t);
-		
-		if (g_slist_length(wnd->priv->tasks) == 0)
-			xmr_waiting_wnd_hide(wnd);
+		// not the current task
+		// just remove from the list
+		if (t->type != type)
+		{
+			GSList *p = wnd->priv->tasks;
+			while (p)
+			{
+				t = (Task *)p->data;
+				if (t->type == type)
+				{
+					wnd->priv->tasks = g_slist_remove(wnd->priv->tasks, t);
+					free_task(t);
+					break;
+				}
+				p = p->next;
+			}
+		}
 		else
-			gtk_widget_queue_draw(GTK_WIDGET(wnd));
+		{
+			wnd->priv->tasks = g_slist_remove(wnd->priv->tasks, t);
+			free_task(t);
+			
+			if (g_slist_length(wnd->priv->tasks) == 0)
+				xmr_waiting_wnd_hide(wnd);
+			else
+				gtk_widget_queue_draw(GTK_WIDGET(wnd));
+		}
 	}
 }
 
