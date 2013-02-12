@@ -27,6 +27,7 @@ struct _XmrButtonPrivate
 
 	GdkPixbuf *images[LAST_STATE];
 	XmrButtonState	state;	/* current state */
+	XmrButtonState	last_state; /* except toggle state */
 
 	XmrButtonState toggle_state;
 	gboolean is_toggle_state;
@@ -150,6 +151,7 @@ xmr_button_init(XmrButton *button)
 
 	priv->type = XMR_BUTTON_NORMAL;
 	priv->state = STATE_NORMAL;
+	priv->last_state = STATE_NORMAL;
 	priv->toggle_state = STATE_NORMAL;
 	priv->is_toggle_state = FALSE;
 	priv->cursor = gdk_cursor_new(GDK_HAND1);
@@ -227,6 +229,7 @@ xmr_button_toggle_state_off(XmrButton *button)
 	g_return_if_fail(button != NULL);
 
 	button->priv->is_toggle_state = FALSE;
+	button->priv->state = button->priv->last_state;
 	gtk_widget_queue_draw(GTK_WIDGET(button));
 }
 
@@ -277,16 +280,16 @@ on_button_mouse_event(XmrButton *button, GdkEvent *event, gpointer data)
     switch(event->type)
     {
     case GDK_BUTTON_PRESS:
-		priv->state = STATE_PUSH;
+		priv->last_state = priv->state = STATE_PUSH;
         break;
 
     case GDK_BUTTON_RELEASE:
-		priv->state = STATE_NORMAL;
+		priv->last_state = priv->state = STATE_NORMAL;
         break;
 
     case GDK_ENTER_NOTIFY:
         gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), priv->cursor);
-		priv->state = STATE_FOCUS;
+		priv->last_state = priv->state = STATE_FOCUS;
         break;
 
     case GDK_LEAVE_NOTIFY:
@@ -295,11 +298,11 @@ on_button_mouse_event(XmrButton *button, GdkEvent *event, gpointer data)
 		if (priv->is_toggle_state)
 			priv->state = priv->toggle_state;
 		else
-			priv->state = STATE_NORMAL;
+			priv->last_state = priv->state = STATE_NORMAL;
         break;
 
     default:
-		priv->state = STATE_NORMAL;
+		priv->last_state = priv->state = STATE_NORMAL;
         break;
     }
 

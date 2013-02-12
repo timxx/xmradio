@@ -428,7 +428,7 @@ xmr_skin_get_image(XmrSkin *skin,
 	xmlNodePtr root = NULL;
 	xmlNodePtr child = NULL;
 	gchar *buffer = NULL;
-	gint len;
+	gint len = 0;
 	xmlChar *image = NULL;
 	GdkPixbuf *pixbuf = NULL;
 

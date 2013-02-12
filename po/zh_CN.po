@@ -1,23 +1,23 @@
 # Chinese Simplified
-# Copyright (C) 2012 Weitian Leung
+# Copyright (C) 2012-2013 Weitian Leung
 # This file is distributed under the same license as the xmradio package.
-# Weitian Leung <weitianleung@gmail.com>, 2012.
+# Weitian Leung <weitianleung@gmail.com>, 2012-2013.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: xmradio\n"
-"Report-Msgid-Bugs-To: https://github.com/timxx/xmradio\n"
-"POT-Creation-Date: 2012-07-11 10:24+0800\n"
-"PO-Revision-Date: 2012-07-11 10:24+0800\n"
+"Project-Id-Version: xmradio 0.4.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-02-12 14:59+0800\n"
+"PO-Revision-Date:  2013-02-12 15:01+0800\n"
 "Last-Translator: Weitian Leung <weitianleung@gmail.com>\n"
-"Language-Team: \n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:111
+#: src/main.c:115
 #, c-format
 msgid ""
 "%s\n"
@@ -26,132 +26,147 @@ msgstr ""
 "%s\n"
 "执行 '%s --help' 获取完整帮助列表.\n"
 
+#: plugins/autocollect/xmr-auto-collect.ui:199
+msgid "<b>You need to loggin before use this plugin</b>"
+msgstr "<b>使用此插件你需要先登陆虾米服务</b>"
+
 #: data/ui/about.ui:7
 msgid "About"
 msgstr "关于"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Active plugins"
-msgstr "启用的插件"
+#: src/xmrlist.c:228
+msgid "Add to Playlist"
+msgstr "添加到播放列表"
+
+#: src/xmrlist.c:305
+msgid "Album"
+msgstr "专辑"
+
+#: src/xmrlist.c:305
+msgid "Artist"
+msgstr "艺人"
 
 #: data/ui/pref.ui:65
 msgid "Author: "
 msgstr "作者："
 
+#: plugins/autocollect/xmr-auto-collect.ui:138
+msgid "Auto Hate when play time percentage little than"
+msgstr "当播放时间比例低于设置值时自动标记不再播放"
+
+#: plugins/autocollect/xmr-auto-collect.ui:61
+msgid "Auto Like when play time percentage greater than"
+msgstr "当播放时间比例超过设置值时自动标记喜欢"
+
 #: data/ui/login.ui:140
 msgid "Auto Login"
 msgstr "自动登陆"
 
+#: src/xmrwindow.c:55
+msgid "Buffering..."
+msgstr "正在缓冲..."
+
 #: data/ui/about.ui:12
-msgid "Copyright @ 2012 Weitian Leung"
+msgid "Copyright @ 2012-2013 Weitian Leung"
 msgstr ""
 
 #: data/ui/pref.ui:80
 msgid "Email: "
 msgstr "邮件："
 
-#: src/main.c:53
-msgid "Enable debug output"
-msgstr "开启输出调试信息"
-
 #: src/xmrplayer.c:361
 msgid "Failed to create playbin2 element; check your GStreamer installation"
-msgstr ""
+msgstr "创建playbin2元素失败了"
 
-#: src/xmrwindow.c:2301 src/xmrwindow.c:2572
+#: src/xmrlist.c:305
+msgid "From"
+msgstr "来自"
+
+#: src/xmrwindow.c:56
+msgid "Getting playlist..."
+msgstr "正在获取播放列表..."
+
+#: src/xmrwindow.c:2686 src/xmrwindow.c:2964
 msgid "Gtk Theme"
 msgstr "Gtk主题"
 
-#: xmradio.desktop.in plugins/indicator/xmr-indicator-plugin.c:129
-#: plugins/indicator/xmr-indicator-plugin.c:337
+#: data/xmradio.desktop.in.h:8 plugins/indicator/xmr-indicator-plugin.c:128
+#: plugins/indicator/xmr-indicator-plugin.c:336
 msgid "Hate"
 msgstr "不再播放"
 
-#: src/main.c:58
-msgid "Hate current song"
-msgstr "不再播放当前歌曲"
-
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Hide on exit"
-msgstr "退出时隐藏"
-
-#: plugins/indicator/xmr-indicator-plugin.c:161
+#: plugins/indicator/xmr-indicator-plugin.c:160
 msgid "Hide on exit when playing"
-msgstr "如果正在播放，关闭时只隐藏程序"
+msgstr "关闭时隐藏程序到后台运行"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Hide window when playing, instead default exit action"
-msgstr "当正在播放时，隐藏窗口而不是退出"
+#: src/xmrlist.c:227
+msgid "Invert Selection"
+msgstr "反选"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "List of active plugins."
-msgstr "启用的插件列表"
-
-#: src/xmrwindow.c:2364 src/xmrwindow.c:2449
+#: data/ui/login.ui:37 src/xmrwindow.c:2272 src/xmrwindow.c:2749
+#: src/xmrwindow.c:2841
 msgid "Login"
 msgstr "登陆"
 
-#: data/ui/login.ui:7 data/ui/login.ui:37
+#: data/ui/login.ui:7
 msgid "Login Info"
 msgstr "登陆信息"
 
-#: src/xmrwindow.c:1530
+#: src/xmrwindow.c:3231
 msgid "Login Status"
 msgstr "登陆状态"
 
-#: src/xmrwindow.c:1523
+#: src/xmrwindow.c:3228
 #, c-format
 msgid ""
 "Login failed:\n"
 "%s"
-msgstr "登陆失败：%s"
+msgstr ""
+"登陆失败了：\n"
+"%s"
 
-#: src/xmrwindow.c:2383 src/xmrwindow.c:2428
+#: src/xmrwindow.c:54
+msgid "Login..."
+msgstr "正在登陆..."
+
+#: src/xmrwindow.c:2276 src/xmrwindow.c:2819
 msgid "Logout"
 msgstr "注销"
 
-#: xmradio.desktop.in plugins/indicator/xmr-indicator-plugin.c:129
-#: plugins/indicator/xmr-indicator-plugin.c:337
+#: data/xmradio.desktop.in.h:7 plugins/indicator/xmr-indicator-plugin.c:124
+#: plugins/indicator/xmr-indicator-plugin.c:332
 msgid "Love"
 msgstr "喜欢"
 
-#: src/main.c:57
-msgid "Love current song"
-msgstr "喜欢当前播放的歌曲"
-
-#: xmradio.desktop.in
+#: data/xmradio.desktop.in.h:2
 msgid "Music Player"
 msgstr "音乐播放器"
 
-#: xmradio.desktop.in
+#: src/xmrwindow.c:908
+msgid "Music search ..."
+msgstr "音乐搜索..."
+
+#: data/xmradio.desktop.in.h:6
 msgid "Next"
 msgstr "下一首"
 
 #: data/ui/login.ui:87
 msgid "Password:"
-msgstr "密码："
+msgstr "密  码："
 
-#: xmradio.desktop.in
+#: data/xmradio.desktop.in.h:5
 msgid "Pause"
 msgstr "暂停"
 
-#: src/main.c:55
-msgid "Pause current song if playing"
-msgstr "暂停播放"
-
-#: xmradio.desktop.in
+#: data/xmradio.desktop.in.h:4
 msgid "Play"
 msgstr "播放"
 
-#: src/main.c:56
-msgid "Play next song"
-msgstr "播放下一首"
+#: src/xmrlist.c:408 src/xmrwindow.c:2251
+msgid "Playlist"
+msgstr "播放列表"
 
-#: src/main.c:54
-msgid "Play song"
-msgstr "播放歌曲"
-
-#: src/xmrwindow.c:2296
+#: src/xmrwindow.c:2681
 msgid "Plugins"
 msgstr "插件"
 
@@ -159,64 +174,49 @@ msgstr "插件"
 msgid "Preferences"
 msgstr "首选项"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Radio url"
-msgstr "电台网址"
+#: src/xmrlist.c:408
+msgid "Search result"
+msgstr "搜索结果"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Set null or leave empty to use gtk theme"
-msgstr "空值时使用Gtk主题"
+#: src/xmrlist.c:226
+msgid "Select All"
+msgstr "全选"
 
-#: plugins/indicator/xmr-indicator-plugin.c:120
-#: plugins/indicator/xmr-indicator-plugin.c:306
+#: plugins/indicator/xmr-indicator-plugin.c:119
+#: plugins/indicator/xmr-indicator-plugin.c:305
 msgid "Show"
 msgstr "显示"
 
-#: src/main.c:59
-msgid "Show the application's version"
-msgstr "显示程序版本"
-
-#: src/xmrwindow.c:2291
+#: src/xmrwindow.c:2676
 msgid "Skin"
 msgstr "皮肤"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "The last window position"
-msgstr "窗口最后位置"
-
-#: com.timxx.xmradio.gschema.xml.in
-msgid "UI theme"
-msgstr "UI主题"
+#: src/xmrlist.c:305
+msgid "Song Name"
+msgstr "歌曲"
 
 #: data/ui/pref.ui:51
 msgid "URL: "
 msgstr "网址："
 
+#: src/xmrdownloader.c:196
+#, c-format
+msgid "Unable to write file: %s"
+msgstr "无法写入文件：%s"
+
 #: data/ui/login.ui:74
 msgid "User Name:"
 msgstr "用户名："
 
-#: src/xmrwindow.c:2448
+#: src/xmrwindow.c:2840
 msgid "User name and password may not empty"
-msgstr "用户名/密码不为空"
+msgstr "用户名、密码不为空"
 
 #: data/ui/pref.ui:36
 msgid "Version: "
 msgstr "版本："
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Volume"
-msgstr "音量"
-
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Volume level"
-msgstr "音量大小"
-
-#: com.timxx.xmradio.gschema.xml.in
-msgid "Window position"
-msgstr "窗口位置"
-
-#: src/xmrwindow.c:682
+#: src/xmrwindow.c:982
 msgid "XMRadio"
 msgstr ""
 
@@ -224,68 +224,53 @@ msgstr ""
 msgid ""
 "XMRadio is a kind of Network Music Player for Linux\n"
 "For more information see www.xiami.com/radio"
-msgstr "XMRadio是一款轻小的虾米电台Linux客户端"
+msgstr "XMRadio是一款基于虾米网页电台服务的Linux GTK+客户端"
 
-#: xmradio.desktop.in
+#: plugins/xmsearch/xmsearch.c:131
+msgid "XiaMi"
+msgstr "虾米搜索"
+
+#: data/xmradio.desktop.in.h:3
 msgid "XiaMi radio"
-msgstr ""
+msgstr "虾米电台"
 
-#: src/xmrwindow.c:1882 src/xmrwindow.c:1938
+#: src/xmrwindow.c:2224 src/xmrwindow.c:2300
 msgid "_Gtk Theme"
-msgstr "_Gtk主题"
+msgstr "Gtk主题"
 
-#: src/xmrwindow.c:1903
+#: src/xmrwindow.c:2245
 msgid "_Radio"
 msgstr "电台"
 
-#: src/xmrwindow.c:1889
+#: src/xmrwindow.c:2231
 msgid "_Skin"
 msgstr "皮肤"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "auto login"
-msgstr "自动登陆"
+#: src/xmrdownloader.c:184
+msgid "curl_easy_init failed"
+msgstr "curl_easy_init失败"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "password"
-msgstr "密码"
+#: src/xmrdownloader.c:224
+#, c-format
+msgid "curl_easy_perform failed: %s"
+msgstr "curl_easy_perform失败了：%s"
 
-#: com.timxx.xmradio.gschema.xml.in
-msgid "radio name"
-msgstr "电台名称"
-
-#: com.timxx.xmradio.gschema.xml.in
-msgid "radio url"
-msgstr "电台网址"
-
-#: com.timxx.xmradio.gschema.xml.in
-msgid "user name"
-msgstr "用户名"
-
-#: com.timxx.xmradio.gschema.xml.in
-msgid "user password"
-msgstr "用户密码"
-
-#: xmradio.desktop.in
+#: data/xmradio.desktop.in.h:1
 msgid "xmradio"
 msgstr ""
 
-#: src/xmrwindow.c:169 src/xmrwindow.c:641
+#: src/xmrwindow.c:919
 msgid "年代电台"
 msgstr ""
 
-#: src/xmrwindow.c:47
+#: src/xmrwindow.c:52
 msgid "新歌电台"
 msgstr ""
 
-#: src/xmrwindow.c:169 src/xmrwindow.c:640
+#: src/xmrwindow.c:918
 msgid "星座电台"
 msgstr ""
 
-#: src/xmrwindow.c:169 src/xmrwindow.c:1548 src/xmrwindow.c:2694
-msgid "私人电台"
-msgstr ""
-
-#: src/xmrwindow.c:169 src/xmrwindow.c:639
+#: src/xmrwindow.c:917
 msgid "风格电台"
 msgstr ""

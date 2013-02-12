@@ -1,0 +1,16 @@
+#!/bin/bash
+
+VERSION=`grep version CMakeLists.txt | cut -d ' ' -f2 | cut -d ')' -f1`
+PACKAGE=xmradio
+
+find -name "*.c" | xargs xgettext -k_ -o po/c.pot --from-code=utf-8
+find -name "*.ui" | xargs xgettext -o po/ui.pot --from-code=utf-8 -LGlade
+intltool-extract --quiet --type=gettext/ini data/xmradio.desktop.in
+xgettext -kN_ -o po/desktop.pot data/xmradio.desktop.in.h
+rm data/xmradio.desktop.in.h
+
+# merge
+xgettext -LPO po/desktop.pot po/ui.pot po/c.pot -o po/xmradio.pot --package-name=$PACKAGE --package-version=$VERSION
+
+# remove temp files
+rm po/c.pot po/ui.pot po/desktop.pot
