@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(xmradio)
 
-set(version 0.3.2)
+set(version 0.4.0)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
@@ -68,6 +68,7 @@ if (WARN_AS_ERROR)
 endif(WARN_AS_ERROR)
 
 if (DEBUG)
+	set(_DEBUG TRUE)
 	set(CMAKE_C_FLAGS "-g ${CMAKE_C_FLAGS}")
 else (DEBUG)
 	set(CMAKE_C_FLAGS "-s -O2 ${CMAKE_C_FLAGS}")

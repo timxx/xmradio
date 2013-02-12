@@ -28,6 +28,7 @@ set(XMRADIO_HEADERS
 	xmrdebug.h
 	xmrdownloader.h
 	xmrlabel.h
+	xmrlist.h
 	xmrplayer.h
 	xmrpluginengine.h
 	xmrradio.h
@@ -36,6 +37,7 @@ set(XMRADIO_HEADERS
 	xmrskin.h
 	xmrutil.h
 	xmrvolumebutton.h
+	xmrwaitingwnd.h
 	xmrwindow.h
 )
 
@@ -50,12 +52,14 @@ set(XMRADIO_CORE_SOURCES
 	xmrdebug.c
 	xmrdownloader.c
 	xmrlabel.c
+	xmrlist.c
 	xmrpluginengine.c
 	xmrradio.c
 	xmrradiochooser.c
 	xmrsettings.c
 	xmrutil.c
 	xmrvolumebutton.c
+	xmrwaitingwnd.c
 	xmrwindow.c
 	${CMAKE_BINARY_DIR}/xmrmarshal.c
 )
