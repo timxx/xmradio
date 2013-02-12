@@ -416,6 +416,43 @@ copy_list_func(gconstpointer src,
 	return song_info_copy((SongInfo *)src);
 }
 
+static GList*
+my_list_copy_deep(GList *list, GCopyFunc func, gpointer user_data)
+{
+#if GLIB_CHECK_VERSION(2, 34, 0)
+	return g_list_copy_deep(list, func, user_data);
+#else
+	GList *new_list = NULL;
+
+	if (list)
+	{
+		GList *last;
+		
+		new_list = g_slice_new(GList);
+		if (func)
+			new_list->data = func(list->data, user_data);
+		else
+			new_list->data = list->data;
+		new_list->prev = NULL;
+		last = new_list;
+		list = list->next;
+		while (list)
+		{
+			last->next = g_slice_new(GList);
+			last->next->prev = last;
+			last = last->next;
+			if (func)
+				last->data = func(list->data, user_data);
+			else
+				last->data = list->data;
+			list = list->next;
+		}
+		last->next = NULL;
+	}
+	return new_list;
+#endif
+}
+
 void
 xmr_list_append(XmrList *list, GList *song_list, const gchar *from, const gchar *link)
 {
@@ -427,8 +464,7 @@ xmr_list_append(XmrList *list, GList *song_list, const gchar *from, const gchar 
 
 	g_return_if_fail(list != NULL);
 	priv = list->priv;
-	
-	new_list = g_list_copy_deep(song_list, (GCopyFunc)copy_list_func, NULL);
+	new_list = my_list_copy_deep(song_list, (GCopyFunc)copy_list_func, NULL);
 	priv->list = g_list_concat(priv->list, new_list);
 	
 	model = gtk_tree_view_get_model(GTK_TREE_VIEW(priv->treeview));
