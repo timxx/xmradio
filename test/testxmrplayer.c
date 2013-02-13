@@ -112,7 +112,9 @@ int main(int argc, char **argv)
 	GError *error = NULL;
 	XmrPlayer *player;
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
 	g_type_init();
+#endif
 	gst_init(&argc, &argv);
 
 	xmr_debug_enable(TRUE);

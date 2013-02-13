@@ -39,7 +39,9 @@ int main(int argc, char **argv)
 	gchar *message = NULL;
 
 	setlocale(LC_ALL, "");
+#if !GLIB_CHECK_VERSION(2, 36, 0)
 	g_type_init();
+#endif
 
 	service = xmr_service_new();
 

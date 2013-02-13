@@ -91,9 +91,9 @@ int main(int argc, char **argv)
 	g_thread_init(NULL);
 #endif
 
-//#if !GLIB_CHECK_VERSION(2, 36, 0)
+#if !GLIB_CHECK_VERSION(2, 36, 0)
 	g_type_init();
-//#endif
+#endif
 
 	setlocale(LC_ALL, NULL);
 

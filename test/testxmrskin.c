@@ -29,8 +29,9 @@ int main(int argc, char **argv)
 	SkinInfo *info;
 	GdkPixbuf *pixbuf;
 	gint x, y;
-
+#if !GLIB_CHECK_VERSION(2, 36, 0)
 	g_type_init();
+#endif
 	xmr_debug_enable(TRUE);
 
 	skin = xmr_skin_new();
