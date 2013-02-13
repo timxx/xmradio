@@ -91,7 +91,9 @@ int main(int argc, char **argv)
 	g_thread_init(NULL);
 #endif
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
+	// !!! glib manual says since version 2.36
+	// but ubuntu 13.04 !!!
+#if !GLIB_CHECK_VERSION(2, 35, 7)
 	g_type_init();
 #endif
 

@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	SkinInfo *info;
 	GdkPixbuf *pixbuf;
 	gint x, y;
-#if !GLIB_CHECK_VERSION(2, 36, 0)
+#if !GLIB_CHECK_VERSION(2, 35, 7)
 	g_type_init();
 #endif
 	xmr_debug_enable(TRUE);
