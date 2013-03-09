@@ -291,10 +291,12 @@ search_thread(Data *data)
 {
 	XmrService *service = NULL;
 	gchar *url;
+	gchar *escape_keyword;
 	GString *result_data;
 	gint result;
 	
-	url = g_strdup_printf(XIAMI_SEARCH_URL"%s", data->keyword);
+	escape_keyword = curl_escape(data->keyword, 0);
+	url = g_strdup_printf(XIAMI_SEARCH_URL"%s",escape_keyword);
 	result_data = g_string_new("");
 	
 	service = xmr_service_new();
@@ -309,6 +311,7 @@ search_thread(Data *data)
 	}
 
 	g_free(url);
+	curl_free(escape_keyword);
 	g_string_free(result_data, TRUE);
 	g_free(data->keyword);
 	g_free(data);
