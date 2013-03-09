@@ -1,3 +1,35 @@
+xmradio (0.4.1~raring) raring; urgency=low
+
+  * 0.4.1
+    - Fixed search music failed with keywords contains whitespace
+    - Fixed XmrLable shows nothing when current system text alpha eq 0
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 23 Feb 2013 15:57:03 +0800
+
+xmradio (0.4.1~quantal) quantal; urgency=low
+
+  * 0.4.1
+    - Fixed search music failed with keywords contains whitespace
+    - Fixed XmrLable shows nothing when current system text alpha eq 0
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 23 Feb 2013 15:56:39 +0800
+
+xmradio (0.4.1~precise) precise; urgency=low
+
+  * 0.4.1
+    - Fixed search music failed with keywords contains whitespace
+    - Fixed XmrLable shows nothing when current system text alpha eq 0
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 23 Feb 2013 15:53:51 +0800
+
+xmradio (0.4.1~oneiric) oneiric; urgency=low
+
+  * 0.4.1
+    - Fixed search music failed with keywords contains whitespace
+    - Fixed XmrLable shows nothing when current system text alpha eq 0
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 23 Feb 2013 15:50:21 +0800
+
 xmradio (0.4.0-3~raring) raring; urgency=low
 
   * 0.4.0

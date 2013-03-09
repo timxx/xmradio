@@ -277,6 +277,9 @@ xmr_label_init(XmrLabel *label)
 	context = gtk_widget_get_style_context(GTK_WIDGET(label));
 
 	gtk_style_context_lookup_color(context, "text_color", &priv->default_color);
+	if (priv->default_color.alpha <= 0)
+		priv->default_color.alpha = 1.0;
+
 	priv->current_color = gdk_rgba_copy(&priv->default_color);
 }
 
@@ -351,10 +354,11 @@ xmr_label_set_color(XmrLabel *label,
 	{
 		if (gdk_color_parse(color, &gdk_color))
 		{
-//			g_print("(%d, %d, %d)\n", gdk_color.red, gdk_color.green, gdk_color.blue);
 			priv->current_color->red = gdk_color.red / 65535.0;
 			priv->current_color->green = gdk_color.green / 65535.0;
 			priv->current_color->blue = gdk_color.blue / 65535.0;
+			// always set to 1.0
+			priv->current_color->alpha = 1.0;
 		}
 	}
 
