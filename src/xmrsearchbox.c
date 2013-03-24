@@ -29,10 +29,12 @@
 #include "config.h"
 #include "xmrchooser.h"
 #include "xmrartist.h"
+#include "xmrwindow.h"
 
 G_DEFINE_TYPE(XmrSearchBox, xmr_search_box, GTK_TYPE_WINDOW)
 
-#define SEARCH_URL "http://www.xiami.com/search/artist?key="
+#define SEARCH_URL	"http://www.xiami.com/search/artist?key="
+#define RADIO_URL	"http://www.xiami.com/radio/xml/type/5/id/"
 
 #define ARTIST_PATTERN "href=\"/artist/"
 #define IMG_SRC_PATTERN "<img src=\""
@@ -78,6 +80,10 @@ enum
 
 static void
 show_chooser(XmrSearchBox *box, gboolean show);
+static void
+on_artist_clicked(XmrChooser *chooser,
+				  XmrArtist *artist,
+				  XmrSearchBox *box);
 
 static void
 post_event(XmrSearchBox *box, guint type, gpointer event)
@@ -524,6 +530,8 @@ xmr_search_box_init(XmrSearchBox *box)
 	
 	g_signal_connect(priv->entry_box, "activate", G_CALLBACK(on_search_box_activate), box);
 	
+	g_signal_connect(priv->chooser, "widget-selected", G_CALLBACK(on_artist_clicked), box);
+	
 	gtk_widget_show_all(vbox);
 }
 
@@ -569,3 +577,21 @@ show_chooser(XmrSearchBox *box, gboolean show)
 		gtk_widget_hide(GTK_WIDGET(priv->chooser));
 	}
 }
+
+static void
+on_artist_clicked(XmrChooser *chooser,
+				  XmrArtist *artist,
+				  XmrSearchBox *box)
+{
+	const gchar *name = xmr_artist_get_name(artist);
+	const gchar *id = xmr_artist_get_id(artist);
+
+	gchar *radio_name = g_strdup_printf("%s - %s", _("Artist Radio"), name);
+	gchar *url = g_strdup_printf(RADIO_URL"%s", id);
+
+	xmr_window_play_custom_radio(XMR_WINDOW(box->priv->parent), radio_name, url);
+	
+	g_free(radio_name);
+	g_free(url);
+}
+
