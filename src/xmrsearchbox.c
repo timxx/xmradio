@@ -282,7 +282,11 @@ parse_data(XmrSearchBox *box, GString *data)
 					strcpy(tmp_file, "/tmp/xmradio-img-srcXXXXXX");
 					int fd = mkstemp(tmp_file);
 					
-					write(fd, img_data->str, img_data->len * sizeof(gchar));
+					int bytes = write(fd, img_data->str, img_data->len * sizeof(gchar));
+					if (bytes == 0)
+					{
+						// warn_unused_result 
+					}
 					close(fd);
 					
 					g_free(img_src);
