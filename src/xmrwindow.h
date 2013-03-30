@@ -2,7 +2,7 @@
  * xmrwindow.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -142,6 +142,18 @@ xmr_window_set_search_result(XmrWindow *window,
 
 gboolean
 xmr_window_is_current_song_marked(XmrWindow *window);
+
+/**
+ * @brief xmr_window_search_radio, show search window only
+ * @param window
+ */
+void
+xmr_window_search_radio(XmrWindow *window);
+
+void
+xmr_window_play_custom_radio(XmrWindow *window,
+							 const gchar *name,
+							 const gchar *url);
 
 G_END_DECLS
 

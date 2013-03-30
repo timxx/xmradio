@@ -1,15 +1,15 @@
-# Chinese Simplified
+# Chinese Simplified.
 # Copyright (C) 2012-2013 Weitian Leung
-# This file is distributed under the same license as the xmradio package.
+# This file is distributed under the same license as the PACKAGE package.
 # Weitian Leung <weitianleung@gmail.com>, 2012-2013.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: xmradio 0.4.0\n"
+"Project-Id-Version: xmradio 0.4.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-02-12 14:59+0800\n"
-"PO-Revision-Date:  2013-02-12 15:01+0800\n"
+"POT-Creation-Date: 2013-03-30 15:06+0800\n"
+"PO-Revision-Date: 2013-03-30 15:010+0800\n"
 "Last-Translator: Weitian Leung <weitianleung@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: zh_CN\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:115
+#: src/main.c:119
 #, c-format
 msgid ""
 "%s\n"
@@ -46,6 +46,10 @@ msgstr "专辑"
 msgid "Artist"
 msgstr "艺人"
 
+#: src/xmrsearchbox.c:524 src/xmrsearchbox.c:611
+msgid "Artist Radio"
+msgstr "艺人电台"
+
 #: data/ui/pref.ui:65
 msgid "Author: "
 msgstr "作者："
@@ -62,7 +66,7 @@ msgstr "当播放时间比例超过设置值时自动标记喜欢"
 msgid "Auto Login"
 msgstr "自动登陆"
 
-#: src/xmrwindow.c:55
+#: src/xmrwindow.c:58
 msgid "Buffering..."
 msgstr "正在缓冲..."
 
@@ -74,6 +78,10 @@ msgstr ""
 msgid "Email: "
 msgstr "邮件："
 
+#: src/xmrsearchbox.c:536
+msgid "Enter artist name..."
+msgstr "请输入艺人名字..."
+
 #: src/xmrplayer.c:361
 msgid "Failed to create playbin2 element; check your GStreamer installation"
 msgstr "创建playbin2元素失败了"
@@ -82,13 +90,13 @@ msgstr "创建playbin2元素失败了"
 msgid "From"
 msgstr "来自"
 
-#: src/xmrwindow.c:56
+#: src/xmrwindow.c:59
 msgid "Getting playlist..."
 msgstr "正在获取播放列表..."
 
-#: src/xmrwindow.c:2686 src/xmrwindow.c:2964
+#: src/xmrwindow.c:2712 src/xmrwindow.c:2990
 msgid "Gtk Theme"
-msgstr "Gtk主题"
+msgstr "GTK主题"
 
 #: data/xmradio.desktop.in.h:8 plugins/indicator/xmr-indicator-plugin.c:128
 #: plugins/indicator/xmr-indicator-plugin.c:336
@@ -103,8 +111,8 @@ msgstr "关闭时隐藏程序到后台运行"
 msgid "Invert Selection"
 msgstr "反选"
 
-#: data/ui/login.ui:37 src/xmrwindow.c:2272 src/xmrwindow.c:2749
-#: src/xmrwindow.c:2841
+#: data/ui/login.ui:37 src/xmrwindow.c:2291 src/xmrwindow.c:2775
+#: src/xmrwindow.c:2867
 msgid "Login"
 msgstr "登陆"
 
@@ -112,11 +120,11 @@ msgstr "登陆"
 msgid "Login Info"
 msgstr "登陆信息"
 
-#: src/xmrwindow.c:3231
+#: src/xmrwindow.c:3289
 msgid "Login Status"
 msgstr "登陆状态"
 
-#: src/xmrwindow.c:3228
+#: src/xmrwindow.c:3286
 #, c-format
 msgid ""
 "Login failed:\n"
@@ -125,11 +133,11 @@ msgstr ""
 "登陆失败了：\n"
 "%s"
 
-#: src/xmrwindow.c:54
+#: src/xmrwindow.c:57
 msgid "Login..."
 msgstr "正在登陆..."
 
-#: src/xmrwindow.c:2276 src/xmrwindow.c:2819
+#: src/xmrwindow.c:2295 src/xmrwindow.c:2845
 msgid "Logout"
 msgstr "注销"
 
@@ -142,7 +150,7 @@ msgstr "喜欢"
 msgid "Music Player"
 msgstr "音乐播放器"
 
-#: src/xmrwindow.c:908
+#: src/xmrwindow.c:916
 msgid "Music search ..."
 msgstr "音乐搜索..."
 
@@ -150,9 +158,17 @@ msgstr "音乐搜索..."
 msgid "Next"
 msgstr "下一首"
 
+#: src/xmrsearchbox.c:138
+msgid "Oops! Network error."
+msgstr "网络出错啦。"
+
+#: src/xmrsearchbox.c:134
+msgid "Oops! Not found any related artist."
+msgstr "未找到相关的艺人。"
+
 #: data/ui/login.ui:87
 msgid "Password:"
-msgstr "密  码："
+msgstr "密码："
 
 #: data/xmradio.desktop.in.h:5
 msgid "Pause"
@@ -162,17 +178,21 @@ msgstr "暂停"
 msgid "Play"
 msgstr "播放"
 
-#: src/xmrlist.c:408 src/xmrwindow.c:2251
+#: src/xmrlist.c:408 src/xmrwindow.c:2270
 msgid "Playlist"
 msgstr "播放列表"
 
-#: src/xmrwindow.c:2681
+#: src/xmrwindow.c:2707
 msgid "Plugins"
 msgstr "插件"
 
 #: data/ui/pref.ui:163
 msgid "Preferences"
 msgstr "首选项"
+
+#: src/xmrsearchbox.c:540
+msgid "Search Artist Radio"
+msgstr "艺人电台搜索"
 
 #: src/xmrlist.c:408
 msgid "Search result"
@@ -187,7 +207,7 @@ msgstr "全选"
 msgid "Show"
 msgstr "显示"
 
-#: src/xmrwindow.c:2676
+#: src/xmrwindow.c:2702
 msgid "Skin"
 msgstr "皮肤"
 
@@ -208,7 +228,7 @@ msgstr "无法写入文件：%s"
 msgid "User Name:"
 msgstr "用户名："
 
-#: src/xmrwindow.c:2840
+#: src/xmrwindow.c:2866
 msgid "User name and password may not empty"
 msgstr "用户名、密码不为空"
 
@@ -216,7 +236,7 @@ msgstr "用户名、密码不为空"
 msgid "Version: "
 msgstr "版本："
 
-#: src/xmrwindow.c:982
+#: src/xmrwindow.c:990
 msgid "XMRadio"
 msgstr ""
 
@@ -224,7 +244,9 @@ msgstr ""
 msgid ""
 "XMRadio is a kind of Network Music Player for Linux\n"
 "For more information see www.xiami.com/radio"
-msgstr "XMRadio是一款基于虾米网页电台服务的Linux GTK+客户端"
+msgstr ""
+"XMRadio是一款基于虾米网页电台服务的Linux GTK+客户端\n"
+"更多信息可访问www.xiami.com/radio"
 
 #: plugins/xmsearch/xmsearch.c:131
 msgid "XiaMi"
@@ -234,15 +256,15 @@ msgstr "虾米搜索"
 msgid "XiaMi radio"
 msgstr "虾米电台"
 
-#: src/xmrwindow.c:2224 src/xmrwindow.c:2300
+#: src/xmrwindow.c:2243 src/xmrwindow.c:2319
 msgid "_Gtk Theme"
-msgstr "Gtk主题"
+msgstr "GTK主题"
 
-#: src/xmrwindow.c:2245
+#: src/xmrwindow.c:2264
 msgid "_Radio"
 msgstr "电台"
 
-#: src/xmrwindow.c:2231
+#: src/xmrwindow.c:2250
 msgid "_Skin"
 msgstr "皮肤"
 
@@ -253,24 +275,24 @@ msgstr "curl_easy_init失败"
 #: src/xmrdownloader.c:224
 #, c-format
 msgid "curl_easy_perform failed: %s"
-msgstr "curl_easy_perform失败了：%s"
+msgstr "curl_easy_perform失败：%s"
 
 #: data/xmradio.desktop.in.h:1
 msgid "xmradio"
-msgstr ""
+msgstr "xmradio"
 
-#: src/xmrwindow.c:919
+#: src/xmrwindow.c:927
 msgid "年代电台"
 msgstr ""
 
-#: src/xmrwindow.c:52
+#: src/xmrwindow.c:55
 msgid "新歌电台"
 msgstr ""
 
-#: src/xmrwindow.c:918
+#: src/xmrwindow.c:926
 msgid "星座电台"
 msgstr ""
 
-#: src/xmrwindow.c:917
+#: src/xmrwindow.c:925
 msgid "风格电台"
 msgstr ""
