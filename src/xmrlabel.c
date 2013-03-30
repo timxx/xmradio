@@ -23,7 +23,7 @@
 #define DEFAULT_TIMEOUT	600
 #define DEFAULT_SPEED	5
 
-G_DEFINE_TYPE(XmrLabel, xmr_label, GTK_TYPE_MISC);
+G_DEFINE_TYPE(XmrLabel, xmr_label, GTK_TYPE_MISC)
 
 struct _XmrLabelPrivate
 {
@@ -316,8 +316,10 @@ GtkWidget*
 xmr_label_new(const gchar *text)
 {
 	return g_object_new(XMR_TYPE_LABEL,
-				"label", text,
-				NULL);
+						"has-tooltip", TRUE,
+						"tooltip-text", text,
+						"label", text,
+						NULL);
 }
 
 void
@@ -331,6 +333,8 @@ xmr_label_set_text(XmrLabel *label,
 
 	g_free(priv->text);
 	priv->text = g_strdup(str);
+
+	gtk_widget_set_tooltip_text(GTK_WIDGET(label), priv->text);
 
 	xmr_label_update_layout(label);
 }
