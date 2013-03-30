@@ -50,6 +50,7 @@ struct _XmrSearchBoxPrivate
 	XmrChooser *chooser;
 	GAsyncQueue *event_queue;
 	guint event_idle_id;
+	guint progress_idle_id;
 };
 
 typedef struct
@@ -80,10 +81,21 @@ enum
 
 static void
 show_chooser(XmrSearchBox *box, gboolean show);
+
 static void
 on_artist_clicked(XmrChooser *chooser,
 				  XmrArtist *artist,
 				  XmrSearchBox *box);
+
+
+static gboolean
+search_progress_idle(GtkEntry *entry);
+
+static void
+search_progress_done(GtkEntry *entry);
+
+static void
+show_progress(XmrSearchBox *box, gboolean show);
 
 static void
 post_event(XmrSearchBox *box, guint type, gpointer event)
@@ -133,6 +145,8 @@ event_poll(XmrSearchBox *box)
 		priv->thread = NULL;
 		g_source_remove(priv->event_idle_id);
 		priv->event_idle_id = 0;
+		
+		show_progress(box, FALSE);
 		break;
 	}
 
@@ -150,6 +164,7 @@ on_key_release(XmrSearchBox	*box,
 	{
 		box->priv->need_to_show = FALSE;
 		gtk_widget_hide(GTK_WIDGET(box));
+		gtk_widget_hide(GTK_WIDGET(box->priv->chooser));
 	}
 
 	return FALSE;
@@ -376,6 +391,8 @@ on_search_box_activate(GtkEntry  *entry,
 		priv->event_idle_id = g_idle_add((GSourceFunc)event_poll, box);
 	}
 	
+	show_progress(box, TRUE);
+	
 	// clear any prev result
 	xmr_chooser_clear(priv->chooser);
 	
@@ -532,6 +549,7 @@ xmr_search_box_init(XmrSearchBox *box)
 	
 	g_signal_connect(priv->chooser, "widget-selected", G_CALLBACK(on_artist_clicked), box);
 	
+	gtk_window_set_position(GTK_WINDOW(box), GTK_WIN_POS_CENTER);
 	gtk_widget_show_all(vbox);
 }
 
@@ -593,5 +611,37 @@ on_artist_clicked(XmrChooser *chooser,
 	
 	g_free(radio_name);
 	g_free(url);
+}
+
+static gboolean
+search_progress_idle(GtkEntry *entry)
+{
+	gtk_entry_progress_pulse(entry);
+
+	return TRUE;
+}
+
+static void
+search_progress_done(GtkEntry *entry)
+{
+	gtk_entry_set_progress_fraction(entry, 0.0);
+}
+
+static void
+show_progress(XmrSearchBox *box, gboolean show)
+{
+	XmrSearchBoxPrivate *priv = box->priv;
+	
+	if (show)
+	{
+		priv->progress_idle_id = g_timeout_add_full(
+					G_PRIORITY_DEFAULT, 100,
+					(GSourceFunc)search_progress_idle, priv->entry_box,
+					(GDestroyNotify)search_progress_done);
+	}
+	else
+	{
+		g_source_remove(priv->progress_idle_id);
+	}
 }
 
