@@ -1761,11 +1761,20 @@ thread_get_playlist(XmrWindow *window)
 
 		xmr_debug("[BEGIN] thread_get_playlist");
 
-		if (priv->radio_type != Radio_Type_Custom)
+		if (xmr_service_is_logged_in(priv->service))
 		{
-			g_mutex_lock(priv->mutex);
-			result = xmr_service_get_track_list_by_id(priv->service, &list, priv->radio_type);
-			g_mutex_unlock(priv->mutex);
+			if (priv->radio_type != Radio_Type_Custom)
+			{
+				g_mutex_lock(priv->mutex);
+				result = xmr_service_get_track_list_by_id(priv->service, &list, priv->radio_type);
+				g_mutex_unlock(priv->mutex);
+			}
+			else
+			{
+				g_mutex_lock(priv->mutex);
+				result = xmr_service_get_track_list_by_style(priv->service, &list, priv->playlist_url);
+				g_mutex_unlock(priv->mutex);
+			}
 		}
 		else
 		{
@@ -2092,7 +2101,9 @@ xmr_window_set_track_info(XmrWindow *window)
 
 	// update fav button status
 	{
-		gint grade = (gint)g_strtod(song->grade, NULL);
+		gint grade = 0;
+		if (song->grade)
+			grade = (gint)g_strtod(song->grade, NULL);
 		if (grade > 0)
 			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
 		else
