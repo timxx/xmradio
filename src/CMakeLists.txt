@@ -23,7 +23,9 @@ execute_process(COMMAND ${GLIB_GENMARSHAL} --header
 
 set(XMRADIO_HEADERS
 	xmrapp.h
+	xmrartist.h
 	xmrbutton.h
+	xmrchooser.h
 	xmrdb.h
 	xmrdebug.h
 	xmrdownloader.h
@@ -32,7 +34,7 @@ set(XMRADIO_HEADERS
 	xmrplayer.h
 	xmrpluginengine.h
 	xmrradio.h
-	xmrradiochooser.h
+	xmrsearchbox.h
 	xmrsettings.h
 	xmrskin.h
 	xmrutil.h
@@ -47,7 +49,9 @@ set(XMRADIO_SOURCES
 
 set(XMRADIO_CORE_SOURCES
 	xmrapp.c
+	xmrartist.c
 	xmrbutton.c
+	xmrchooser.c
 	xmrdb.c
 	xmrdebug.c
 	xmrdownloader.c
@@ -55,7 +59,7 @@ set(XMRADIO_CORE_SOURCES
 	xmrlist.c
 	xmrpluginengine.c
 	xmrradio.c
-	xmrradiochooser.c
+	xmrsearchbox.c
 	xmrsettings.c
 	xmrutil.c
 	xmrvolumebutton.c

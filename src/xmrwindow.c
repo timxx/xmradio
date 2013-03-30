@@ -2,7 +2,7 @@
  * xmrwindow.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 #include "config.h"
 #include "xmrutil.h"
 #include "xmrsettings.h"
-#include "xmrradiochooser.h"
+#include "xmrchooser.h"
 #include "xmrdb.h"
 #include "xmrmarshal.h"
 #include "xmrapp.h"
@@ -45,6 +45,9 @@
 #include "xmrwaitingwnd.h"
 #include "icon_enter_xpm.h"
 #include "xmrlist.h"
+#include "xmrsearchbox.h"
+#include "xmrradio.h"
+#include "xmrartist.h"
 
 G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW)
 
@@ -137,6 +140,13 @@ typedef struct
 	gchar *message;
 }LoginFinish;
 
+typedef enum
+{
+	Radio_Type_MyRadio,
+	Radio_Type_XMGuess,
+	Radio_Type_Custom
+}RadioType;
+
 struct _XmrWindowPrivate
 {
 	gchar		*skin;
@@ -158,7 +168,7 @@ struct _XmrWindowPrivate
 	GtkWidget	*menu_logout;
 
 	/**
-	 * #XmrRadioChooser
+	 * #XmrChooser
 	 * 0 - FengGe
 	 * 1 - XingZuo
 	 * 2 - NianDai
@@ -171,13 +181,7 @@ struct _XmrWindowPrivate
 	GList *playlist;
 	gchar *playlist_url;
 
-	/**
-	 * @brief radio_type
-	 * 0 - My radio
-	 * 1 - XiaMi Cai
-	 * 3 - Others
-	 */
-	gint radio_type;
+	RadioType radio_type;
 
 	SongInfo *current_song;
 
@@ -223,6 +227,8 @@ struct _XmrWindowPrivate
 	GtkWidget *waiting_wnd;
 
 	GtkWidget *xmr_searchlist;
+	
+	GtkWidget *radio_search_box; /* for search artist radio */
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -261,10 +267,11 @@ static const gchar *radio_style[]=
 
 static const gchar *radio_names[] =
 {
-	N_("私人电台"), N_("虾米猜"), N_("风格电台"), N_("星座电台"), N_("年代电台")
+	N_("私人电台"), N_("虾米猜"), N_("风格电台"), N_("星座电台"), N_("年代电台"),
+	N_("艺人电台")
 };
 
-#define RADIO_COUNT 5
+#define RADIO_COUNT 6
 
 //=======================================================================
 
@@ -296,7 +303,7 @@ static void
 on_xmr_button_clicked(GtkWidget *widget, gpointer data);
 
 static void
-radio_selected(XmrRadioChooser *chooser,
+radio_selected(XmrChooser *chooser,
 			XmrRadio *radio,
 			XmrWindow *window);
 
@@ -863,9 +870,10 @@ xmr_window_init(XmrWindow *window)
 	priv->waiting_wnd = xmr_waiting_wnd_new(GTK_WINDOW(window));
 	
 	priv->xmr_searchlist = NULL;
+	priv->radio_search_box = NULL;
 
 	priv->current_song = NULL;
-	priv->radio_type = 2;
+	priv->radio_type = Radio_Type_Custom;
 
 	priv->queue_fetch_playlist = g_async_queue_new();
 	priv->queue_fetch_cover = g_async_queue_new();
@@ -914,9 +922,9 @@ xmr_window_init(XmrWindow *window)
 
 	gtk_widget_show(priv->fixed);
 
-	priv->chooser[0] = xmr_radio_chooser_new(_("风格电台"));
-	priv->chooser[1] = xmr_radio_chooser_new(_("星座电台"));
-	priv->chooser[2] = xmr_radio_chooser_new(_("年代电台"));
+	priv->chooser[0] = xmr_chooser_new(_("风格电台"), GTK_ORIENTATION_HORIZONTAL);
+	priv->chooser[1] = xmr_chooser_new(_("星座电台"), GTK_ORIENTATION_HORIZONTAL);
+	priv->chooser[2] = xmr_chooser_new(_("年代电台"), GTK_ORIENTATION_HORIZONTAL);
 
 	g_signal_connect(window, "draw", G_CALLBACK(on_draw), NULL);
 	g_signal_connect(window, "button-press-event", G_CALLBACK(on_button_press), NULL);
@@ -943,7 +951,7 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->search_box, "focus-out-event", G_CALLBACK(on_search_box_focus_out), NULL);
 
 	for(i=0; i<3; ++i)
-	  g_signal_connect(priv->chooser[i], "radio-selected",
+	  g_signal_connect(priv->chooser[i], "widget-selected",
 				  G_CALLBACK(radio_selected), window);
 
 	g_signal_connect_after(window, "delete-event", G_CALLBACK(on_delete_event), NULL);
@@ -1340,14 +1348,14 @@ on_xmr_button_clicked(GtkWidget *widget, gpointer data)
 }
 
 static void
-radio_selected(XmrRadioChooser *chooser,
+radio_selected(XmrChooser *chooser,
 			XmrRadio *radio,
 			XmrWindow *window)
 {
 	const gchar *name = xmr_radio_get_name(radio);
 	const gchar *url = xmr_radio_get_url(radio);
 
-	window->priv->radio_type = 2;
+	window->priv->radio_type = Radio_Type_Custom;
 	change_radio(window, name, url);
 }
 
@@ -1753,11 +1761,20 @@ thread_get_playlist(XmrWindow *window)
 
 		xmr_debug("[BEGIN] thread_get_playlist");
 
-		if (priv->radio_type != 2)
+		if (xmr_service_is_logged_in(priv->service))
 		{
-			g_mutex_lock(priv->mutex);
-			result = xmr_service_get_track_list_by_id(priv->service, &list, priv->radio_type);
-			g_mutex_unlock(priv->mutex);
+			if (priv->radio_type != Radio_Type_Custom)
+			{
+				g_mutex_lock(priv->mutex);
+				result = xmr_service_get_track_list_by_id(priv->service, &list, priv->radio_type);
+				g_mutex_unlock(priv->mutex);
+			}
+			else
+			{
+				g_mutex_lock(priv->mutex);
+				result = xmr_service_get_track_list_by_style(priv->service, &list, priv->playlist_url);
+				g_mutex_unlock(priv->mutex);
+			}
 		}
 		else
 		{
@@ -2084,7 +2101,9 @@ xmr_window_set_track_info(XmrWindow *window)
 
 	// update fav button status
 	{
-		gint grade = (gint)g_strtod(song->grade, NULL);
+		gint grade = 0;
+		if (song->grade)
+			grade = (gint)g_strtod(song->grade, NULL);
 		if (grade > 0)
 			xmr_button_toggle_state_on(XMR_BUTTON(priv->buttons[BUTTON_LIKE]), STATE_FOCUS);
 		else
@@ -2374,8 +2393,15 @@ on_radio_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 {
 	gint i;
 	const gchar *menu = gtk_menu_item_get_label(item);
+	
+	// 艺人电台
+	if (g_strcmp0(menu, radio_names[RADIO_COUNT-1]) == 0)
+	{
+		xmr_window_search_radio(window);
+		return ;
+	}
 
-	for(i=0; i<RADIO_COUNT; ++i)
+	for(i=0; i<RADIO_COUNT-1; ++i)
 	{
 		if (g_strcmp0(menu, radio_names[i]) == 0)
 		{
@@ -2411,9 +2437,11 @@ load_settings(XmrWindow *window)
 
 	xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
 	if (g_strcmp0(radio_names[0], radio_name) == 0)
-		priv->radio_type = 0;
+		priv->radio_type = Radio_Type_MyRadio;
 	else if (g_strcmp0(radio_names[1], radio_name) == 0)
-		priv->radio_type = 1;
+		priv->radio_type = Radio_Type_XMGuess;
+	else
+		priv->radio_type = Radio_Type_Custom;
 
 	xmr_settings_get_window_pos(priv->settings, &x, &y);
 	if (x !=- 1 && y != -1)
@@ -2432,18 +2460,16 @@ load_settings(XmrWindow *window)
 	}
 	else
 	{
-		// user not login
-		// invalid radio url
-		// -> switch to default radio
-		if (priv->radio_type != 2 && radio_url && *radio_url != 0)
+		// load last radio
+		if (priv->radio_type == Radio_Type_Custom && radio_url && *radio_url != 0)
 		{
 			priv->playlist_url = g_strdup(radio_url);
 			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), radio_name);
 		}
-		else
+		else // switch to default radio
 		{
 			priv->playlist_url = g_strdup(DEFAULT_RADIO_URL);
-			priv->radio_type = 2;
+			priv->radio_type = Radio_Type_Custom;
 			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), DEFAULT_RADIO_NAME);
 		}
 
@@ -2549,7 +2575,7 @@ load_radio(XmrWindow *window)
 				XmrRadio *xmr_radio = xmr_radio_new_with_info(radio_info->logo,
 							radio_info->name, radio_info->url);
 
-				xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[i]), xmr_radio);
+				xmr_chooser_append(XMR_CHOOSER(priv->chooser[i]), GTK_WIDGET(xmr_radio));
 
 				p = p->next;
 			}
@@ -2791,9 +2817,9 @@ change_radio(XmrWindow *window,
 
 	priv->playlist_url = (url == NULL ? NULL : g_strdup(url));
 
-	if (priv->radio_type == 0)
+	if (priv->radio_type == Radio_Type_MyRadio)
 		radio_name = radio_names[0];
-	else if (priv->radio_type == 1)
+	else if (priv->radio_type == Radio_Type_XMGuess)
 		radio_name = radio_names[1];
 
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), radio_name);
@@ -2819,7 +2845,7 @@ on_login_dialog_button_login_clicked(GtkButton *button,
 					_("Logout")) == 0)
 	{
 		xmr_window_logout(window);
-		priv->radio_type = 2;
+		priv->radio_type = Radio_Type_Custom;
 		change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
 
 		return FALSE;
@@ -3206,6 +3232,30 @@ xmr_window_is_current_song_marked(XmrWindow *window)
 	return xmr_button_is_toggled(XMR_BUTTON(window->priv->buttons[BUTTON_LIKE]));
 }
 
+void
+xmr_window_search_radio(XmrWindow *window)
+{
+	XmrWindowPrivate *priv;
+	g_return_if_fail(window != NULL);
+	priv = window->priv;
+	
+	if (priv->radio_search_box == NULL)
+		priv->radio_search_box = xmr_search_box_new(GTK_WINDOW(window));
+	
+	xmr_search_box_show(XMR_SEARCH_BOX(priv->radio_search_box));
+}
+
+void
+xmr_window_play_custom_radio(XmrWindow *window,
+							 const gchar *name,
+							 const gchar *url)
+{
+	g_return_if_fail(window != NULL);
+
+	window->priv->radio_type = Radio_Type_Custom;
+	change_radio(window, name, url);
+}
+
 static gboolean
 show_message_idle(XmrWindow *window)
 {
@@ -3241,7 +3291,7 @@ login_finish(XmrWindow *window,
 
 		if (g_list_length(priv->playlist) == 0)
 		{
-			if (priv->radio_type != 2) {
+			if (priv->radio_type != Radio_Type_Custom) {
 				change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
 			}
 		}
@@ -3269,11 +3319,11 @@ login_finish(XmrWindow *window,
 			if (g_strcmp0(priv->playlist_url, radio_url) != 0)
 			{
 				if (radio_url && *radio_url != 0)
-					priv->radio_type = 2;
+					priv->radio_type = Radio_Type_Custom;
 				else if (g_strcmp0(radio_name, radio_names[0]) == 0)
-					priv->radio_type = 0;
+					priv->radio_type = Radio_Type_MyRadio;
 				else if (g_strcmp0(radio_name, radio_names[1]) == 0)
-					priv->radio_type = 1;
+					priv->radio_type = Radio_Type_XMGuess;
 				change_radio(window, radio_name, radio_url);
 			}
 			g_free(radio_name);
@@ -3293,9 +3343,9 @@ on_logout(XmrWindow *window)
 	gtk_widget_hide(window->priv->menu_logout);
 	gtk_widget_show(window->priv->menu_login);
 
-	if (window->priv->radio_type != 2)
+	if (window->priv->radio_type != Radio_Type_Custom)
 	{
-		window->priv->radio_type = 2;
+		window->priv->radio_type = Radio_Type_Custom;
 		change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
 	}
 }
@@ -3564,7 +3614,7 @@ xmr_event_poll(XmrWindow *window)
 				break;
 
 			xmr_radio = xmr_radio_new_with_info(radio->uri, radio->info->name, radio->info->url);
-			xmr_radio_chooser_append(XMR_RADIO_CHOOSER(priv->chooser[radio->idx]), xmr_radio);
+			xmr_chooser_append(XMR_CHOOSER(priv->chooser[radio->idx]), GTK_WIDGET(xmr_radio));
 
 			g_free(radio->uri);
 			radio_info_free(radio->info);
