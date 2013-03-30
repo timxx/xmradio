@@ -40,3 +40,9 @@ sudo apt-add-repository ppa:timxx/xmradio
 sudo apt-get update
 
 sudo apt-get install xmradio
+
+* Arch Linux
+
+[Install from cuihao's AUR](https://aur.archlinux.org/packages/xmradio-git/)
+
+yaourt -S xmradio-git
