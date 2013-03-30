@@ -429,6 +429,9 @@ xmr_search_box_finalize(GObject *obj)
 	g_async_queue_unref(priv->event_queue);
 	if (priv->event_idle_id != 0)
 		g_source_remove(priv->event_idle_id);
+	
+	if (priv->progress_idle_id != 0)
+		g_source_remove(priv->progress_idle_id);
 
 	G_OBJECT_CLASS(xmr_search_box_parent_class)->finalize(obj);
 }
@@ -521,6 +524,7 @@ xmr_search_box_init(XmrSearchBox *box)
 	priv->chooser = XMR_CHOOSER(xmr_chooser_new(_("Artist Radio"), GTK_ORIENTATION_VERTICAL));
 	priv->event_queue = g_async_queue_new();
 	priv->event_idle_id = 0;
+	priv->progress_idle_id = 0;
 	
 	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
 	gtk_container_add(GTK_CONTAINER(box), vbox);
