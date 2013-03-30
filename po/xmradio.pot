@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: xmradio 0.4.0\n"
+"Project-Id-Version: xmradio 0.4.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-02-12 14:59+0800\n"
+"POT-Creation-Date: 2013-03-30 15:06+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,53 +51,6 @@ msgstr ""
 msgid "Hate"
 msgstr ""
 
-#: plugins/autocollect/xmr-auto-collect.ui:61
-msgid "Auto Like when play time percentage greater than"
-msgstr ""
-
-#: plugins/autocollect/xmr-auto-collect.ui:138
-msgid "Auto Hate when play time percentage little than"
-msgstr ""
-
-#: plugins/autocollect/xmr-auto-collect.ui:199
-msgid "<b>You need to loggin before use this plugin</b>"
-msgstr ""
-
-#: data/ui/login.ui:7
-msgid "Login Info"
-msgstr ""
-
-#: data/ui/login.ui:37 src/xmrwindow.c:2272 src/xmrwindow.c:2749
-#: src/xmrwindow.c:2841
-msgid "Login"
-msgstr ""
-
-#: data/ui/login.ui:74
-msgid "User Name:"
-msgstr ""
-
-#: data/ui/login.ui:87
-msgid "Password:"
-msgstr ""
-
-#: data/ui/login.ui:140
-msgid "Auto Login"
-msgstr ""
-
-#: data/ui/about.ui:7
-msgid "About"
-msgstr ""
-
-#: data/ui/about.ui:12
-msgid "Copyright @ 2012-2013 Weitian Leung"
-msgstr ""
-
-#: data/ui/about.ui:13
-msgid ""
-"XMRadio is a kind of Network Music Player for Linux\n"
-"For more information see www.xiami.com/radio"
-msgstr ""
-
 #: data/ui/pref.ui:36
 msgid "Version: "
 msgstr ""
@@ -118,15 +71,51 @@ msgstr ""
 msgid "Preferences"
 msgstr ""
 
-#: src/xmrplayer.c:361
-msgid "Failed to create playbin2 element; check your GStreamer installation"
+#: data/ui/about.ui:7
+msgid "About"
 msgstr ""
 
-#: src/main.c:115
-#, c-format
+#: data/ui/about.ui:12
+msgid "Copyright @ 2012-2013 Weitian Leung"
+msgstr ""
+
+#: data/ui/about.ui:13
 msgid ""
-"%s\n"
-"Run '%s --help' to see a full list of available command line options.\n"
+"XMRadio is a kind of Network Music Player for Linux\n"
+"For more information see www.xiami.com/radio"
+msgstr ""
+
+#: data/ui/login.ui:7
+msgid "Login Info"
+msgstr ""
+
+#: data/ui/login.ui:37 src/xmrwindow.c:2291 src/xmrwindow.c:2775
+#: src/xmrwindow.c:2867
+msgid "Login"
+msgstr ""
+
+#: data/ui/login.ui:74
+msgid "User Name:"
+msgstr ""
+
+#: data/ui/login.ui:87
+msgid "Password:"
+msgstr ""
+
+#: data/ui/login.ui:140
+msgid "Auto Login"
+msgstr ""
+
+#: plugins/autocollect/xmr-auto-collect.ui:61
+msgid "Auto Like when play time percentage greater than"
+msgstr ""
+
+#: plugins/autocollect/xmr-auto-collect.ui:138
+msgid "Auto Hate when play time percentage little than"
+msgstr ""
+
+#: plugins/autocollect/xmr-auto-collect.ui:199
+msgid "<b>You need to loggin before use this plugin</b>"
 msgstr ""
 
 #: src/xmrlist.c:226
@@ -157,12 +146,98 @@ msgstr ""
 msgid "From"
 msgstr ""
 
-#: src/xmrlist.c:408 src/xmrwindow.c:2251
+#: src/xmrlist.c:408 src/xmrwindow.c:2270
 msgid "Playlist"
 msgstr ""
 
 #: src/xmrlist.c:408
 msgid "Search result"
+msgstr ""
+
+#: src/main.c:119
+#, c-format
+msgid ""
+"%s\n"
+"Run '%s --help' to see a full list of available command line options.\n"
+msgstr ""
+
+#: src/xmrwindow.c:55
+msgid "新歌电台"
+msgstr ""
+
+#: src/xmrwindow.c:57
+msgid "Login..."
+msgstr ""
+
+#: src/xmrwindow.c:58
+msgid "Buffering..."
+msgstr ""
+
+#: src/xmrwindow.c:59
+msgid "Getting playlist..."
+msgstr ""
+
+#: src/xmrwindow.c:916
+msgid "Music search ..."
+msgstr ""
+
+#: src/xmrwindow.c:925
+msgid "风格电台"
+msgstr ""
+
+#: src/xmrwindow.c:926
+msgid "星座电台"
+msgstr ""
+
+#: src/xmrwindow.c:927
+msgid "年代电台"
+msgstr ""
+
+#: src/xmrwindow.c:990
+msgid "XMRadio"
+msgstr ""
+
+#: src/xmrwindow.c:2243 src/xmrwindow.c:2319
+msgid "_Gtk Theme"
+msgstr ""
+
+#: src/xmrwindow.c:2250
+msgid "_Skin"
+msgstr ""
+
+#: src/xmrwindow.c:2264
+msgid "_Radio"
+msgstr ""
+
+#: src/xmrwindow.c:2295 src/xmrwindow.c:2845
+msgid "Logout"
+msgstr ""
+
+#: src/xmrwindow.c:2702
+msgid "Skin"
+msgstr ""
+
+#: src/xmrwindow.c:2707
+msgid "Plugins"
+msgstr ""
+
+#: src/xmrwindow.c:2712 src/xmrwindow.c:2990
+msgid "Gtk Theme"
+msgstr ""
+
+#: src/xmrwindow.c:2866
+msgid "User name and password may not empty"
+msgstr ""
+
+#: src/xmrwindow.c:3286
+#, c-format
+msgid ""
+"Login failed:\n"
+"%s"
+msgstr ""
+
+#: src/xmrwindow.c:3289
+msgid "Login Status"
 msgstr ""
 
 #: src/xmrdownloader.c:184
@@ -179,83 +254,28 @@ msgstr ""
 msgid "curl_easy_perform failed: %s"
 msgstr ""
 
-#: src/xmrwindow.c:52
-msgid "新歌电台"
+#: src/xmrplayer.c:361
+msgid "Failed to create playbin2 element; check your GStreamer installation"
 msgstr ""
 
-#: src/xmrwindow.c:54
-msgid "Login..."
+#: src/xmrsearchbox.c:134
+msgid "Oops! Not found any related artist."
 msgstr ""
 
-#: src/xmrwindow.c:55
-msgid "Buffering..."
+#: src/xmrsearchbox.c:138
+msgid "Oops! Network error."
 msgstr ""
 
-#: src/xmrwindow.c:56
-msgid "Getting playlist..."
+#: src/xmrsearchbox.c:524 src/xmrsearchbox.c:611
+msgid "Artist Radio"
 msgstr ""
 
-#: src/xmrwindow.c:908
-msgid "Music search ..."
+#: src/xmrsearchbox.c:536
+msgid "Enter artist name..."
 msgstr ""
 
-#: src/xmrwindow.c:917
-msgid "风格电台"
-msgstr ""
-
-#: src/xmrwindow.c:918
-msgid "星座电台"
-msgstr ""
-
-#: src/xmrwindow.c:919
-msgid "年代电台"
-msgstr ""
-
-#: src/xmrwindow.c:982
-msgid "XMRadio"
-msgstr ""
-
-#: src/xmrwindow.c:2224 src/xmrwindow.c:2300
-msgid "_Gtk Theme"
-msgstr ""
-
-#: src/xmrwindow.c:2231
-msgid "_Skin"
-msgstr ""
-
-#: src/xmrwindow.c:2245
-msgid "_Radio"
-msgstr ""
-
-#: src/xmrwindow.c:2276 src/xmrwindow.c:2819
-msgid "Logout"
-msgstr ""
-
-#: src/xmrwindow.c:2676
-msgid "Skin"
-msgstr ""
-
-#: src/xmrwindow.c:2681
-msgid "Plugins"
-msgstr ""
-
-#: src/xmrwindow.c:2686 src/xmrwindow.c:2964
-msgid "Gtk Theme"
-msgstr ""
-
-#: src/xmrwindow.c:2840
-msgid "User name and password may not empty"
-msgstr ""
-
-#: src/xmrwindow.c:3228
-#, c-format
-msgid ""
-"Login failed:\n"
-"%s"
-msgstr ""
-
-#: src/xmrwindow.c:3231
-msgid "Login Status"
+#: src/xmrsearchbox.c:540
+msgid "Search Artist Radio"
 msgstr ""
 
 #: plugins/xmsearch/xmsearch.c:131
