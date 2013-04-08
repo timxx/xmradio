@@ -15,13 +15,11 @@ See src/lib/xmrservice.c for more details
 
 Dependencies see: debian/control (DEB) and opensuse/xmradio.spec (RPM)
 
-cd PROJECT_DIR
-
 mkdir build
 
 cd build
 
-cmake .. -DCMKAE_INSTALL_PREFIX=YOUR_PREFIX OTHER_OPTIONS
+cmake ../SOURCE_CODE_DIR -DCMAKE_INSTALL_PREFIX=YOUR_PREFIX OTHER_OPTIONS
 
 make
 
