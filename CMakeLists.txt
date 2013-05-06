@@ -6,6 +6,12 @@ set(version 0.4.2)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+# Default build type set to Release
+# to avoid auto build system
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 # uninstall target
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
@@ -16,7 +22,6 @@ add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 option(NLS	"Native language support"  ON)
-option(DEBUG "Generate debug information" OFF)
 option(WARN_AS_ERROR "Warning as error" ON)
 option(BUILD_TEST "Build tests" OFF)
 
@@ -68,12 +73,10 @@ if (WARN_AS_ERROR)
 	set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
 endif(WARN_AS_ERROR)
 
-if (DEBUG)
+message("Build type: ${CMAKE_BUILD_TYPE}")
+if (CMAKE_BUILD_TYPE EQUAL "Debug")
 	set(_DEBUG TRUE)
-	set(CMAKE_C_FLAGS "-g ${CMAKE_C_FLAGS}")
-else (DEBUG)
-	set(CMAKE_C_FLAGS "-s -O2 ${CMAKE_C_FLAGS}")
-endif(DEBUG)
+endif()
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
