@@ -3,3 +3,4 @@ foreach(size 16 22 24 32 48 64 128 256)
 		PATTERN .* EXCLUDE
 		PATTERN *~ EXCLUDE)
 endforeach(size 16 22 24 32 48 64 128 256)
+install(DIRECTORY scalable DESTINATION ${prefix}/share/icons/hicolor)
