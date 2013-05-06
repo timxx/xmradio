@@ -82,9 +82,7 @@ configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
 
 include_directories(${PROJECT_BINARY_DIR})
 
-add_subdirectory(cmake)
 add_subdirectory(data)
-add_subdirectory(doc)
 add_subdirectory(po)
 add_subdirectory(src)
 add_subdirectory(plugins)
