@@ -24,6 +24,7 @@ add_custom_target(uninstall
 option(NLS	"Native language support"  ON)
 option(WARN_AS_ERROR "Warning as error" ON)
 option(BUILD_TEST "Build tests" OFF)
+option(ENABLE_ASAN "Build with Address-Sanitizer if gcc >= 4.8 or clang >= 3.1" OFF)
 
 include(CheckIncludeFiles)
 include(FindPkgConfig)
@@ -72,6 +73,24 @@ set(PLUGIN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/plugins)
 if (WARN_AS_ERROR)
 	set(CMAKE_C_FLAGS "-Wall -Werror ${CMAKE_C_FLAGS}")
 endif(WARN_AS_ERROR)
+
+if (ENABLE_ASAN)
+	if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU")
+		execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+			OUTPUT_VARIABLE GCC_VERSION)
+		if (GCC_VERSION VERSION_LESS 4.8)
+			message(WARNING "Your gcc version may not use Address-Sanitizer")
+		endif()
+		set(CMAKE_C_FLAGS "-fsanitize=address -fno-omit-frame-pointer ${CMAKE_C_FLAGS}")
+	elseif (${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
+		execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+			OUTPUT_VARIABLE CLANG_VERSION)
+		if (CLANG_VERSION VERSION_LESS 3.1)
+			message(WARNING "Your clang version may not use Address-Sanitizer")
+		endif()
+		set(CMAKE_C_FLAGS "-fsanitize=address -fno-omit-frame-pointer ${CMAKE_C_FLAGS}")
+	endif()
+endif(ENABLE_ASAN)
 
 message("Build type: ${CMAKE_BUILD_TYPE}")
 if (CMAKE_BUILD_TYPE EQUAL "Debug")
