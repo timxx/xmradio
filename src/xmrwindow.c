@@ -229,6 +229,8 @@ struct _XmrWindowPrivate
 	GtkWidget *xmr_searchlist;
 	
 	GtkWidget *radio_search_box; /* for search artist radio */
+	
+	gboolean use_gst_buffering;
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -628,6 +630,11 @@ update_playlist_menu_items(XmrWindow *window);
 static void
 on_playlist_changed(XmrWindow *window, gpointer data);
 
+static void
+on_settings_changed(GSettings *settings,
+					const char *key,
+					XmrWindow *window);
+
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -880,6 +887,7 @@ xmr_window_init(XmrWindow *window)
 	priv->queue_event = g_async_queue_new();
 	priv->xmr_event_timer = g_timeout_add(XMR_EVENT_INTERVAL, (GSourceFunc)xmr_event_poll, window);
 	priv->buffering_timer = 0;
+	priv->use_gst_buffering = FALSE;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -925,6 +933,8 @@ xmr_window_init(XmrWindow *window)
 	priv->chooser[0] = xmr_chooser_new(_("风格电台"), GTK_ORIENTATION_HORIZONTAL);
 	priv->chooser[1] = xmr_chooser_new(_("星座电台"), GTK_ORIENTATION_HORIZONTAL);
 	priv->chooser[2] = xmr_chooser_new(_("年代电台"), GTK_ORIENTATION_HORIZONTAL);
+
+	g_signal_connect(priv->settings, "changed", G_CALLBACK(on_settings_changed), window);
 
 	g_signal_connect(window, "draw", G_CALLBACK(on_draw), NULL);
 	g_signal_connect(window, "button-press-event", G_CALLBACK(on_button_press), NULL);
@@ -2146,7 +2156,6 @@ xmr_window_play_next(XmrWindow *window)
 	XmrWindowPrivate *priv;
 	gpointer data;
 	SongInfo *song;
-	gchar *file;
 
 	g_return_if_fail( window != NULL );
 	priv = window->priv;
@@ -2178,24 +2187,34 @@ xmr_window_play_next(XmrWindow *window)
 	song = (SongInfo *)priv->playlist->data;
 	priv->current_song = song_info_copy(song);
 
-	file = make_track_file(song);
-
-	if (is_track_downloaded(song))
+	// using gstreamer buffering
+	if (priv->use_gst_buffering)
 	{
-		xmr_debug("play next song: %s", file);
-		xmr_player_open(priv->player, file, NULL);
+		xmr_debug("play next song: %s", song->song_name);
+		xmr_player_open(priv->player, song->location, NULL);
 		xmr_player_play(priv->player);
 	}
 	else
 	{
-		xmr_downloader_add_task(priv->downloader, song->location, file);
-		start_buffering_timer(window);
+		gchar *file = make_track_file(song);
+	
+		if (is_track_downloaded(song))
+		{
+			xmr_debug("play next song: %s", file);
+			xmr_player_open(priv->player, file, NULL);
+			xmr_player_play(priv->player);
+		}
+		else
+		{
+			xmr_downloader_add_task(priv->downloader, song->location, file);
+			start_buffering_timer(window);
+		}
+
+		g_free(file);
 	}
 
 	xmr_window_set_track_info(window);
 	g_signal_emit(window, signals[TRACK_CHANGED], 0, priv->current_song);
-
-	g_free(file);
 
 	// get new playlist if only one song in playlist
 	if (g_list_length(priv->playlist) > 1)
@@ -2434,6 +2453,8 @@ load_settings(XmrWindow *window)
 	priv->skin = xmr_settings_get_theme(priv->settings);
 
 	load_skin(window);
+	
+	priv->use_gst_buffering = g_settings_get_boolean(G_SETTINGS(priv->settings), "gst-buffering");
 
 	xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
 	if (g_strcmp0(radio_names[0], radio_name) == 0)
@@ -2705,6 +2726,13 @@ init_pref_window(XmrWindow *window,
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
 				gtk_label_new(_("Plugins")));
+	
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "box_other"));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
+							 gtk_label_new(_("Other")));
+	
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cbUseGstBuffering"));
+	g_settings_bind(G_SETTINGS(priv->settings), "gst-buffering", widget, "active", G_SETTINGS_BIND_DEFAULT);
 
 	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
 	if (widget)
@@ -3374,18 +3402,28 @@ fetch_playlist_finish(XmrWindow *window,
 		if (g_list_length(priv->playlist) > 0)
 		{
 			SongInfo *song;
-			gchar *file;
 
 			song = priv->playlist->data;
 			song_info_free(priv->current_song);
 			priv->current_song = song_info_copy(song);
 
-			file = make_track_file(song);
-
-			xmr_downloader_add_task(priv->downloader, song->location, file);
-			g_free(file);
-
-			start_buffering_timer(window);
+			if (priv->use_gst_buffering)
+			{
+				xmr_debug("play song: %s", song->song_name);
+				xmr_player_open(priv->player, song->location, NULL);
+				xmr_player_play(priv->player);
+				
+				xmr_window_set_track_info(window);
+			}
+			else
+			{
+				gchar *file = make_track_file(song);
+	
+				xmr_downloader_add_task(priv->downloader, song->location, file);
+				g_free(file);
+	
+				start_buffering_timer(window);
+			}
 		}
 	}
 }
@@ -3662,6 +3700,9 @@ buffering_timeout(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 
+	if (priv->use_gst_buffering)
+		return FALSE;
+
 	if (!xmr_window_playing(window))
 	{
 		if (priv->current_song != NULL && is_track_downloaded(priv->current_song))
@@ -3820,4 +3861,15 @@ static void
 on_playlist_changed(XmrWindow *window, gpointer data)
 {
 	update_playlist_menu_items(window);
+}
+
+static void
+on_settings_changed(GSettings *settings,
+					const char *key,
+					XmrWindow *window)
+{
+	if (g_strcmp0(key, "gst-buffering") == 0)
+	{
+		window->priv->use_gst_buffering = g_settings_get_boolean(settings, key);
+	}
 }
