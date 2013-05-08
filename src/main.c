@@ -171,7 +171,7 @@ int main(int argc, char **argv)
 
 	// ensure folder exists
 	tmp_dir = g_strdup_printf("%s/%s", g_get_tmp_dir(), PACKAGE);
-	g_mkdir_with_parents(tmp_dir, 0755);
+	g_mkdir_with_parents(tmp_dir, 0777);
 
 	app = xmr_app_instance();
 
