@@ -254,6 +254,7 @@ impl_deactivate(PeasActivatable *activatable)
 	
 	if (plugin->settings != NULL)
 	{
+		g_signal_handlers_disconnect_by_func(plugin->settings, G_CALLBACK(on_settings_changed), plugin);
 		g_object_unref(plugin->settings);
 		plugin->settings = NULL;
 	}

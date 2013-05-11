@@ -1,7 +1,7 @@
 /** 
  * xmr-notification-plugin.c
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -118,7 +118,10 @@ impl_deactivate(PeasActivatable *activatable)
 	if (window)
 	{
 		g_signal_handlers_disconnect_by_func(window,
-					track_changed, plugin);
+				G_CALLBACK(track_changed), plugin);
+
+		g_signal_handlers_disconnect_by_func(window,
+				G_CALLBACK(cover_image_changed), plugin);
 
 		g_object_unref(window);
 	}
