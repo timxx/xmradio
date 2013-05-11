@@ -1,7 +1,7 @@
 /** 
  * xmr-indicator-plugin.c
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -260,6 +260,7 @@ impl_deactivate(PeasActivatable *activatable)
 
 	plugin = XMR_INDICATOR_PLUGIN(activatable);
 
+	window = plugin->window;
 	if (window)
 	{
 		g_object_get(window, "player", &player, NULL);
