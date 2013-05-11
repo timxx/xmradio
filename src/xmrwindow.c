@@ -3433,6 +3433,7 @@ fetch_playlist_finish(XmrWindow *window,
 				xmr_player_play(priv->player);
 				
 				xmr_window_set_track_info(window);
+				g_signal_emit(window, signals[TRACK_CHANGED], 0, priv->current_song);
 			}
 			else
 			{
