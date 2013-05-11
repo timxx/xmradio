@@ -1008,47 +1008,6 @@ xmr_window_dispose(GObject *obj)
 	XmrWindow *window = XMR_WINDOW(obj);
 	XmrWindowPrivate *priv = window->priv;
 
-	if (priv->player != NULL)
-	{
-		g_object_unref(priv->player);
-		priv->player = NULL;
-	}
-	if (priv->service != NULL)
-	{
-		g_object_unref(priv->service);
-		priv->service = NULL;
-	}
-
-	if (priv->ui_pref)
-	{
-		g_object_unref(priv->ui_pref);
-		priv->ui_pref = NULL;
-	}
-
-	if (priv->ui_login)
-	{
-		g_object_unref(priv->ui_login);
-		priv->ui_login = NULL;
-	}
-
-	if (priv->pb_cover)
-	{
-		g_object_unref(priv->pb_cover);
-		priv->pb_cover = NULL;
-	}
-
-	if (priv->extensions != NULL)
-	{
-		g_object_unref (priv->extensions);
-		priv->extensions = NULL;
-	}
-
-	if (priv->downloader)
-	{
-		g_object_unref(priv->downloader);
-		priv->downloader = NULL;
-	}
-
 	if (priv->queue_fetch_playlist)
 	{
 		while (g_async_queue_try_pop(priv->queue_fetch_playlist) != NULL)
@@ -1087,6 +1046,66 @@ xmr_window_dispose(GObject *obj)
 	}
 
 	peas_engine_garbage_collect(PEAS_ENGINE(priv->plugin_engine));
+	
+	if (priv->extensions != NULL)
+	{
+		g_object_unref (priv->extensions);
+		priv->extensions = NULL;
+	}
+
+	if (priv->ui_pref)
+	{
+		g_object_unref(priv->ui_pref);
+		priv->ui_pref = NULL;
+	}
+
+	if (priv->ui_login)
+	{
+		g_object_unref(priv->ui_login);
+		priv->ui_login = NULL;
+	}
+
+	if (priv->pb_cover)
+	{
+		g_object_unref(priv->pb_cover);
+		priv->pb_cover = NULL;
+	}
+
+	if (priv->downloader)
+	{
+		g_signal_handlers_disconnect_by_func(priv->downloader, G_CALLBACK(download_finish), window);
+		g_signal_handlers_disconnect_by_func(priv->downloader, G_CALLBACK(download_progress), window);
+		g_signal_handlers_disconnect_by_func(priv->downloader, G_CALLBACK(download_failed), window);
+
+		g_object_unref(priv->downloader);
+		priv->downloader = NULL;
+	}
+
+	if (priv->settings)
+	{
+		g_signal_handlers_disconnect_by_func(priv->settings, G_CALLBACK(on_settings_changed), window);
+		g_object_unref(priv->settings);
+		priv->settings = NULL;
+	}
+
+	if (priv->player != NULL)
+	{
+		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_eos), window);
+		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_error), window);
+		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_tick), window);
+		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_buffering), window);
+		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_state_changed), window);
+		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_volume_changed), window);
+
+		g_object_unref(priv->player);
+		priv->player = NULL;
+	}
+
+	if (priv->service != NULL)
+	{
+		g_object_unref(priv->service);
+		priv->service = NULL;
+	}
 
 	G_OBJECT_CLASS(xmr_window_parent_class)->dispose(obj);
 }
