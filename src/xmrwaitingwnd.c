@@ -284,7 +284,9 @@ xmr_waiting_wnd_show(XmrWaitingWnd *wnd)
 	
 	// only do this when parent visible
 	gdk_window = gtk_widget_get_window(GTK_WIDGET(wnd->priv->parent));
-	is_iconify = gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_ICONIFIED;
+
+	if (gdk_window)
+		is_iconify = gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_ICONIFIED;
 
 	if (!is_iconify && gtk_widget_get_visible(GTK_WIDGET(wnd->priv->parent)))
 	{
