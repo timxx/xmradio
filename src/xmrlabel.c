@@ -2,7 +2,7 @@
  * xmrlabel.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -134,18 +134,18 @@ xmr_label_realize(GtkWidget *widget)
 	GdkWindow *window;
 	GdkWindowAttr attributes;
 	gint attributes_mask;
-	cairo_pattern_t *pattern;
 
 	gtk_widget_set_realized(widget, TRUE);
 
 	if (!gtk_widget_get_has_window(widget))
-    {
+	{
 		window = gtk_widget_get_parent_window(widget);
 		gtk_widget_set_window(widget, window);
 		g_object_ref(window);
-    }
+	}
 	else
-    {
+	{
+		GdkRGBA rgba = { 0 };
 		gtk_widget_get_allocation(widget, &allocation);
 
 		attributes.window_type = GDK_WINDOW_CHILD;
@@ -162,10 +162,8 @@ xmr_label_realize(GtkWidget *widget)
 		gtk_widget_set_window(widget, window);
 		gdk_window_set_user_data(window, widget);
 
-		pattern = cairo_pattern_create_rgba(0, 0, 0, 0);
-		gdk_window_set_background_pattern(window, pattern);
-		cairo_pattern_destroy(pattern);
-    }
+		gdk_window_set_background_rgba(window, &rgba);
+	}
 }
 
 static void
@@ -206,6 +204,18 @@ xmr_label_draw(GtkWidget *widget, cairo_t *cr)
 
 	if (!priv->text || priv->text[0] == '\0')
 		return FALSE;
+	
+	// FIXME:
+	// why always need to set background rgba to
+	// make it transparency
+	{
+		GdkRGBA rgba = { 0 };
+		GdkWindow *window;
+	
+		window = gtk_widget_get_window(widget);
+		if (window)
+			gdk_window_set_background_rgba(window, &rgba);
+	}
 
 	xmr_label_ensure_layout(label);
 
