@@ -154,6 +154,8 @@ int main(int argc, char **argv)
 
 		send_action(bus, player_action);
 
+		xmr_utils_cleanup();
+
 		// exit directly
 		return 0;
 	}
@@ -170,7 +172,11 @@ int main(int argc, char **argv)
 				NULL);
 
 	// ensure folder exists
-	tmp_dir = g_strdup_printf("%s/%s", g_get_tmp_dir(), PACKAGE);
+	tmp_dir = g_strdup_printf("%s/%s-%s",
+							  g_get_tmp_dir(),
+							  PACKAGE,
+							  g_get_real_name());
+
 	g_mkdir_with_parents(tmp_dir, 0777);
 
 	app = xmr_app_instance();
@@ -184,6 +190,7 @@ int main(int argc, char **argv)
 	g_object_unref(app);
 
 	curl_global_cleanup();
+	xmr_utils_cleanup();
 
 	return 0;
 }

@@ -5,6 +5,7 @@ project(xmradio)
 set(version 0.4.2)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+include(cmake/macro.cmake)
 
 # Default build type set to Release
 # to avoid auto build system
@@ -97,8 +98,9 @@ if (CMAKE_BUILD_TYPE EQUAL "Debug")
 	set(_DEBUG TRUE)
 endif()
 
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
+set(XMR_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/output)
+set(EXECUTABLE_OUTPUT_PATH ${XMR_OUTPUT_PATH})
+set(LIBRARY_OUTPUT_PATH ${XMR_OUTPUT_PATH})
 
 configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
 
