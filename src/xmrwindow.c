@@ -2527,6 +2527,14 @@ load_skin(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 	gchar *skin_dir;
+	
+	// load application location
+	skin_dir = g_strdup_printf("%s/skin", xmr_app_dir());
+	if (skin_dir)
+	{
+		list_file(skin_dir, FALSE, append_skin, &priv->skin_list);
+		g_free(skin_dir);
+	}
 
 	// load user config location
 	skin_dir = g_strdup_printf("%s/skin", xmr_config_dir());
