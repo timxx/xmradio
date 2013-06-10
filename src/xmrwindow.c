@@ -445,7 +445,8 @@ static void
 append_skin_to_pref(XmrWindow *window, SkinInfo *info);
 
 static GtkBuilder *
-create_builder_with_file(const gchar *file);
+create_builder_with_file(const gchar *path,
+						 const gchar *filename);
 
 static void
 init_pref_window(XmrWindow *window,
@@ -845,7 +846,7 @@ xmr_window_init(XmrWindow *window)
 	priv->settings = xmr_settings_new();
 	priv->skin_list = NULL;
 	priv->skin_item_group = NULL;
-	priv->ui_pref = create_builder_with_file(UIDIR"/pref.ui");
+	priv->ui_pref = create_builder_with_file(UIDIR, "pref.ui");
 	priv->ui_login = NULL;
 	priv->usr = NULL;
 	priv->pwd = NULL;
@@ -2377,7 +2378,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 
 		if (dialog_about == NULL)
 		{
-			builder = create_builder_with_file(UIDIR"/about.ui");
+			builder = create_builder_with_file(UIDIR, "about.ui");
 			if (builder == NULL)
 			{
 				g_warning("Missing about.ui file!\n");
@@ -2719,16 +2720,30 @@ append_skin_to_pref(XmrWindow *window, SkinInfo *info)
 }
 
 static GtkBuilder *
-create_builder_with_file(const gchar *file)
+create_builder_with_file(const gchar *path,
+						 const gchar *filename)
 {
 	GtkBuilder *builder = NULL;
+	gchar *filePath;
 
 	builder = gtk_builder_new();
 	g_return_val_if_fail(builder != NULL, NULL);
+	
+	filePath = g_build_filename(xmr_app_dir(), "ui", filename, NULL);
 
 	gtk_builder_set_translation_domain(builder, GETTEXT_PACKAGE);
-	gtk_builder_add_from_file(builder, file, NULL);
+	
+	// always try to load from application dir first
+	if (gtk_builder_add_from_file(builder, filePath, NULL) == 0)
+	{
+		g_free(filePath);
+		filePath = g_build_filename(path, filename, NULL);
+		gtk_builder_add_from_file(builder, filePath, NULL);
+	}
+
 	gtk_builder_connect_signals(builder, NULL);
+	
+	g_free(filePath);
 
 	return builder;
 }
@@ -2780,7 +2795,7 @@ init_login_dialog(XmrWindow *window)
 	GtkWidget *entry_usr, *entry_pwd;
 	GtkWidget *checkbox;
 
-	priv->ui_login = create_builder_with_file(UIDIR"/login.ui");
+	priv->ui_login = create_builder_with_file(UIDIR, "login.ui");
 	g_return_if_fail(priv->ui_login != NULL);
 
 	priv->dialog_login = GTK_WIDGET(gtk_builder_get_object(priv->ui_login, "dialog_login"));
