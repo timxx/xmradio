@@ -79,6 +79,9 @@ send_action(DBusConnection *bus, PlayerAction action);
 static void
 remove_file(const gchar *file, gpointer data);
 
+static void
+init_icon_theme();
+
 int main(int argc, char **argv)
 {
 	XmrApp *app;
@@ -181,6 +184,8 @@ int main(int argc, char **argv)
 
 	app = xmr_app_instance();
 
+	init_icon_theme();
+
 	g_application_run(G_APPLICATION(app), argc, argv);
 
 	// remove ...
@@ -218,4 +223,16 @@ static void
 remove_file(const gchar *file, gpointer data)
 {
 	g_remove(file);
+}
+
+static void
+init_icon_theme()
+{
+	GtkIconTheme *theme = gtk_icon_theme_get_default();
+	gchar *icon_dir = g_build_filename(xmr_app_dir(), "icons", NULL);
+
+	gtk_icon_theme_append_search_path(theme, icon_dir);
+	g_free(icon_dir);
+
+	gtk_icon_theme_append_search_path(theme, DATADIR"/icons");
 }
