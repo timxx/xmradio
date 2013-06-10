@@ -201,9 +201,6 @@ xmr_label_draw(GtkWidget *widget, cairo_t *cr)
 
 	GtkAllocation allocation;
 	gint width, height;
-
-	if (!priv->text || priv->text[0] == '\0')
-		return FALSE;
 	
 	// FIXME:
 	// why always need to set background rgba to
@@ -216,6 +213,9 @@ xmr_label_draw(GtkWidget *widget, cairo_t *cr)
 		if (window)
 			gdk_window_set_background_rgba(window, &rgba);
 	}
+
+	if (!priv->text || priv->text[0] == '\0')
+		return FALSE;
 
 	xmr_label_ensure_layout(label);
 
