@@ -125,12 +125,16 @@ xmr_app_dir()
 	
 	if (g_app_dir == NULL)
 	{
-		gchar *cwd;
-		cwd = g_strdup_printf("/proc/%d/cwd", getpid());
+		gchar *exe;
+		gchar *exefile;
+
+		exe = g_strdup_printf("/proc/%d/exe", getpid());
 		
-		g_app_dir = g_file_read_link(cwd, NULL);
+		exefile = g_file_read_link(exe, NULL);
+		g_app_dir = g_path_get_dirname(exefile);
 		
-		g_free(cwd);
+		g_free(exe);
+		g_free(exefile);
 	}
 	
 	G_UNLOCK(xmr_utils_global);
