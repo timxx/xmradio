@@ -999,6 +999,7 @@ GtkWidget* xmr_window_new()
 	 return g_object_new(XMR_TYPE_WINDOW,
 				"type", GTK_WINDOW_TOPLEVEL,
 				"title", _("XMRadio"),
+				"icon-name", "xmradio",
 				"resizable", FALSE,
 				NULL);
 }

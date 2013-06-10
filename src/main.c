@@ -99,6 +99,16 @@ int main(int argc, char **argv)
 #if !GLIB_CHECK_VERSION(2, 35, 7)
 	g_type_init();
 #endif
+	
+	// to make non-installed schemas loadable
+	{
+		gchar *schema_dir;
+		schema_dir = g_build_filename(xmr_app_dir(), "glib-2.0/schemas", NULL);
+		if (g_file_test(schema_dir, G_FILE_TEST_EXISTS))
+			g_setenv("GSETTINGS_SCHEMA_DIR", schema_dir, TRUE);
+
+		g_free(schema_dir);
+	}
 
 	setlocale(LC_ALL, NULL);
 

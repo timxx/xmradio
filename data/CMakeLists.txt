@@ -26,23 +26,9 @@ set(gsettings_SCHEMAS
 	com.timxx.xmradio.gschema.xml
 )
 
-MACRO(TRANSLATE_XML infile outfile)
-	ADD_CUSTOM_COMMAND(
-		OUTPUT ${outfile}
-		COMMAND ${INTLTOOL_MERGE} -x -u
-		${i18ndir}
-		${infile} ${outfile}
-		DEPENDS ${infile}
-	)
-ENDMACRO(TRANSLATE_XML)
-
-add_custom_target(schemasfile ALL DEPENDS ${gsettings_SCHEMAS})
-# translate_xml(${CMAKE_CURRENT_SOURCE_DIR}/com.timxx.xmradio.gschema.xml.in
-#	${CMAKE_CURRENT_BINARY_DIR}/com.timxx.xmradio.gschema.xml)
-
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/com.timxx.xmradio.gschema.xml
 	DESTINATION ${prefix}/share/glib-2.0/schemas/)
-install(SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/compile-schemas.cmake)
+install(SCRIPT ${XMR_CMAKE_PATH}/compile-schemas.cmake)
 
 install(DIRECTORY ui DESTINATION ${pkgdatadir}
 	PATTERN .* EXCLUDE
@@ -51,3 +37,13 @@ install(DIRECTORY ui DESTINATION ${pkgdatadir}
 # Generate *.ui files to
 # ${XMR_OUTPUT_PATH}/ui
 generate_dirs("ui" "" "ui_data")
+
+# Generate schema files
+generate_files("${gsettings_SCHEMAS}" "glib-2.0/schemas" "schema_data")
+
+find_program(COMPILE_SCHEMA glib-compile-schemas)
+if (COMPILE_SCHEMA)
+	add_custom_command(TARGET schema_data POST_BUILD
+		COMMAND ${COMPILE_SCHEMA} "${XMR_OUTPUT_PATH}/glib-2.0/schemas"
+	)
+endif()
