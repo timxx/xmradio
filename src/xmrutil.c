@@ -25,6 +25,7 @@ G_LOCK_DEFINE_STATIC(xmr_utils_global);
 static gchar *g_config_dir = NULL;
 static gchar *g_cover_dir = NULL;
 static gchar *g_app_dir = NULL;
+static gchar *g_tmp_dir = NULL;
 
 GdkPixbuf *
 gdk_pixbuf_from_memory(const gchar *buffer, gint len)
@@ -142,6 +143,23 @@ xmr_app_dir()
 	return g_app_dir;
 }
 
+const gchar *
+xmr_tmp_dir()
+{
+	G_LOCK(xmr_utils_global);
+	if (g_tmp_dir == 0)
+	{
+		g_tmp_dir = g_strdup_printf("%s/%s-%s",
+									  g_get_tmp_dir(),
+									  PACKAGE,
+									  g_get_user_name());
+		g_mkdir_with_parents(g_tmp_dir, 0755);
+	}
+	G_UNLOCK(xmr_utils_global);
+	
+	return g_tmp_dir;
+}
+
 void
 xmr_message(GtkWidget *parent,
 			const gchar *message,
@@ -186,8 +204,10 @@ xmr_utils_cleanup()
 	g_free(g_config_dir);
 	g_free(g_cover_dir);
 	g_free(g_app_dir);
+	g_free(g_tmp_dir);
 	
 	g_config_dir = NULL;
 	g_cover_dir = NULL;
 	g_app_dir = NULL;
+	g_tmp_dir = NULL;
 }

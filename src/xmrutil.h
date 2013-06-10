@@ -64,6 +64,13 @@ xmr_radio_icon_dir();
 const gchar *
 xmr_app_dir();
 
+/**
+ * return tmp dir
+ */
+const gchar *
+xmr_tmp_dir();
+
+
 void
 xmr_message(GtkWidget *parent,
 			const gchar *message,

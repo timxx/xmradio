@@ -3615,7 +3615,7 @@ make_track_file(SongInfo *track)
 		}
 	}
 
-	file = g_strdup_printf("%s/%s/%s", g_get_tmp_dir(), PACKAGE, name);
+	file = g_strdup_printf("%s/%s", xmr_tmp_dir(), name);
 
 	g_free(name);
 

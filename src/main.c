@@ -88,7 +88,6 @@ int main(int argc, char **argv)
 	GOptionContext *context;
 	GError *error = NULL;
 	PlayerAction player_action = ActionNone;
-	gchar *tmp_dir = NULL;
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_init(NULL);
@@ -184,14 +183,6 @@ int main(int argc, char **argv)
 				"gtk-button-images", TRUE,
 				NULL);
 
-	// ensure folder exists
-	tmp_dir = g_strdup_printf("%s/%s-%s",
-							  g_get_tmp_dir(),
-							  PACKAGE,
-							  g_get_real_name());
-
-	g_mkdir_with_parents(tmp_dir, 0777);
-
 	app = xmr_app_instance();
 
 	init_icon_theme();
@@ -199,9 +190,8 @@ int main(int argc, char **argv)
 	g_application_run(G_APPLICATION(app), argc, argv);
 
 	// remove ...
-	list_file(tmp_dir, FALSE, remove_file, NULL);
+	list_file(xmr_tmp_dir(), FALSE, remove_file, NULL);
 
-	g_free(tmp_dir);
 	g_object_unref(app);
 
 	curl_global_cleanup();
