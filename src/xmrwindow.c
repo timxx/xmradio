@@ -3842,7 +3842,8 @@ static gint
 get_search_box_font_width(GtkWidget *search_box)
 {
 	GtkStyleContext *ctx = gtk_widget_get_style_context(search_box);
-	const PangoFontDescription *desc = gtk_style_context_get_font(ctx, GTK_STATE_FLAG_NORMAL);
+	PangoFontDescription *desc = NULL;
+	gtk_style_context_get(ctx, GTK_STATE_FLAG_NORMAL, "font", &desc, NULL);
 	gint size = pango_font_description_get_size(desc);
 	if (PANGO_SCALE != 0)
 	{

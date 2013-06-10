@@ -212,7 +212,7 @@ xmr_waiting_wnd_init(XmrWaitingWnd *wnd)
 	
 	gtk_widget_set_app_paintable(GTK_WIDGET(wnd), TRUE);
 	gtk_widget_set_size_request(GTK_WIDGET(wnd), WAITING_WND_W, WAITING_WND_H);
-	gtk_window_set_opacity(GTK_WINDOW(wnd), 0.7);
+	gtk_widget_set_opacity(GTK_WIDGET(wnd), 0.7);
 	gtk_window_set_skip_taskbar_hint(GTK_WINDOW(wnd), TRUE);
 	gtk_window_set_decorated(GTK_WINDOW(wnd), FALSE);
 	
