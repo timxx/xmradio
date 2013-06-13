@@ -115,10 +115,15 @@ int main(int argc, char **argv)
 	/* initialize i18n */
 	{
 		gchar *locale_dir = g_build_filename(xmr_app_dir(), "locale", NULL);
-		if (g_file_test(locale_dir, G_FILE_TEST_EXISTS))
+		if (g_file_test(locale_dir, G_FILE_TEST_EXISTS) &&
+			g_file_test(locale_dir, G_FILE_TEST_IS_DIR))
+		{
 			bindtextdomain(GETTEXT_PACKAGE, locale_dir);
+		}
 		else
+		{
 			bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+		}
 		bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
 		
 		g_free(locale_dir);
