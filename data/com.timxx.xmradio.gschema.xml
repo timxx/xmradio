@@ -41,7 +41,7 @@
 			<description>Volume level</description>
 		</key>
 		<key name="gst-buffering" type="b">
-			<default>false</default>
+			<default>true</default>
 			<summary>Use GStreamer buffering</summary>
 			<description>Check this for using GStreamer buffering mode rather than download cache mode</description>
 		</key>
