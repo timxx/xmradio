@@ -201,18 +201,6 @@ xmr_label_draw(GtkWidget *widget, cairo_t *cr)
 
 	GtkAllocation allocation;
 	gint width, height;
-	
-	// FIXME:
-	// why always need to set background rgba to
-	// make it transparency
-	{
-		GdkRGBA rgba = { 0 };
-		GdkWindow *window;
-	
-		window = gtk_widget_get_window(widget);
-		if (window)
-			gdk_window_set_background_rgba(window, &rgba);
-	}
 
 	if (!priv->text || priv->text[0] == '\0')
 		return FALSE;
@@ -291,6 +279,8 @@ xmr_label_init(XmrLabel *label)
 		priv->default_color.alpha = 1.0;
 
 	priv->current_color = gdk_rgba_copy(&priv->default_color);
+	
+	gtk_widget_set_app_paintable(GTK_WIDGET(label), TRUE);
 }
 
 static void
