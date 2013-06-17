@@ -2181,8 +2181,6 @@ xmr_window_play_next(XmrWindow *window)
 	g_return_if_fail( window != NULL );
 	priv = window->priv;
 
-	xmr_player_close(priv->player);
-
 	// change to default cover image first
 	if (priv->pb_cover)
 		set_cover_image(window, priv->pb_cover);
