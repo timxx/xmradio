@@ -63,9 +63,6 @@ G_DEFINE_TYPE(XmrWindow, xmr_window, GTK_TYPE_WINDOW)
 #define COVER_WIDTH	100
 #define COVER_HEIGHT 100
 
-// 512Kb
-#define BUFFERING_FILE_SIZE	(512 * 1024)
-
 enum
 {
 	BUTTON_CLOSE = 0,	// X button
@@ -2225,6 +2222,7 @@ xmr_window_play_next(XmrWindow *window)
 		}
 		else
 		{
+			xmr_player_close(priv->player);
 			xmr_downloader_add_task(priv->downloader, song->location, file);
 			start_buffering_timer(window);
 		}
@@ -3495,20 +3493,34 @@ download_finish(XmrDownloader *downloader,
 	// download next song
 	{
 		GList *p = priv->playlist;
+		gboolean download_flag = FALSE;
 
 		while(p)
 		{
 			SongInfo *song = p->data;
-			gchar *file = make_track_file(song);
+			gchar *track_file = make_track_file(song);
 
-			if (!is_file_exists(file))
+			if (strcmp(file, track_file) == 0 &&
+				strcmp(song->location, url) == 0)
 			{
-				xmr_downloader_add_task(priv->downloader, song->location, file);
-				g_free(file);
-				break;
+				g_free(song->location);
+				song->location = g_strdup(file);
+				
+				if (strcmp(priv->current_song->location, url) == 0 &&
+					strcmp(priv->current_song->song_id, song->song_id) == 0)
+				{
+					g_free(priv->current_song->location);
+					priv->current_song->location = g_strdup(file);
+				}
 			}
 
-			g_free(file);
+			if (!download_flag && !is_file_exists(track_file))
+			{
+				xmr_downloader_add_task(priv->downloader, song->location, track_file);
+				download_flag = TRUE;
+			}
+
+			g_free(track_file);
 
 			p = p->next;
 		}
@@ -3536,34 +3548,22 @@ download_failed(XmrDownloader *downloader,
 }
 
 static gboolean
+str_start_with(const char *str, const char *prefix)
+{
+	size_t lenpre = strlen(prefix);
+	size_t lenstr = strlen(str);
+	return lenstr < lenpre ? FALSE : strncasecmp(prefix, str, lenpre) == 0;
+}
+
+static gboolean
 is_track_downloaded(SongInfo *track)
 {
-	gboolean ret = FALSE;
 	gchar *file = make_track_file(track);
 	if (!file) {
 		return FALSE;
 	}
-
-	// FIXME:
-	// do not consider whether is a valid MEDIA file
-	ret = g_file_test(file, G_FILE_TEST_EXISTS);
-
-	do
-	{
-		struct stat st;
-		if (ret == FALSE)
-			break;
-
-		// check file size too
-		if (stat(file, &st) == -1)
-			break;
-
-		ret = (st.st_size >= BUFFERING_FILE_SIZE);
-	} while (0);
-
-	g_free(file);
-
-	return ret;
+	
+	return is_file_exists(file) && !str_start_with(track->location, "http://");
 }
 
 static gboolean
