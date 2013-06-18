@@ -2,7 +2,7 @@
  * xmrbutton.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  */
 #include "xmrbutton.h"
 
-G_DEFINE_TYPE(XmrButton, xmr_button, GTK_TYPE_BUTTON);
+G_DEFINE_TYPE(XmrButton, xmr_button, GTK_TYPE_BUTTON)
 
 struct _XmrButtonPrivate
 {
@@ -79,9 +79,9 @@ xmr_button_dispose(GObject *obj)
 
 static void
 xmr_button_get_property(GObject *object,
-		       guint prop_id,
-		       GValue *value,
-		       GParamSpec *pspec)
+			   guint prop_id,
+			   GValue *value,
+			   GParamSpec *pspec)
 {
 	XmrButton *button = XMR_BUTTON(object);
 	XmrButtonPrivate *priv = button->priv;
@@ -100,9 +100,9 @@ xmr_button_get_property(GObject *object,
 
 static void
 xmr_button_set_property(GObject *object,
-		       guint prop_id,
-		       const GValue *value,
-		       GParamSpec *pspec)
+			   guint prop_id,
+			   const GValue *value,
+			   GParamSpec *pspec)
 {
 	XmrButton *button = XMR_BUTTON(object);
 	XmrButtonPrivate *priv = button->priv;
@@ -163,12 +163,12 @@ xmr_button_init(XmrButton *button)
 
 	g_signal_connect(button, "button-press-event",
 				G_CALLBACK(on_button_mouse_event), NULL);
-    g_signal_connect(button, "button-release-event",
-                G_CALLBACK(on_button_mouse_event), NULL);
-    g_signal_connect(button, "enter-notify-event",
-                G_CALLBACK(on_button_mouse_event), NULL);
-    g_signal_connect(button, "leave-notify-event",
-                G_CALLBACK(on_button_mouse_event), NULL);
+	g_signal_connect(button, "button-release-event",
+				G_CALLBACK(on_button_mouse_event), NULL);
+	g_signal_connect(button, "enter-notify-event",
+				G_CALLBACK(on_button_mouse_event), NULL);
+	g_signal_connect(button, "leave-notify-event",
+				G_CALLBACK(on_button_mouse_event), NULL);
 
 	g_signal_connect(button, "draw",
 				G_CALLBACK(on_draw), NULL);
@@ -277,34 +277,35 @@ on_button_mouse_event(XmrButton *button, GdkEvent *event, gpointer data)
 	if (priv->state == STATE_DISABLE || priv->type == XMR_BUTTON_NORMAL)
 		return FALSE;
 
-    switch(event->type)
-    {
-    case GDK_BUTTON_PRESS:
+	switch(event->type)
+	{
+	case GDK_BUTTON_PRESS:
 		priv->last_state = priv->state = STATE_PUSH;
-        break;
+		break;
 
-    case GDK_BUTTON_RELEASE:
+	case GDK_BUTTON_RELEASE:
 		priv->last_state = priv->state = STATE_NORMAL;
-        break;
+		break;
 
-    case GDK_ENTER_NOTIFY:
-        gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), priv->cursor);
+	case GDK_ENTER_NOTIFY:
+		gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), priv->cursor);
 		priv->last_state = priv->state = STATE_FOCUS;
-        break;
+		break;
 
-    case GDK_LEAVE_NOTIFY:
-        gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), NULL);
+	case GDK_LEAVE_NOTIFY:
+		gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(button)), NULL);
 		// restore toggle state
 		if (priv->is_toggle_state)
 			priv->state = priv->toggle_state;
 		else
-			priv->last_state = priv->state = STATE_NORMAL;
-        break;
+			priv->state = STATE_NORMAL;
+		priv->last_state = STATE_NORMAL;
+		break;
 
-    default:
+	default:
 		priv->last_state = priv->state = STATE_NORMAL;
-        break;
-    }
+		break;
+	}
 
 	return FALSE;
 }
