@@ -101,7 +101,8 @@ enum
 	XMR_EVENT_APPEND_RADIO,
 	XMR_EVENT_PLAYER_EOS,
 	XMR_EVENT_PLAYER_STATE_CHANGED,
-	XMR_EVENT_PLAYER_TICK
+	XMR_EVENT_PLAYER_TICK,
+	XMR_EVENT_PLAYER_BUFFERING
 };
 
 typedef struct
@@ -1766,7 +1767,9 @@ player_buffering(XmrPlayer *player,
 			guint progress,
 			XmrWindow *window)
 {
-	//xmr_debug("Buffering: %d\n", progress);
+	// to avoid too many buffering event
+	if (progress % 25 == 0)
+		xmr_event_send(window, XMR_EVENT_PLAYER_BUFFERING, GINT_TO_POINTER(progress));
 }
 
 static void
@@ -3774,6 +3777,18 @@ xmr_event_poll(XmrWindow *window)
 		{
 			gchar *time = (gchar *)event->data;
 			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_TIME]), time);
+		}
+		break;
+		
+	case XMR_EVENT_PLAYER_BUFFERING:
+		{
+			gint progress = GPOINTER_TO_INT(event->data);
+			if (progress == 100)
+				xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING);
+			else
+				xmr_waiting_wnd_add_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING, WAITING_INFO_BUFFERING);
+			g_print("buffering (%d)...", progress);
+			event->data = NULL;
 		}
 		break;
 	}
