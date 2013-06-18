@@ -228,6 +228,9 @@ struct _XmrWindowPrivate
 	GtkWidget *radio_search_box; /* for search artist radio */
 	
 	gboolean use_gst_buffering;
+	
+	gint search_music_count;
+	guint search_music_idle_id;
 };
 /* end of struct _XmrWindowPrivate */
 
@@ -633,6 +636,11 @@ on_settings_changed(GSettings *settings,
 					const char *key,
 					XmrWindow *window);
 
+static gboolean
+search_music_progress_idle(GtkEntry *entry);
+
+static void
+search_music_progress_done(GtkEntry *entry);
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -886,6 +894,8 @@ xmr_window_init(XmrWindow *window)
 	priv->xmr_event_timer = g_timeout_add(XMR_EVENT_INTERVAL, (GSourceFunc)xmr_event_poll, window);
 	priv->buffering_timer = 0;
 	priv->use_gst_buffering = FALSE;
+	priv->search_music_count = 0;
+	priv->search_music_idle_id = 0;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
@@ -1036,6 +1046,12 @@ xmr_window_dispose(GObject *obj)
 	{
 		g_source_remove(priv->buffering_timer);
 		priv->buffering_timer = 0;
+	}
+	
+	if (priv->search_music_idle_id)
+	{
+		g_source_remove(priv->search_music_idle_id);
+		priv->search_music_idle_id = 0;
 	}
 
 	if (priv->queue_event)
@@ -3323,6 +3339,38 @@ xmr_window_play_custom_radio(XmrWindow *window,
 	change_radio(window, name, url);
 }
 
+void
+xmr_window_increase_search_music_count(XmrWindow *window)
+{
+	XmrWindowPrivate *priv;
+	g_return_if_fail(window != NULL);
+	priv = window->priv;
+	
+	priv->search_music_count++;
+	if (priv->search_music_count == 1)
+	{
+		priv->search_music_idle_id = g_timeout_add_full(
+					G_PRIORITY_DEFAULT, 100,
+					(GSourceFunc)search_music_progress_idle, priv->search_box,
+					(GDestroyNotify)search_music_progress_done);
+	}
+}
+
+void
+xmr_window_decrease_search_music_count(XmrWindow *window)
+{
+	XmrWindowPrivate *priv;
+	g_return_if_fail(window != NULL);
+	priv = window->priv;
+	
+	priv->search_music_count--;
+	if (priv->search_music_count == 0)
+	{
+		g_source_remove(priv->search_music_idle_id);
+		priv->search_music_idle_id = 0;
+	}
+}
+
 static gboolean
 show_message_idle(XmrWindow *window)
 {
@@ -3915,4 +3963,18 @@ on_settings_changed(GSettings *settings,
 	{
 		window->priv->use_gst_buffering = g_settings_get_boolean(settings, key);
 	}
+}
+
+static gboolean
+search_music_progress_idle(GtkEntry *entry)
+{
+	gtk_entry_progress_pulse(entry);
+
+	return TRUE;
+}
+
+static void
+search_music_progress_done(GtkEntry *entry)
+{
+	gtk_entry_set_progress_fraction(entry, 0.0);
 }
