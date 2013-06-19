@@ -192,6 +192,10 @@ struct _XmrWindowPrivate
 	GSList *skin_item_group; /* skin menu item list */
 
 	GdkPixbuf *pb_cover;	/* default album cover image pixbuf */
+	GdkPixbuf *pb_cover_current; /* current album cover image */
+
+	gint cover_request_width;
+	gint cover_request_height;
 
 	GtkBuilder *ui_pref;
 	GtkBuilder *ui_login;
@@ -323,7 +327,7 @@ static void
 set_gtk_theme(XmrWindow *window);
 
 static void
-set_skin(XmrWindow *window, const gchar *skin);
+set_skin(XmrWindow *window, SkinInfo *info);
 
 static void
 hide_children(XmrWindow *window);
@@ -861,6 +865,9 @@ xmr_window_init(XmrWindow *window)
 	priv->pwd = NULL;
 	priv->switch_radio = FALSE;
 	priv->pb_cover = NULL;
+	priv->pb_cover_current = NULL;
+	priv->cover_request_width = COVER_WIDTH;
+	priv->cover_request_height = COVER_HEIGHT;
 	priv->plugin_engine = xmr_plugin_engine_new();
 	priv->extensions = peas_extension_set_new(PEAS_ENGINE(priv->plugin_engine),
 						   PEAS_TYPE_ACTIVATABLE,
@@ -1465,9 +1472,13 @@ set_cover_image(XmrWindow *window, GdkPixbuf *pixbuf)
 	i_w = gdk_pixbuf_get_width(pixbuf);
 	i_h = gdk_pixbuf_get_height(pixbuf);
 
-	if (i_w != COVER_WIDTH || i_h != COVER_HEIGHT) //scale
+	if (i_w != priv->cover_request_width ||
+		i_h != priv->cover_request_height) // need scale
 	{
-		GdkPixbuf *pb = gdk_pixbuf_scale_simple(pixbuf, COVER_WIDTH, COVER_HEIGHT, GDK_INTERP_BILINEAR);
+		GdkPixbuf *pb = gdk_pixbuf_scale_simple(pixbuf,
+							priv->cover_request_width,
+							priv->cover_request_height,
+							GDK_INTERP_BILINEAR);
 		if (pb)
 		{
 			gtk_image_set_from_pixbuf(GTK_IMAGE(priv->image), pb);
@@ -1489,11 +1500,13 @@ set_gtk_theme(XmrWindow *window)
 
 	static struct Pos label_pos[LAST_LABEL] =
 	{
-		{140, 20}, {135, 80},
-		{135, 120}, {135, 160}
+		{140, 20}, {135, 82},
+		{135, 132}, {135, 157}, {135, 107}
 	};
 
 	priv->gtk_theme = TRUE;
+	priv->cover_request_width = COVER_WIDTH;
+	priv->cover_request_height = COVER_HEIGHT;
 
 	gtk_window_set_decorated(GTK_WINDOW(window), TRUE);
 	gtk_widget_set_size_request(GTK_WIDGET(window), 500, 200);
@@ -1532,6 +1545,10 @@ set_gtk_theme(XmrWindow *window)
 	}
 
 	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, 25, 80);
+	// update cover size
+	if (priv->pb_cover_current != NULL)
+		set_cover_image(window, priv->pb_cover_current);
+
 	gtk_widget_show(priv->image);
 	
 	{
@@ -1549,7 +1566,7 @@ set_gtk_theme(XmrWindow *window)
 }
 
 static void
-set_skin(XmrWindow *window, const gchar *skin)
+set_skin(XmrWindow *window, SkinInfo *info)
 {
 	XmrWindowPrivate *priv = window->priv;
 	gint x, y;
@@ -1574,9 +1591,9 @@ set_skin(XmrWindow *window, const gchar *skin)
 
 	do
 	{
-		if (!xmr_skin_load(xmr_skin, skin))
+		if (!xmr_skin_load(xmr_skin, info->file))
 		{
-			xmr_debug("failed to load skin: %s", skin);
+			xmr_debug("failed to load skin: %s", info->file);
 			break;
 		}
 
@@ -1651,13 +1668,26 @@ set_skin(XmrWindow *window, const gchar *skin)
 			gtk_fixed_move(GTK_FIXED(priv->fixed), priv->image, x, y);
 			gtk_widget_show(priv->image);
 		}
+		
+		if (xmr_skin_get_size(xmr_skin, UI_MAIN, "cover", &x, &y))
+		{
+			priv->cover_request_width = x;
+			priv->cover_request_height = y;
+		}
+		else
+		{
+			priv->cover_request_width = COVER_WIDTH;
+			priv->cover_request_height = COVER_HEIGHT;
+		}
 
 		if (priv->pb_cover)
 			g_object_unref(priv->pb_cover);
 
 		priv->pb_cover = xmr_skin_get_image(xmr_skin, UI_MAIN, "cover");
-		if (priv->pb_cover && gtk_image_get_pixbuf(GTK_IMAGE(priv->image)) == NULL)
+		if (priv->pb_cover && priv->pb_cover_current == NULL)
 			set_cover_image(window, priv->pb_cover);
+		else if (priv->pb_cover_current != NULL)
+			set_cover_image(window, priv->pb_cover_current);
 		
 		gtk_widget_hide(priv->search_box);
 		if (xmr_skin_get_position(xmr_skin, UI_MAIN, "search_box", &x, &y))
@@ -1677,20 +1707,14 @@ set_skin(XmrWindow *window, const gchar *skin)
 
 		// save to settings
 		{
-			SkinInfo *info = xmr_skin_info_new();
-			if (info == NULL)
-				g_error("No more memory !");
-			xmr_skin_get_info(xmr_skin, info);
 			xmr_settings_set_theme(priv->settings, info->name);
 
-			if (priv->skin)
-				g_free(priv->skin);
-
+			g_free(priv->skin);
 			priv->skin = g_strdup(info->name);
 		}
 
 		gtk_widget_queue_draw(GTK_WIDGET(window));
-		g_signal_emit(window, signals[THEME_CHANGED], 0, skin);
+		g_signal_emit(window, signals[THEME_CHANGED], 0, info->file);
 
 		if (xmr_player_playing(priv->player))
 			gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
@@ -2461,8 +2485,6 @@ on_skin_menu_item_activate(GtkMenuItem *item, SkinInfo *skin)
 
 	box = GTK_WIDGET(gtk_builder_get_object(window->priv->ui_pref, "cb_skin"));
 	gtk_combo_box_set_active_id(GTK_COMBO_BOX(box), skin->file);
-
-	set_skin(window, skin->file);
 }
 
 static void
@@ -2618,7 +2640,7 @@ load_skin(XmrWindow *window)
 					gtk_combo_box_set_active(GTK_COMBO_BOX(box), idx + 1);
 				}
 	
-				set_skin(window, skin_info->file);
+				set_skin(window, skin_info);
 
 				no_skin_match = FALSE;
 			}
@@ -2629,7 +2651,7 @@ load_skin(XmrWindow *window)
 
 		if (no_skin_match && !is_text_empty(priv->skin))
 		{
-			set_skin(window, ((SkinInfo *)priv->skin_list->data)->file);
+			set_skin(window, ((SkinInfo *)priv->skin_list->data));
 		}
 	}
 }
@@ -3143,7 +3165,7 @@ on_combo_box_changed(GtkComboBox *combo_box, XmrWindow *window)
 			gtk_widget_set_tooltip_text(widget, info->file);
 		}
 
-		set_skin(window, info->file);
+		set_skin(window, info);
 	}
 
 	if (item){
@@ -3551,6 +3573,7 @@ fetch_cover_finish(XmrWindow *window,
 {
 	g_object_ref(pixbuf);
 
+	window->priv->pb_cover_current = pixbuf;
 	set_cover_image(window, pixbuf);
 
 	g_object_unref(pixbuf);
