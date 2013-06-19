@@ -45,6 +45,11 @@
 			<summary>Use GStreamer buffering</summary>
 			<description>Check this for using GStreamer buffering mode rather than download cache mode</description>
 		</key>
+		<key name="ontop" type="b">
+			<default>false</default>
+			<summary>Whether keep window on top</summary>
+			<description>Set true to keep window always on top</description>
+		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
 		<key name="active-plugins" type="as">

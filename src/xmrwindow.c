@@ -89,6 +89,7 @@ enum
 	LABEL_SONG_NAME,
 	LABEL_ARTIST,
 	LABEL_TIME,
+	LABEL_ALBUM,
 	LAST_LABEL
 };
 
@@ -164,6 +165,8 @@ struct _XmrWindowPrivate
 	GtkWidget	*menu_playlist;
 	GtkWidget	*menu_login;
 	GtkWidget	*menu_logout;
+	
+	GtkWidget	*menu_item_ontop;
 
 	/**
 	 * #XmrChooser
@@ -989,6 +992,11 @@ xmr_window_init(XmrWindow *window)
 				"volume",
 				priv->buttons[BUTTON_VOLUME], "value",
 				G_SETTINGS_BIND_DEFAULT);
+	g_settings_bind(G_SETTINGS(priv->settings),
+				"ontop",
+				priv->menu_item_ontop, "active",
+				G_SETTINGS_BIND_DEFAULT);
+
 	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
 
 #if GLIB_CHECK_VERSION(2, 32, 0)
@@ -1559,7 +1567,7 @@ set_skin(XmrWindow *window, const gchar *skin)
 	static const gchar *ui_main_labels[] =
 	{
 		"radio_name", "song_name",
-		"artist", "progress"
+		"artist", "progress", "album"
 	};
 
 	xmr_skin = xmr_skin_new();
@@ -2143,6 +2151,7 @@ xmr_window_set_track_info(XmrWindow *window)
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_SONG_NAME]), song->song_name);
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_ARTIST]), song->artist_name);
 	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_TIME]), "00:00/00:00");
+	xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_ALBUM]), song->album_name);
 
 	gtk_widget_set_tooltip_text(priv->image, song->album_name);
 
@@ -2329,6 +2338,14 @@ create_popup_menu(XmrWindow *window)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
+	item = gtk_check_menu_item_new_with_mnemonic(_("Always on _Top"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+	priv->menu_item_ontop = item;
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
+
+	item = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
 	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_PREFERENCES, accel_group);
 	gtk_image_menu_item_set_accel_group(GTK_IMAGE_MENU_ITEM(item), accel_group);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
@@ -2425,6 +2442,11 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 	{
 		xmr_window_quit(window);
 	}
+	else if (GTK_WIDGET(item) == priv->menu_item_ontop)
+	{
+		gboolean active = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(item));
+		gtk_window_set_keep_above(GTK_WINDOW(window), active);
+	}
 }
 
 static void
@@ -2503,6 +2525,9 @@ load_settings(XmrWindow *window)
 	xmr_settings_get_window_pos(priv->settings, &x, &y);
 	if (x !=- 1 && y != -1)
 		gtk_window_move(GTK_WINDOW(window), x, y);
+	
+	gtk_window_set_keep_above(GTK_WINDOW(window),
+		g_settings_get_boolean(G_SETTINGS(priv->settings), "ontop"));
 
 	xmr_settings_get_usr_info(priv->settings, &priv->usr, &priv->pwd);
 	if (xmr_settings_get_auto_login(priv->settings))
@@ -3787,7 +3812,7 @@ xmr_event_poll(XmrWindow *window)
 				xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING);
 			else
 				xmr_waiting_wnd_add_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING, WAITING_INFO_BUFFERING);
-			g_print("buffering (%d)...", progress);
+			xmr_debug("buffering (%d)...", progress);
 			event->data = NULL;
 		}
 		break;
@@ -3977,6 +4002,11 @@ on_settings_changed(GSettings *settings,
 	if (g_strcmp0(key, "gst-buffering") == 0)
 	{
 		window->priv->use_gst_buffering = g_settings_get_boolean(settings, key);
+	}
+	else if (g_strcmp0(key, "ontop") == 0)
+	{
+		gboolean active = g_settings_get_boolean(settings, key);
+		gtk_window_set_keep_above(GTK_WINDOW(window), active);
 	}
 }
 
