@@ -2,7 +2,7 @@
  * xmrutil.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,6 +58,19 @@ xmr_config_dir();
 const gchar *
 xmr_radio_icon_dir();
 
+/**
+ * return application path 
+ */
+const gchar *
+xmr_app_dir();
+
+/**
+ * return tmp dir
+ */
+const gchar *
+xmr_tmp_dir();
+
+
 void
 xmr_message(GtkWidget *parent,
 			const gchar *message,
@@ -70,6 +83,12 @@ gint
 write_memory_to_file(const gchar *file,
 			const gpointer data,
 			gint len);
+
+/**
+ * cleanup global buffer
+ */
+void
+xmr_utils_cleanup();
 
 G_END_DECLS
 

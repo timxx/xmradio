@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=`grep version CMakeLists.txt | cut -d ' ' -f2 | cut -d ')' -f1`
+VERSION=`grep -m 1 version CMakeLists.txt | cut -d ' ' -f2 | cut -d ')' -f1`
 PACKAGE=xmradio
 
 find -name "*.c" | xargs xgettext -k_ -o po/c.pot --from-code=utf-8

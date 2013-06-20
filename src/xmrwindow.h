@@ -155,6 +155,12 @@ xmr_window_play_custom_radio(XmrWindow *window,
 							 const gchar *name,
 							 const gchar *url);
 
+void
+xmr_window_increase_search_music_count(XmrWindow *window);
+
+void
+xmr_window_decrease_search_music_count(XmrWindow *window);
+
 G_END_DECLS
 
 #endif /* __XMR_WINDOW_H__ */

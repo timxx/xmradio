@@ -1,3 +1,83 @@
+xmradio (0.4.3~raring) raring; urgency=low
+
+  * 0.4.3
+    - New icon set
+    - New buffering mode
+    - New skin: DouBanFM
+    - Stay ontop mode added
+    - Sound menu integrate
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com>  Thu, 20 Jun 2013 11:17:26 +0800
+
+xmradio (0.4.3~quantal) quantal; urgency=low
+
+  * 0.4.3
+    - New icon set
+    - New buffering mode
+    - New skin: DouBanFM
+    - Stay ontop mode added
+    - Sound menu integrate
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com>  Thu, 20 Jun 2013 11:16:32 +0800
+
+xmradio (0.4.3~precise) precise; urgency=low
+
+  * 0.4.3
+    - New icon set
+    - New buffering mode
+    - New skin: DouBanFM
+    - Stay ontop mode added
+    - Sound menu integrate
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com>  Thu, 20 Jun 2013 11:15:54 +0800
+
+xmradio (0.4.3~oneiric) oneiric; urgency=low
+
+  * 0.4.3
+    - New icon set
+    - New buffering mode
+    - New skin: DouBanFM
+    - Stay ontop mode added
+    - Sound menu integrate
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com>  Thu, 20 Jun 2013 11:14:14 +0800
+
+xmradio (0.4.2~raring) raring; urgency=low
+
+  * 0.4.2
+    - Add Artist Radio
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com> Sat, 30 Mar 2013 15:58:02 +0800
+
+xmradio (0.4.2~quantal) quantal; urgency=low
+
+  * 0.4.2
+    - Add Artist Radio
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 30 Mar 2013 15:57:15 +0800
+
+xmradio (0.4.2~precise) precise; urgency=low
+
+  * 0.4.2
+    - Add Artist Radio
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 30 Mar 2013 15:55:59 +0800
+
+xmradio (0.4.2~oneiric) oneiric; urgency=low
+
+  * 0.4.2
+    - Add Artist Radio
+    - Bug fixes
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 30 Mar 2013 15:55:30 +0800
+
 xmradio (0.4.1~raring) raring; urgency=low
 
   * 0.4.1

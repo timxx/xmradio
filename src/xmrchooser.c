@@ -89,7 +89,11 @@ xmr_chooser_set_property(GObject *object,
 	case PROP_ORIENTATION:
 		priv->orientation = g_value_get_enum(value);
 		priv->box = gtk_box_new(priv->orientation, 10);
+#if GTK_CHECK_VERSION(3, 8, 0)
+		gtk_container_add(GTK_CONTAINER(priv->view), priv->box);
+#else
 		gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(priv->view), priv->box);
+#endif
 		break;
 
 	default:

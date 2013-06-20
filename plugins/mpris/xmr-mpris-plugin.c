@@ -1,7 +1,7 @@
 /** 
  * xmr-mpris-plugin.c
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,10 +52,12 @@ typedef struct
 	guint root_id;
 	guint player_id;
 
+	GHashTable *player_property_changes;
+	guint property_emit_id;
+
 	gint64 duration;
 	gint64 elapsed;
 	SongInfo *current_song;
-
 }XmrMprisPlugin;
 
 typedef struct
@@ -65,6 +67,26 @@ typedef struct
 
 XMR_DEFINE_PLUGIN(XMR_TYPE_MPRIS_PLUGIN, XmrMprisPlugin, xmr_mpris_plugin,)
 
+static GVariant *
+build_metadata(XmrMprisPlugin *plugin);
+
+static void
+add_player_property_change(XmrMprisPlugin *plugin,
+			    const char *property,
+			    GVariant *value);
+
+static GVariant *
+get_playback_status(XmrMprisPlugin *plugin);
+
+static void
+metadata_changed(XmrMprisPlugin *plugin)
+{
+	GVariant *variant;
+
+	variant = build_metadata(plugin);
+	add_player_property_change(plugin, "Metadata", variant);
+}
+
 static void
 track_changed(XmrWindow *window,
 			SongInfo *new_track,
@@ -72,6 +94,8 @@ track_changed(XmrWindow *window,
 {
 	song_info_free(plugin->current_song);
 	plugin->current_song = song_info_copy(new_track);
+
+	metadata_changed(plugin);
 }
 
 static void
@@ -96,6 +120,95 @@ player_tick(XmrPlayer	*player,
 	{
 		xmr_debug("Unable to set MPRIS Seeked signal: %s", error->message);
 		g_clear_error(&error);
+	}
+}
+
+static void
+player_state_changed(XmrPlayer *player,
+			gint old_state,
+			gint new_state,
+			XmrMprisPlugin *plugin)
+{
+	add_player_property_change(plugin, "PlaybackStatus", get_playback_status(plugin));
+}
+
+static void
+emit_property_changes(XmrMprisPlugin *plugin, GHashTable *changes, const char *interface)
+{
+	GError *error = NULL;
+	GVariantBuilder *properties;
+	GVariantBuilder *invalidated;
+	GVariant *parameters;
+	gpointer propname, propvalue;
+	GHashTableIter iter;
+
+	/* build property changes */
+	properties = g_variant_builder_new(G_VARIANT_TYPE ("a{sv}"));
+	invalidated = g_variant_builder_new(G_VARIANT_TYPE ("as"));
+	g_hash_table_iter_init(&iter, changes);
+	while (g_hash_table_iter_next(&iter, &propname, &propvalue))
+	{
+		if (propvalue != NULL)
+		{
+			g_variant_builder_add(properties,
+					       "{sv}",
+					       propname,
+					       propvalue);
+		}
+		else
+		{
+			g_variant_builder_add(invalidated, "s", propname);
+		}
+
+	}
+
+	parameters = g_variant_new("(sa{sv}as)",
+				    interface,
+				    properties,
+				    invalidated);
+	g_variant_builder_unref(properties);
+	g_variant_builder_unref(invalidated);
+	g_dbus_connection_emit_signal(plugin->connection,
+				       NULL,
+				       MPRIS_OBJECT_NAME,
+				       "org.freedesktop.DBus.Properties",
+				       "PropertiesChanged",
+				       parameters,
+				       &error);
+	if (error != NULL)
+	{
+		g_warning("Unable to send MPRIS property changes for %s: %s",
+			   interface, error->message);
+		g_clear_error(&error);
+	}
+}
+
+static gboolean
+emit_properties_idle(XmrMprisPlugin *plugin)
+{
+	if (plugin->player_property_changes != NULL)
+	{
+		emit_property_changes(plugin, plugin->player_property_changes, MPRIS_PLAYER_INTERFACE);
+		g_hash_table_destroy(plugin->player_property_changes);
+		plugin->player_property_changes = NULL;
+	}
+	
+	plugin->property_emit_id = 0;
+	return FALSE;
+}
+
+static void
+add_player_property_change(XmrMprisPlugin *plugin,
+			    const char *property,
+			    GVariant *value)
+{
+	if (plugin->player_property_changes == NULL) {
+		plugin->player_property_changes = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_variant_unref);
+	}
+	g_hash_table_insert(plugin->player_property_changes, g_strdup(property), g_variant_ref_sink(value));
+
+	if (plugin->property_emit_id == 0) {
+		plugin->property_emit_id = g_idle_add((GSourceFunc)emit_properties_idle, plugin);
 	}
 }
 
@@ -187,9 +300,13 @@ get_root_property(GDBusConnection *connection,
 	{
 		return g_variant_new_string("xmradio");
 	}
+	else if (g_strcmp0(property_name, "DesktopEntry") == 0)
+	{
+		return g_variant_new_string("xmradio");
+	}
 	else if (g_strcmp0(property_name, "SupportedUriSchemes") == 0)
 	{
-		const char *fake_supported_schemes[] = { "http", NULL };
+		const char *fake_supported_schemes[] = { "http", "file", NULL };
 		return g_variant_new_strv(fake_supported_schemes, -1);
 	}
 	else if (g_strcmp0(property_name, "SupportedMimeTypes") == 0)
@@ -277,12 +394,35 @@ handle_player_method_call(GDBusConnection *connection,
 	}
 	else if (g_strcmp0(method_name, "Pause") == 0)
 	{
-		xmr_window_pause(plugin->window);
-		handle_result(invocation, TRUE, NULL);
+		if (xmr_window_playing(plugin->window))
+		{
+			xmr_window_pause(plugin->window);
+			handle_result(invocation, TRUE, NULL);
+		}
+		else
+		{
+			handle_result(invocation, FALSE, NULL);
+		}
 	}
 	else if (g_strcmp0 (method_name, "Play") == 0)
 	{
-		xmr_window_play(plugin->window);
+		if (xmr_window_playing(plugin->window))
+		{
+			handle_result(invocation, FALSE, NULL);
+		}
+		else
+		{
+			xmr_window_play(plugin->window);
+			handle_result(invocation, TRUE, NULL);
+		}
+	}
+	else if (g_strcmp0(method_name, "PlayPause") == 0)
+	{
+		if (xmr_window_playing(plugin->window))
+			xmr_window_pause(plugin->window);
+		else
+			xmr_window_play(plugin->window);
+
 		handle_result(invocation, TRUE, NULL);
 	}
 	else
@@ -360,6 +500,12 @@ build_metadata(XmrMprisPlugin *plugin)
 		if (plugin->current_song->location)
 			g_variant_builder_add(builder, "{sv}", "xesam:url",
 								  g_variant_new("s", plugin->current_song->location));
+
+		if (plugin->current_song->album_cover)
+		{
+			g_variant_builder_add(builder, "{sv}", "mpris:artUrl",
+					g_variant_new("s", plugin->current_song->album_cover));
+		}
 	}
 
 	v = g_variant_builder_end (builder);
@@ -523,6 +669,8 @@ impl_activate(PeasActivatable *activatable)
 				G_CALLBACK(track_changed), plugin);
 	g_signal_connect(plugin->player, "tick", G_CALLBACK(player_tick), plugin);
 
+	g_signal_connect(plugin->player, "state-changed", G_CALLBACK(player_state_changed), plugin);
+
 	plugin->connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 	if (error != NULL)
 	{
@@ -590,6 +738,9 @@ impl_deactivate(PeasActivatable *activatable)
 
 	g_signal_handlers_disconnect_by_func(plugin->player,
 				player_tick, plugin);
+
+	g_signal_handlers_disconnect_by_func(plugin->player,
+			player_state_changed, plugin);
 
 	if (plugin->root_id != 0)
 	{
