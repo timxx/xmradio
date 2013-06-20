@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: xmradio 0.4.2\n"
+"Project-Id-Version: xmradio 0.4.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-03-30 15:06+0800\n"
+"POT-Creation-Date: 2013-06-20 10:23+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -41,34 +41,47 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: data/xmradio.desktop.in.h:7 plugins/indicator/xmr-indicator-plugin.c:124
-#: plugins/indicator/xmr-indicator-plugin.c:332
+#: data/xmradio.desktop.in.h:7 plugins/indicator/xmr-indicator-plugin.c:126
+#: plugins/indicator/xmr-indicator-plugin.c:341
 msgid "Love"
 msgstr ""
 
-#: data/xmradio.desktop.in.h:8 plugins/indicator/xmr-indicator-plugin.c:128
-#: plugins/indicator/xmr-indicator-plugin.c:336
+#: data/xmradio.desktop.in.h:8 plugins/indicator/xmr-indicator-plugin.c:130
+#: plugins/indicator/xmr-indicator-plugin.c:345
 msgid "Hate"
 msgstr ""
 
-#: data/ui/pref.ui:36
-msgid "Version: "
+#: plugins/autocollect/xmr-auto-collect.ui:61
+msgid "Auto Like when play time percentage greater than"
 msgstr ""
 
-#: data/ui/pref.ui:51
-msgid "URL: "
+#: plugins/autocollect/xmr-auto-collect.ui:138
+msgid "Auto Hate when play time percentage little than"
 msgstr ""
 
-#: data/ui/pref.ui:65
-msgid "Author: "
+#: plugins/autocollect/xmr-auto-collect.ui:199
+msgid "<b>You need to loggin before use this plugin</b>"
 msgstr ""
 
-#: data/ui/pref.ui:80
-msgid "Email: "
+#: data/ui/login.ui:7
+msgid "Login Info"
 msgstr ""
 
-#: data/ui/pref.ui:163
-msgid "Preferences"
+#: data/ui/login.ui:37 src/xmrwindow.c:2387 src/xmrwindow.c:2908
+#: src/xmrwindow.c:3000
+msgid "Login"
+msgstr ""
+
+#: data/ui/login.ui:74
+msgid "User Name:"
+msgstr ""
+
+#: data/ui/login.ui:87
+msgid "Password:"
+msgstr ""
+
+#: data/ui/login.ui:140
+msgid "Auto Login"
 msgstr ""
 
 #: data/ui/about.ui:7
@@ -85,37 +98,59 @@ msgid ""
 "For more information see www.xiami.com/radio"
 msgstr ""
 
-#: data/ui/login.ui:7
-msgid "Login Info"
+#: data/ui/pref.ui:12
+msgid "Use GStreamer buffering"
 msgstr ""
 
-#: data/ui/login.ui:37 src/xmrwindow.c:2291 src/xmrwindow.c:2775
-#: src/xmrwindow.c:2867
-msgid "Login"
+#: data/ui/pref.ui:61
+msgid "Version: "
 msgstr ""
 
-#: data/ui/login.ui:74
-msgid "User Name:"
+#: data/ui/pref.ui:100
+msgid "Author: "
 msgstr ""
 
-#: data/ui/login.ui:87
-msgid "Password:"
+#: data/ui/pref.ui:139
+msgid "URL: "
 msgstr ""
 
-#: data/ui/login.ui:140
-msgid "Auto Login"
+#: data/ui/pref.ui:179
+msgid "Email: "
 msgstr ""
 
-#: plugins/autocollect/xmr-auto-collect.ui:61
-msgid "Auto Like when play time percentage greater than"
+#: data/ui/pref.ui:215
+msgid "Preferences"
 msgstr ""
 
-#: plugins/autocollect/xmr-auto-collect.ui:138
-msgid "Auto Hate when play time percentage little than"
+#: src/xmrplayer.c:367
+msgid "Failed to create playbin2 element; check your GStreamer installation"
 msgstr ""
 
-#: plugins/autocollect/xmr-auto-collect.ui:199
-msgid "<b>You need to loggin before use this plugin</b>"
+#: src/xmrsearchbox.c:134
+msgid "Oops! Not found any related artist."
+msgstr ""
+
+#: src/xmrsearchbox.c:138
+msgid "Oops! Network error."
+msgstr ""
+
+#: src/xmrsearchbox.c:528 src/xmrsearchbox.c:615
+msgid "Artist Radio"
+msgstr ""
+
+#: src/xmrsearchbox.c:540
+msgid "Enter artist name..."
+msgstr ""
+
+#: src/xmrsearchbox.c:544
+msgid "Search Artist Radio"
+msgstr ""
+
+#: src/main.c:144
+#, c-format
+msgid ""
+"%s\n"
+"Run '%s --help' to see a full list of available command line options.\n"
 msgstr ""
 
 #: src/xmrlist.c:226
@@ -146,7 +181,7 @@ msgstr ""
 msgid "From"
 msgstr ""
 
-#: src/xmrlist.c:408 src/xmrwindow.c:2270
+#: src/xmrlist.c:408 src/xmrwindow.c:2358
 msgid "Playlist"
 msgstr ""
 
@@ -154,11 +189,18 @@ msgstr ""
 msgid "Search result"
 msgstr ""
 
-#: src/main.c:119
+#: src/xmrdownloader.c:187
+msgid "curl_easy_init failed"
+msgstr ""
+
+#: src/xmrdownloader.c:199
 #, c-format
-msgid ""
-"%s\n"
-"Run '%s --help' to see a full list of available command line options.\n"
+msgid "Unable to write file: %s"
+msgstr ""
+
+#: src/xmrdownloader.c:227
+#, c-format
+msgid "curl_easy_perform failed: %s"
 msgstr ""
 
 #: src/xmrwindow.c:55
@@ -177,116 +219,86 @@ msgstr ""
 msgid "Getting playlist..."
 msgstr ""
 
-#: src/xmrwindow.c:916
+#: src/xmrwindow.c:943
 msgid "Music search ..."
 msgstr ""
 
-#: src/xmrwindow.c:925
+#: src/xmrwindow.c:952
 msgid "风格电台"
 msgstr ""
 
-#: src/xmrwindow.c:926
+#: src/xmrwindow.c:953
 msgid "星座电台"
 msgstr ""
 
-#: src/xmrwindow.c:927
+#: src/xmrwindow.c:954
 msgid "年代电台"
 msgstr ""
 
-#: src/xmrwindow.c:990
+#: src/xmrwindow.c:1024
 msgid "XMRadio"
 msgstr ""
 
-#: src/xmrwindow.c:2243 src/xmrwindow.c:2319
+#: src/xmrwindow.c:2331 src/xmrwindow.c:2415
 msgid "_Gtk Theme"
 msgstr ""
 
-#: src/xmrwindow.c:2250
+#: src/xmrwindow.c:2338
 msgid "_Skin"
 msgstr ""
 
-#: src/xmrwindow.c:2264
+#: src/xmrwindow.c:2352
 msgid "_Radio"
 msgstr ""
 
-#: src/xmrwindow.c:2295 src/xmrwindow.c:2845
+#: src/xmrwindow.c:2365
+msgid "Always on _Top"
+msgstr ""
+
+#: src/xmrwindow.c:2391 src/xmrwindow.c:2978
 msgid "Logout"
 msgstr ""
 
-#: src/xmrwindow.c:2702
+#: src/xmrwindow.c:2828
 msgid "Skin"
 msgstr ""
 
-#: src/xmrwindow.c:2707
+#: src/xmrwindow.c:2833
 msgid "Plugins"
 msgstr ""
 
-#: src/xmrwindow.c:2712 src/xmrwindow.c:2990
+#: src/xmrwindow.c:2837
+msgid "Other"
+msgstr ""
+
+#: src/xmrwindow.c:2845 src/xmrwindow.c:3123
 msgid "Gtk Theme"
 msgstr ""
 
-#: src/xmrwindow.c:2866
+#: src/xmrwindow.c:2999
 msgid "User name and password may not empty"
 msgstr ""
 
-#: src/xmrwindow.c:3286
+#: src/xmrwindow.c:3451
 #, c-format
 msgid ""
 "Login failed:\n"
 "%s"
 msgstr ""
 
-#: src/xmrwindow.c:3289
+#: src/xmrwindow.c:3454
 msgid "Login Status"
 msgstr ""
 
-#: src/xmrdownloader.c:184
-msgid "curl_easy_init failed"
-msgstr ""
-
-#: src/xmrdownloader.c:196
-#, c-format
-msgid "Unable to write file: %s"
-msgstr ""
-
-#: src/xmrdownloader.c:224
-#, c-format
-msgid "curl_easy_perform failed: %s"
-msgstr ""
-
-#: src/xmrplayer.c:361
-msgid "Failed to create playbin2 element; check your GStreamer installation"
-msgstr ""
-
-#: src/xmrsearchbox.c:134
-msgid "Oops! Not found any related artist."
-msgstr ""
-
-#: src/xmrsearchbox.c:138
-msgid "Oops! Network error."
-msgstr ""
-
-#: src/xmrsearchbox.c:524 src/xmrsearchbox.c:611
-msgid "Artist Radio"
-msgstr ""
-
-#: src/xmrsearchbox.c:536
-msgid "Enter artist name..."
-msgstr ""
-
-#: src/xmrsearchbox.c:540
-msgid "Search Artist Radio"
-msgstr ""
-
-#: plugins/xmsearch/xmsearch.c:131
+#: plugins/xmsearch/xmsearch.c:150
 msgid "XiaMi"
 msgstr ""
 
-#: plugins/indicator/xmr-indicator-plugin.c:119
-#: plugins/indicator/xmr-indicator-plugin.c:305
+#: plugins/indicator/xmr-indicator-plugin.c:121
+#: plugins/indicator/xmr-indicator-plugin.c:314
 msgid "Show"
 msgstr ""
 
-#: plugins/indicator/xmr-indicator-plugin.c:160
+#: plugins/indicator/xmr-indicator-plugin.c:162
 msgid "Hide on exit when playing"
 msgstr ""
