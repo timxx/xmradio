@@ -2,7 +2,7 @@
  * xmrpluginengine.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,7 +77,6 @@ xmr_plugin_engine_new()
 		g_clear_error(&error);
 	}
 
-
 	if (g_irepository_require(g_irepository_get_default(),
 				   "PeasGtk", "1.0", 0, &error) == NULL)
 	{
@@ -90,15 +89,18 @@ xmr_plugin_engine_new()
 
 	peas_engine_enable_loader(PEAS_ENGINE(engine), "python");
 
-	user_plugin_path = g_build_filename(xmr_config_dir(), "plugins/", NULL);
+	// application binary path plugins
+	user_plugin_path = g_build_filename(xmr_app_dir(), "plugins/", NULL);
+	peas_engine_add_search_path(PEAS_ENGINE(engine), user_plugin_path, user_plugin_path);
+	g_free(user_plugin_path);
 
 	// per-user plugins
-	peas_engine_add_search_path(PEAS_ENGINE (engine), user_plugin_path, user_plugin_path);
+	user_plugin_path = g_build_filename(xmr_config_dir(), "plugins/", NULL);
+	peas_engine_add_search_path(PEAS_ENGINE(engine), user_plugin_path, user_plugin_path);
+	g_free(user_plugin_path);
 
 	// system-wide plugins
-	peas_engine_add_search_path(PEAS_ENGINE (engine), PLUGIN_DIR, PLUGIN_DATA_DIR);
-
-	g_free(user_plugin_path);
+	peas_engine_add_search_path(PEAS_ENGINE(engine), PLUGIN_DIR, PLUGIN_DATA_DIR);
 
 	g_settings_bind(engine->priv->plugins_settings,
 			 "active-plugins",

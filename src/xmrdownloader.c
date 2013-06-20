@@ -2,7 +2,7 @@
  * xmrdownloader.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -157,12 +157,15 @@ my_progress_func(Task *task,
 				 double ultotal,
 				 double ulnow)
 {
+	// progress event takes too much cpu
+	// just ignore it
+#if 0
 	Progress *p = g_new(Progress, 1);
 	p->url = g_strdup(task->url);
 	p->progress = now * 100.0 / total;
 
 	post_event(task->downloader, EVENT_PROGRESS, p);
-
+#endif
 	return 0;
 }
 
@@ -382,6 +385,10 @@ xmr_downloader_add_task(XmrDownloader *downloader,
 	// task already exists
 	// just ignore it
 	if (xmr_downloader_test_task(downloader, url, file))
+		return ;
+	
+	// only allow 3 tasks at the same time
+	if (g_slist_length(priv->tasks) == 3)
 		return ;
 
 	task = g_new0(Task, 1);

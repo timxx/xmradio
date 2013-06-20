@@ -41,6 +41,9 @@ typedef struct
 	PeasExtensionBase parent;
 	GAsyncQueue *event_queue;
 	guint event_idle_id;
+	gint thread_count;
+	gint last_thread_count;
+	GMutex *mutex;
 }XmrSearchPlugin;
 
 typedef struct
@@ -119,22 +122,37 @@ decode_url(const gchar *url)
 static gboolean
 event_poll_idle(XmrSearchPlugin *plugin)
 {
-	GList *list = g_async_queue_try_pop(plugin->event_queue);
-	if (list == NULL)
-		return TRUE;
-	
-	// update search result list
+	gboolean ret = plugin->thread_count == 0 ? FALSE : TRUE;
+	XmrWindow *window = NULL;
+	GList *list;
+
+	if (!ret)
 	{
-		XmrWindow *window = NULL;
-		g_object_get(plugin, "object", &window, NULL);
-		
-		xmr_window_set_search_result(window, list, _("XiaMi"), "www.xiami.com");
-		g_list_free_full(list, (GDestroyNotify)song_info_free);
-		
-		g_object_unref(window);
+		plugin->event_idle_id = 0;
 	}
 	
-	return TRUE;
+	g_object_get(plugin, "object", &window, NULL);
+	
+	if (plugin->last_thread_count != plugin->thread_count)
+	{
+		plugin->last_thread_count--;
+		xmr_window_decrease_search_music_count(window);
+	}
+
+	list = g_async_queue_try_pop(plugin->event_queue);
+	if (list == NULL)
+	{
+		g_object_unref(window);
+		return ret;
+	}
+	
+	// update search result list
+	xmr_window_set_search_result(window, list, _("XiaMi"), "www.xiami.com");
+	g_list_free_full(list, (GDestroyNotify)song_info_free);
+		
+	g_object_unref(window);
+	
+	return ret;
 }
 
 static char*
@@ -310,6 +328,10 @@ search_thread(Data *data)
 			g_async_queue_push(data->plugin->event_queue, list);
 	}
 
+	g_mutex_lock(data->plugin->mutex);
+	data->plugin->thread_count--;
+	g_mutex_unlock(data->plugin->mutex);
+
 	g_free(url);
 	curl_free(escape_keyword);
 	g_string_free(result_data, TRUE);
@@ -327,6 +349,13 @@ on_music_search(XmrWindow *window,
 	Data *data = g_new(Data, 1);
 	data->keyword = g_strdup(keyword);
 	data->plugin = plugin;
+
+	plugin->thread_count++;
+	plugin->last_thread_count++;
+	if (plugin->event_idle_id == 0)
+		plugin->event_idle_id = g_timeout_add(200, (GSourceFunc)event_poll_idle, plugin);
+
+	xmr_window_increase_search_music_count(window);
 
 #if GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_new("search_music", (GThreadFunc)search_thread, data);
@@ -351,7 +380,15 @@ impl_activate(PeasActivatable *activatable)
 	}
 	
 	plugin->event_queue = g_async_queue_new();
-	plugin->event_idle_id = g_timeout_add(200, (GSourceFunc)event_poll_idle, plugin);
+	plugin->event_idle_id = 0;
+	plugin->thread_count = 0;
+	plugin->last_thread_count = 0;
+#if GLIB_CHECK_VERSION(2, 32, 0)
+	plugin->mutex = g_malloc(sizeof(GMutex));
+	g_mutex_init(plugin->mutex);
+#else
+	plugin->mutex = g_mutex_new();
+#endif
 }
 
 static void
@@ -373,6 +410,17 @@ impl_deactivate(PeasActivatable *activatable)
 		g_source_remove(plugin->event_idle_id);
 
 	g_async_queue_unref(plugin->event_queue);
+	
+	if (plugin->mutex)
+	{
+#if GLIB_CHECK_VERSION(2, 32, 0)
+		g_mutex_clear(plugin->mutex);
+		g_free(plugin->mutex);
+#else
+		g_mutex_free(plugin->mutex);
+#endif
+		plugin->mutex = NULL;
+	}
 }
 
 static void

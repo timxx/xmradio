@@ -2,7 +2,7 @@
  * xmrplayer.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 #include "xmrmarshal.h"
 #include "xmrdebug.h"
 
-G_DEFINE_TYPE(XmrPlayer, xmr_player, G_TYPE_OBJECT);
+G_DEFINE_TYPE(XmrPlayer, xmr_player, G_TYPE_OBJECT)
 
 enum
 {
@@ -339,6 +339,12 @@ bus_cb(GstBus *bus, GstMessage *message, XmrPlayer *player)
 			}
 			break;
 		}
+		
+	case GST_MESSAGE_CLOCK_LOST:
+		/* Get a new clock */
+		gst_element_set_state(priv->playbin, GST_STATE_PAUSED);
+		gst_element_set_state(priv->playbin, GST_STATE_PLAYING);
+		break;
 
 	default:
 		break;
@@ -629,6 +635,8 @@ xmr_player_open(XmrPlayer	*player,
 			return FALSE;
 	}
 
+	xmr_player_close(player);
+
 	{
 		static const gchar * const prefix[] =
 		{
@@ -676,6 +684,8 @@ xmr_player_close(XmrPlayer	*player)
 
 	g_return_val_if_fail( player != NULL, FALSE);
 	priv = player->priv;
+	
+	xmr_player_set_time(player, 0);
 
 	if (priv->playbin != NULL)
 	{

@@ -27,6 +27,7 @@
 #include "xmrplayer.h"
 #include "config.h"
 #include "xmrdebug.h"
+#include "xmrutil.h"
 
 #define XMR_TYPE_AUTOCOLLECT_PLUGIN			(xmr_autocollect_plugin_get_type())
 #define XMR_AUTOCOLLECT_PLUGIN(o)			(G_TYPE_CHECK_INSTANCE_CAST((o), XMR_TYPE_AUTOCOLLECT_PLUGIN, XmrAutoCollectPlugin))
@@ -90,10 +91,16 @@ static GtkWidget *
 impl_create_configure_widget(PeasGtkConfigurable *cfg)
 {
 	GObject *obj;
+	gchar *filePath;
 	XmrAutoCollectPlugin *plugin = XMR_AUTOCOLLECT_PLUGIN(cfg);
 	
 	plugin->builder = gtk_builder_new();
-	gtk_builder_add_from_file(plugin->builder, PLUGIN_DATA_DIR "/autocollect/xmr-auto-collect.ui", NULL);
+	filePath = g_build_filename(xmr_app_dir(), "plugins/xmr-auto-collect.ui", NULL);
+
+	if (gtk_builder_add_from_file(plugin->builder, filePath, NULL) == 0)
+		gtk_builder_add_from_file(plugin->builder, PLUGIN_DATA_DIR "/autocollect/xmr-auto-collect.ui", NULL);
+	
+	g_free(filePath);
 
 	obj = gtk_builder_get_object(plugin->builder, "auto_like");
 	g_settings_bind(plugin->settings, "auto-like", obj, "active", G_SETTINGS_BIND_DEFAULT);
@@ -254,6 +261,7 @@ impl_deactivate(PeasActivatable *activatable)
 	
 	if (plugin->settings != NULL)
 	{
+		g_signal_handlers_disconnect_by_func(plugin->settings, G_CALLBACK(on_settings_changed), plugin);
 		g_object_unref(plugin->settings);
 		plugin->settings = NULL;
 	}

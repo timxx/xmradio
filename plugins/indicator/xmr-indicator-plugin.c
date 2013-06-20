@@ -1,7 +1,7 @@
 /** 
  * xmr-indicator-plugin.c
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,8 @@
 #else
 #include "xmr-tray-icon.h"
 #endif
+
+#include "xmrutil.h"
 
 #define XMR_TYPE_INDICATOR_PLUGIN			(xmr_indicator_plugin_get_type())
 #define XMR_INDICATOR_PLUGIN(o)				(G_TYPE_CHECK_INSTANCE_CAST((o), XMR_TYPE_INDICATOR_PLUGIN, XmrIndicatorPlugin))
@@ -220,7 +222,13 @@ impl_activate(PeasActivatable *activatable)
 		if (!plugin->indicator)
 		{
 #if HAVE_APP_INDICATOR
+			gchar *icon_path;
 			plugin->indicator = xmr_app_indicator_new(plugin->popup_menu);
+			
+			icon_path = g_build_filename(xmr_app_dir(), "icons", NULL);
+			if (g_file_test(icon_path, G_FILE_TEST_EXISTS))
+				app_indicator_set_icon_theme_path(APP_INDICATOR(plugin->indicator), icon_path);
+			g_free(icon_path);
 #else
 			plugin->indicator = xmr_tray_icon_new(GTK_WIDGET(window), plugin->popup_menu);
 #endif
@@ -260,6 +268,7 @@ impl_deactivate(PeasActivatable *activatable)
 
 	plugin = XMR_INDICATOR_PLUGIN(activatable);
 
+	window = plugin->window;
 	if (window)
 	{
 		g_object_get(window, "player", &player, NULL);

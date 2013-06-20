@@ -79,13 +79,15 @@ send_action(DBusConnection *bus, PlayerAction action);
 static void
 remove_file(const gchar *file, gpointer data);
 
+static void
+init_icon_theme();
+
 int main(int argc, char **argv)
 {
 	XmrApp *app;
 	GOptionContext *context;
 	GError *error = NULL;
 	PlayerAction player_action = ActionNone;
-	gchar *tmp_dir = NULL;
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_init(NULL);
@@ -96,13 +98,36 @@ int main(int argc, char **argv)
 #if !GLIB_CHECK_VERSION(2, 35, 7)
 	g_type_init();
 #endif
+	
+	// to make non-installed schemas loadable
+	{
+		gchar *schema_dir;
+		schema_dir = g_build_filename(xmr_app_dir(), "glib-2.0/schemas", NULL);
+		if (g_file_test(schema_dir, G_FILE_TEST_EXISTS))
+			g_setenv("GSETTINGS_SCHEMA_DIR", schema_dir, TRUE);
+
+		g_free(schema_dir);
+	}
 
 	setlocale(LC_ALL, NULL);
 
 #ifdef ENABLE_NLS
 	/* initialize i18n */
-	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
-	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+	{
+		gchar *locale_dir = g_build_filename(xmr_app_dir(), "locale", NULL);
+		if (g_file_test(locale_dir, G_FILE_TEST_EXISTS) &&
+			g_file_test(locale_dir, G_FILE_TEST_IS_DIR))
+		{
+			bindtextdomain(GETTEXT_PACKAGE, locale_dir);
+		}
+		else
+		{
+			bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+		}
+		bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+		
+		g_free(locale_dir);
+	}
 
 	textdomain(GETTEXT_PACKAGE);
 #endif
@@ -154,6 +179,8 @@ int main(int argc, char **argv)
 
 		send_action(bus, player_action);
 
+		xmr_utils_cleanup();
+
 		// exit directly
 		return 0;
 	}
@@ -169,21 +196,19 @@ int main(int argc, char **argv)
 				"gtk-button-images", TRUE,
 				NULL);
 
-	// ensure folder exists
-	tmp_dir = g_strdup_printf("%s/%s", g_get_tmp_dir(), PACKAGE);
-	g_mkdir_with_parents(tmp_dir, 0755);
-
 	app = xmr_app_instance();
+
+	init_icon_theme();
 
 	g_application_run(G_APPLICATION(app), argc, argv);
 
 	// remove ...
-	list_file(tmp_dir, FALSE, remove_file, NULL);
+	list_file(xmr_tmp_dir(), FALSE, remove_file, NULL);
 
-	g_free(tmp_dir);
 	g_object_unref(app);
 
 	curl_global_cleanup();
+	xmr_utils_cleanup();
 
 	return 0;
 }
@@ -211,4 +236,16 @@ static void
 remove_file(const gchar *file, gpointer data)
 {
 	g_remove(file);
+}
+
+static void
+init_icon_theme()
+{
+	GtkIconTheme *theme = gtk_icon_theme_get_default();
+	gchar *icon_dir = g_build_filename(xmr_app_dir(), "icons", NULL);
+
+	gtk_icon_theme_append_search_path(theme, icon_dir);
+	g_free(icon_dir);
+
+	gtk_icon_theme_append_search_path(theme, DATADIR"/icons");
 }
