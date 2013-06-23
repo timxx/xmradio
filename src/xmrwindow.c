@@ -3657,12 +3657,17 @@ str_start_with(const char *str, const char *prefix)
 static gboolean
 is_track_downloaded(SongInfo *track)
 {
+	gboolean retv = FALSE;
 	gchar *file = make_track_file(track);
 	if (!file) {
 		return FALSE;
 	}
 	
-	return is_file_exists(file) && !str_start_with(track->location, "http://");
+	retv = is_file_exists(file) && !str_start_with(track->location, "http://");
+	
+	g_free(file);
+	
+	return retv;
 }
 
 static gboolean
