@@ -3,6 +3,7 @@ add_subdirectory(indicator)
 add_subdirectory(mpris)
 add_subdirectory(autocollect)
 add_subdirectory(xmsearch)
+add_subdirectory(xmrmmkeys)
 
 set(plugins
 	notification
@@ -10,6 +11,7 @@ set(plugins
 	mpris
 	autocollect
 	xmsearch
+	xmrmmkeys
 )
 
 # Generate plugin data files to

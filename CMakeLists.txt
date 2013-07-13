@@ -34,6 +34,7 @@ include(FindPkgConfig)
 
 check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(malloc.h HAVE_MALLOC_H)
+check_include_files(X11/XF86keysym.h HAVE_MMKEYS_H)
 
 find_program(GLIB_GENMARSHAL
 	NAMES glib-genmarshal
