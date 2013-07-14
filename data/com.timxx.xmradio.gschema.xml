@@ -50,10 +50,15 @@
 			<summary>Whether keep window on top</summary>
 			<description>Set true to keep window always on top</description>
 		</key>
+		<key name="stick-window" type="b">
+			<default>false</default>
+			<summary>Asks to stick window</summary>
+			<description>Set true to make window appear on all user desktops</description>
+		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
 		<key name="active-plugins" type="as">
-			<default>['notification', 'indicator', 'mpris', 'xmsearch']</default>
+			<default>['notification', 'indicator', 'mpris', 'xmsearch', 'xmrmmkeys']</default>
 			<summary>Active plugins</summary>
 			<description>List of active plugins.</description>
 		</key>

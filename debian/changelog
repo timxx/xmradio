@@ -1,3 +1,27 @@
+xmradio (0.4.4~raring) raring; urgency=low
+
+  * 0.4.4
+    - New plugin: xmrmmkeys
+    - New option: stick window
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sun, 14 Jul 2013 17:03:41 +0800
+
+xmradio (0.4.4~quantal) quantal; urgency=low
+
+  * 0.4.4
+    - New plugin: xmrmmkeys
+    - New option: stick window
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sun, 14 Jul 2013 17:03:02 +0800
+
+xmradio (0.4.4~precise) precise; urgency=low
+
+  * 0.4.4
+    - New plugin: xmrmmkeys
+    - New option: stick window
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sun, 14 Jul 2013 17:01:14 +0800
+
 xmradio (0.4.3~raring) raring; urgency=low
 
   * 0.4.3
