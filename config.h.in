@@ -3,6 +3,7 @@
 
 #cmakedefine HAVE_UNISTD_H
 #cmakedefine HAVE_MALLOC_H
+#cmakedefine HAVE_MMKEYS_H
 #cmakedefine ENABLE_NLS
 #cmakedefine _DEBUG
 

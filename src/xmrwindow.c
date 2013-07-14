@@ -2550,6 +2550,9 @@ load_settings(XmrWindow *window)
 	
 	gtk_window_set_keep_above(GTK_WINDOW(window),
 		g_settings_get_boolean(G_SETTINGS(priv->settings), "ontop"));
+	
+	if (g_settings_get_boolean(G_SETTINGS(priv->settings), "stick-window"))
+		gtk_window_stick(GTK_WINDOW(window));
 
 	xmr_settings_get_usr_info(priv->settings, &priv->usr, &priv->pwd);
 	if (xmr_settings_get_auto_login(priv->settings))
@@ -2847,6 +2850,9 @@ init_pref_window(XmrWindow *window,
 		g_signal_connect(widget, "changed",
 					G_CALLBACK(on_combo_box_changed), window);
 	}
+	
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cbStick"));
+	g_settings_bind(G_SETTINGS(priv->settings), "stick-window", widget, "active", G_SETTINGS_BIND_DEFAULT);
 }
 
 static void
@@ -4035,6 +4041,14 @@ on_settings_changed(GSettings *settings,
 	{
 		gboolean active = g_settings_get_boolean(settings, key);
 		gtk_window_set_keep_above(GTK_WINDOW(window), active);
+	}
+	else if (g_strcmp0(key, "stick-window") == 0)
+	{
+		gboolean active = g_settings_get_boolean(settings, key);
+		if (active)
+			gtk_window_stick(GTK_WINDOW(window));
+		else
+			gtk_window_unstick(GTK_WINDOW(window));
 	}
 }
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(xmradio)
 
-set(version 0.4.3)
+set(version 0.4.4)
 
 set(XMR_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${XMR_CMAKE_PATH} ${CMAKE_MODULE_PATH})
@@ -34,6 +34,7 @@ include(FindPkgConfig)
 
 check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(malloc.h HAVE_MALLOC_H)
+check_include_files(X11/XF86keysym.h HAVE_MMKEYS_H)
 
 find_program(GLIB_GENMARSHAL
 	NAMES glib-genmarshal

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: xmradio 0.4.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-06-20 10:23+0800\n"
-"PO-Revision-Date: 2013-06-20 10:32+0800\n"
+"POT-Creation-Date: 2013-07-14 16:34+0800\n"
+"PO-Revision-Date: 2013-07-14 16:38+0800\n"
 "Last-Translator: Weitian Leung <weitianleung@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: zh_CN\n"
@@ -54,7 +54,7 @@ msgstr "艺人"
 msgid "Artist Radio"
 msgstr "艺人电台"
 
-#: data/ui/pref.ui:100
+#: data/ui/pref.ui:115
 msgid "Author: "
 msgstr "作者："
 
@@ -78,7 +78,7 @@ msgstr "正在缓冲..."
 msgid "Copyright @ 2012-2013 Weitian Leung"
 msgstr ""
 
-#: data/ui/pref.ui:179
+#: data/ui/pref.ui:194
 msgid "Email: "
 msgstr "邮件："
 
@@ -98,7 +98,7 @@ msgstr "来自"
 msgid "Getting playlist..."
 msgstr "正在获取播放列表..."
 
-#: src/xmrwindow.c:2845 src/xmrwindow.c:3123
+#: src/xmrwindow.c:2848 src/xmrwindow.c:3129
 msgid "Gtk Theme"
 msgstr "GTK主题"
 
@@ -115,8 +115,8 @@ msgstr "关闭时隐藏程序到后台运行"
 msgid "Invert Selection"
 msgstr "反选"
 
-#: data/ui/login.ui:37 src/xmrwindow.c:2387 src/xmrwindow.c:2908
-#: src/xmrwindow.c:3000
+#: data/ui/login.ui:37 src/xmrwindow.c:2387 src/xmrwindow.c:2914
+#: src/xmrwindow.c:3006
 msgid "Login"
 msgstr "登陆"
 
@@ -124,11 +124,11 @@ msgstr "登陆"
 msgid "Login Info"
 msgstr "登陆信息"
 
-#: src/xmrwindow.c:3454
+#: src/xmrwindow.c:3460
 msgid "Login Status"
 msgstr "登陆状态"
 
-#: src/xmrwindow.c:3451
+#: src/xmrwindow.c:3457
 #, c-format
 msgid ""
 "Login failed:\n"
@@ -141,7 +141,7 @@ msgstr ""
 msgid "Login..."
 msgstr "正在登陆..."
 
-#: src/xmrwindow.c:2391 src/xmrwindow.c:2978
+#: src/xmrwindow.c:2391 src/xmrwindow.c:2984
 msgid "Logout"
 msgstr "注销"
 
@@ -170,7 +170,7 @@ msgstr "网络出错啦。"
 msgid "Oops! Not found any related artist."
 msgstr "未找到相关的艺人。"
 
-#: src/xmrwindow.c:2837
+#: src/xmrwindow.c:2840
 msgid "Other"
 msgstr "其它"
 
@@ -190,11 +190,11 @@ msgstr "播放"
 msgid "Playlist"
 msgstr "播放列表"
 
-#: src/xmrwindow.c:2833
+#: src/xmrwindow.c:2836
 msgid "Plugins"
 msgstr "插件"
 
-#: data/ui/pref.ui:215
+#: data/ui/pref.ui:230
 msgid "Preferences"
 msgstr "首选项"
 
@@ -215,7 +215,11 @@ msgstr "全选"
 msgid "Show"
 msgstr "显示"
 
-#: src/xmrwindow.c:2828
+#: data/ui/pref.ui:27
+msgid "Show window on all desktops"
+msgstr "在所有桌面上显示窗口"
+
+#: src/xmrwindow.c:2831
 msgid "Skin"
 msgstr "皮肤"
 
@@ -223,7 +227,7 @@ msgstr "皮肤"
 msgid "Song Name"
 msgstr "歌曲"
 
-#: data/ui/pref.ui:139
+#: data/ui/pref.ui:154
 msgid "URL: "
 msgstr "网址："
 
@@ -240,11 +244,11 @@ msgstr "使用GStreamer内部缓冲机制"
 msgid "User Name:"
 msgstr "用户名："
 
-#: src/xmrwindow.c:2999
+#: src/xmrwindow.c:3005
 msgid "User name and password may not empty"
 msgstr "用户名、密码不为空"
 
-#: data/ui/pref.ui:61
+#: data/ui/pref.ui:76
 msgid "Version: "
 msgstr "版本："
 
