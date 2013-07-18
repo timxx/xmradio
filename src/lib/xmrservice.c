@@ -621,12 +621,12 @@ get_track(xmlNodePtr root, GList **list)
 		if (song->song_id == NULL)
 			break;
 
-		song->song_name		= (gchar *)xml_first_child_content(root, BAD_CAST "song_name");
+		song->song_name		= (gchar *)xml_first_child_content(root, BAD_CAST "title");
 		song->album_id		= (gchar *)xml_first_child_content(root, BAD_CAST "album_id");
 		song->album_name	= (gchar *)xml_first_child_content(root, BAD_CAST "album_name");
 		song->artist_id		= (gchar *)xml_first_child_content(root, BAD_CAST "artist_id");
-		song->artist_name	= (gchar *)xml_first_child_content(root, BAD_CAST "artist_name");
-		song->album_cover	= (gchar *)xml_first_child_content(root, BAD_CAST "album_cover");
+		song->artist_name	= (gchar *)xml_first_child_content(root, BAD_CAST "artist");
+		song->album_cover	= (gchar *)xml_first_child_content(root, BAD_CAST "pic");
 		url					= (gchar *)xml_first_child_content(root, BAD_CAST "location");
 		if (url == NULL)
 			break;
