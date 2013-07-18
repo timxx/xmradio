@@ -14,7 +14,7 @@ set(LIB_HEADERS
 	radioinfo.h
 )
 
-set(LIB_VERSION 0.1)
+set(LIB_VERSION 0.2)
 
 include_directories(${GOBJECT_INCLUDE_DIRS})
 include_directories(${CURL_INCLUDE_DIRS})
