@@ -1,3 +1,24 @@
+xmradio (0.4.4-2~raring) raring; urgency=high
+
+  * 0.4.4-2
+    - fixed no track infomation
+
+ -- Weitian Leung <weitianleung@gmail.com>  Wed, 31 Jul 2013 09:00:14 +0800
+
+xmradio (0.4.4-2~quantal) quantal; urgency=high
+
+  * 0.4.4-2
+    - fixed no track infomation
+
+ -- Weitian Leung <weitianleung@gmail.com>  Wed, 31 Jul 2013 08:59:35 +0800
+
+xmradio (0.4.4-2~precise) precise; urgency=high
+
+  * 0.4.4-2
+    - fixed no track infomation
+
+ -- Weitian Leung <weitianleung@gmail.com>  Wed, 31 Jul 2013 08:58:41 +0800
+
 xmradio (0.4.4-1~raring) raring; urgency=high
 
   * 0.4.4-1

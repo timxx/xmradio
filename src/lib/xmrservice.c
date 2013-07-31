@@ -2,7 +2,7 @@
  * xmrservice.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@
 #define XMR_LOGIN_URL	"http://www.xiami.com/kuang/login"
 #define XMR_LOGOUT_URL	"http://www.xiami.com/member/logout"
 
-G_DEFINE_TYPE(XmrService, xmr_service, G_TYPE_OBJECT);
+G_DEFINE_TYPE(XmrService, xmr_service, G_TYPE_OBJECT)
 
 enum
 {
@@ -628,13 +628,21 @@ get_track(xmlNodePtr root, GList **list)
 		song->artist_name	= (gchar *)xml_first_child_content(root, BAD_CAST "artist");
 		song->album_cover	= (gchar *)xml_first_child_content(root, BAD_CAST "pic");
 		url					= (gchar *)xml_first_child_content(root, BAD_CAST "location");
+		
+		if (song->song_name == NULL)
+			song->song_name = (gchar *)xml_first_child_content(root, BAD_CAST "song_name");
+		if (song->artist_name == NULL)
+			song->artist_name = (gchar *)xml_first_child_content(root, BAD_CAST "artist_name");
+		if (song->album_cover == NULL)
+			song->album_cover = (gchar *)xml_first_child_content(root, BAD_CAST "album_cover");
+		
 		if (url == NULL)
 			break;
 
-		song->location		= decode_url(url);
+		song->location = decode_url(url);
 		g_free(url);
 
-		song->grade			= (gchar *)xml_first_child_content(root, BAD_CAST "grade");
+		song->grade = (gchar *)xml_first_child_content(root, BAD_CAST "grade");
 
 		*list = g_list_append(*list, song);
 
