@@ -617,8 +617,24 @@ get_track(xmlNodePtr root, GList **list)
 
 	do
 	{
+		GList *p = *list;
+		gboolean song_exists = FALSE;
+
 		song->song_id		= (gchar *)xml_first_child_content(root, BAD_CAST "song_id");
 		if (song->song_id == NULL)
+			break;
+
+		for ( ; p != NULL; p = p->next)
+		{
+			SongInfo *si = (SongInfo *)p->data;
+			if (g_strcmp0(si->song_id, song->song_id) == 0)
+			{
+				song_exists = TRUE;
+				break;
+			}
+		}
+
+		if (song_exists)
 			break;
 
 		song->song_name		= (gchar *)xml_first_child_content(root, BAD_CAST "title");
