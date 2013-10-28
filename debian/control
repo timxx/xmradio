@@ -6,8 +6,7 @@ Standards-Version: 3.9.2
 Homepage: https://github.com/timxx/xmradio
 Build-Depends: debhelper (>= 8.0.0), cmake,
          libgtk-3-dev, libglib2.0-dev, zlib1g-dev,
-         libgdk-pixbuf2.0-dev, libgstreamer0.10-dev,
-         libgstreamer-plugins-base0.10-dev,
+         libgdk-pixbuf2.0-dev, libvlc-dev,
          libsqlite3-dev, libdbus-glib-1-dev,
          libpeas-dev, libcurl4-openssl-dev,
          libxml2-dev, libnotify-dev,
@@ -19,10 +18,8 @@ Package: xmradio
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
          dbus,
-         gstreamer0.10-plugins-base,
+         libvlc5, libvlccore5,
          gnome-icon-theme,
-         gstreamer0.10-x
-Recommends: gstreamer0.10-good-plugins, gstreamer0.10-plugins-ugly, gstreamer0.10-fluendo-mp3
 Description: Xia Mi Radio for Linux
  xmradio is a tiny Internet Xia Mi Radio client for Linux, which
  supports many radio style, skin builtin and many other features.
