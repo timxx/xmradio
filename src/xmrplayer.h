@@ -2,7 +2,7 @@
  * xmrplayer.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #define __XMR_PLAYER_H__
 
 #include <glib-object.h>
-#include <gst/gst.h>
 
 G_BEGIN_DECLS
 
@@ -49,18 +48,17 @@ struct _XmrPlayerClass
 	GObjectClass parent_class;
 
 	gboolean	(*open)(XmrPlayer	*player,
-						const gchar *uri,
-						GError		**error);
-
-	gboolean	(*opened)(XmrPlayer *player);
-
-	gboolean	(*close)(XmrPlayer	*player);
+						const gchar *uri);
 
 	gboolean	(*play)(XmrPlayer	*player);
 
 	void		(*pause)(XmrPlayer *player);
+	
+	void		(*playpause)(XmrPlayer *player);
+	
+	void		(*stop)(XmrPlayer *player);
 
-	gboolean	(*resume)(XmrPlayer *player);
+	void		(*resume)(XmrPlayer *player);
 
 	gboolean	(*playing)(XmrPlayer *player);
 
@@ -75,6 +73,10 @@ struct _XmrPlayerClass
 	gint64		(*get_time)(XmrPlayer *player);
 
 	gint64		(*get_duration)(XmrPlayer *player);
+	
+	void		(*set_loop)(XmrPlayer *player, gint count);
+	
+	gint		(*get_loop)(XmrPlayer *player);
 
 	/* signals */
 	void		(*eos)(XmrPlayer *player,
@@ -90,21 +92,8 @@ struct _XmrPlayerClass
 	void		(*buffering)(XmrPlayer *player,
 						guint progress);
 
-	void		(*state_changed)(XmrPlayer *player,
-							gint		old_state,
-							gint		new_state);
-
-	void		(*volume_changed)(XmrPlayer *player,
-									float	 volume);
+	void		(*state_changed)(XmrPlayer *player);
 }; /* end of struct _XmrPlayerClass */
-
-typedef enum
-{
-	XMR_PLAYER_ERROR_NO_AUDIO,
-	XMR_PLAYER_ERROR_GENERAL,
-	XMR_PLAYER_ERROR_INTERNAL,
-	XMR_PLAYER_ERROR_NOT_FOUND
-} XmrPlayerError;
 
 GType xmr_player_get_type();
 
@@ -113,14 +102,7 @@ xmr_player_new();
 
 gboolean
 xmr_player_open(XmrPlayer	*player,
-			const gchar *uri,
-			GError		**error);
-
-gboolean
-xmr_player_opened(XmrPlayer *player);
-
-gboolean
-xmr_player_close(XmrPlayer *player);
+			const gchar *uri);
 
 gboolean
 xmr_player_play(XmrPlayer *player);
@@ -128,7 +110,13 @@ xmr_player_play(XmrPlayer *player);
 void	
 xmr_player_pause(XmrPlayer *player);
 
-gboolean
+void
+xmr_player_playpause(XmrPlayer *player);
+
+void
+xmr_player_stop(XmrPlayer *player);
+
+void
 xmr_player_resume(XmrPlayer *player);
 
 gboolean
@@ -150,6 +138,15 @@ xmr_player_get_time(XmrPlayer *player);
 
 gint64
 xmr_player_get_duration(XmrPlayer *player);
+
+gint
+xmr_player_get_loop(XmrPlayer *player);
+
+/**
+ * set @count to -1 means infinite loop
+ */
+void
+xmr_player_set_loop(XmrPlayer *player, gint count);
 
 G_END_DECLS
 

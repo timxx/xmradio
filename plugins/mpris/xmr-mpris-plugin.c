@@ -114,7 +114,7 @@ player_tick(XmrPlayer	*player,
 				       MPRIS_OBJECT_NAME,
 				       MPRIS_PLAYER_INTERFACE,
 				       "Seeked",
-				       g_variant_new("(x)", elapsed / 1000),
+				       g_variant_new("(x)", elapsed * 1000),
 				       &error);
 	if (error != NULL)
 	{
@@ -125,8 +125,6 @@ player_tick(XmrPlayer	*player,
 
 static void
 player_state_changed(XmrPlayer *player,
-			gint old_state,
-			gint new_state,
 			XmrMprisPlugin *plugin)
 {
 	add_player_property_change(plugin, "PlaybackStatus", get_playback_status(plugin));
@@ -553,7 +551,7 @@ get_player_property(GDBusConnection *connection,
 	}
 	else if (g_strcmp0(property_name, "Position") == 0)
 	{
-		return g_variant_new_int64(plugin->elapsed / 1000);
+		return g_variant_new_int64(plugin->elapsed * 1000);
 	}
 	else if (g_strcmp0 (property_name, "MinimumRate") == 0)
 	{

@@ -2,7 +2,7 @@
  * testxmrplayer.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
 #include "../src/xmrplayer.h"
 #include "../src/xmrdebug.h"
 
-#define TEST_SONG1 "http://f1.xiami.net/23833/497018/02_1770835404_3065816.mp3"
-#define TEST_SONG2 "http://f3.xiami.net/4/122/58222/497541/01_1770841480_3120220.mp3"
+#define TEST_SONG1 "http://m1.file.xiami.com/526/49526/279740/3320602_159988_l.mp3"
+#define TEST_SONG2 "http://m1.file.xiami.com/629/2629/167442/2051506_10338286_l.mp3"
 
 static GMainLoop *loop = NULL;
 
@@ -59,18 +59,9 @@ static void player_buffering(XmrPlayer *player,
 }
 
 static void player_state_changed(XmrPlayer *player,
-			gint		old_state,
-			gint		new_state,
 			gpointer data)
 {
-	g_print("state changed from %d to %d\n", old_state, new_state);
-}
-
-static void	player_volume_changed(XmrPlayer *player,
-			float	 volume,
-			gpointer data)
-{
-	g_print("volume changed: %f\n", volume);
+	g_print("state changed\n");
 }
 
 static void	signal_handler(int signum)
@@ -87,8 +78,8 @@ static gboolean timeout_next(gpointer data)
 
 	g_usleep(G_USEC_PER_SEC * 5);
 
-	xmr_player_open(player, TEST_SONG2, NULL);
-
+	xmr_player_open(player, TEST_SONG2);
+	xmr_player_set_loop(player, 2);
 	xmr_player_play(player);
 
 	g_print("should changed song\n");
@@ -109,13 +100,11 @@ static gboolean timeout_pause(gpointer data)
 
 int main(int argc, char **argv)
 {
-	GError *error = NULL;
 	XmrPlayer *player;
 
 #if !GLIB_CHECK_VERSION(2, 35, 7)
 	g_type_init();
 #endif
-	gst_init(&argc, &argv);
 
 	xmr_debug_enable(TRUE);
 
@@ -150,15 +139,9 @@ int main(int argc, char **argv)
 				G_CALLBACK(player_state_changed),
 				NULL);
 
-	g_signal_connect(player,
-				"volume-changed",
-				G_CALLBACK(player_volume_changed),
-				NULL);
-
-	if (!xmr_player_open(player, TEST_SONG1, &error))
+	if (!xmr_player_open(player, TEST_SONG1))
 	{
-		g_print("open failed: %s\n", error->message);
-		g_error_free(error);
+		g_print("open failed\n");
 
 		g_object_unref(player);
 
@@ -175,6 +158,7 @@ int main(int argc, char **argv)
 		g_timeout_add_seconds(10, timeout_pause, player);
 		g_main_loop_run(loop);
 	}
+
 	g_object_unref(player);
 
 	return 0;

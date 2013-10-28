@@ -40,10 +40,10 @@
 			<summary>Volume</summary>
 			<description>Volume level</description>
 		</key>
-		<key name="gst-buffering" type="b">
-			<default>true</default>
-			<summary>Use GStreamer buffering</summary>
-			<description>Check this for using GStreamer buffering mode rather than download cache mode</description>
+		<key name="download-mode" type="b">
+			<default>false</default>
+			<summary>Download media befor play</summary>
+			<description>Check this for using Download mode before play any media</description>
 		</key>
 		<key name="ontop" type="b">
 			<default>false</default>

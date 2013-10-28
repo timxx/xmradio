@@ -2,7 +2,7 @@
  * main.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,10 @@
 #include <locale.h>
 #include <glib.h>
 #include <curl/curl.h>
-#include <gst/gst.h>
 #include <dbus/dbus.h>
 #include <dbus/dbus-glib-lowlevel.h>
 #include <glib/gstdio.h>
+#include <stdlib.h>
 
 #include "xmrapp.h"
 #include "config.h"
@@ -137,7 +137,6 @@ int main(int argc, char **argv)
 	g_option_context_add_main_entries(context, options, GETTEXT_PACKAGE);
 
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
-	g_option_context_add_group(context, gst_init_get_option_group());
 
 	if (g_option_context_parse(context, &argc, &argv, &error) == FALSE)
 	{
@@ -186,8 +185,6 @@ int main(int argc, char **argv)
 	}
 
 	xmr_debug_enable(debug);
-
-	gst_init(&argc, &argv);
 
 	curl_global_init(CURL_GLOBAL_ALL);
 

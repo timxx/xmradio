@@ -17,11 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
- * Reference from part of Rhythmbox source code
- */
 
-#include <gst/interfaces/streamvolume.h>
+#include <vlc/vlc.h>
 #include <glib/gi18n.h>
 
 #include "xmrplayer.h"
@@ -33,8 +30,7 @@ G_DEFINE_TYPE(XmrPlayer, xmr_player, G_TYPE_OBJECT)
 enum
 {
 	PROP_0,
-	PROP_PLAYBIN,
-	PROP_BUS
+	PROP_PLAYER
 };
 
 enum
@@ -43,361 +39,118 @@ enum
 	ERROR,
 	TICK,
 	BUFFERING,
-	VOLUME_CHANGED,
 	STATE_CHANGED,
 	LAST_SIGNAL
-};
-
-enum StateChangeAction
-{
-	DO_NOTHING,
-	PLAYER_SHUTDOWN,
-	SET_NEXT_URI,
-	STOP_TICK_TIMER,
-	FINISH_TRACK_CHANGE
 };
 
 static guint signals[LAST_SIGNAL] = { 0 };
 
 struct _XmrPlayerPrivate
 {
-	gchar *prev_uri;	/* previous song uri */
-	gchar *uri;			/* current song */
-
-	GstElement *playbin;
-	GstElement *audio_sink;
-
-	float cur_volume;
-
-	gint tick_timeout_id;
-
-	gboolean playing;
-	gboolean buffering;
-
-	gboolean current_track_finishing;
-	gboolean stream_change_pending;
-
-	enum StateChangeAction state_change_action;
+	libvlc_instance_t *instance;
+	libvlc_media_player_t *player;
+	
+	GAsyncQueue *event_queue;
+	guint event_idle_id;
+	
+	gint loop_count;
 };
 
-static void
-start_state_change(XmrPlayer *player, GstState state, enum StateChangeAction action);
-
-static void
-state_change_finished(XmrPlayer *player, GError *error);
-
-static void
-track_change_done(XmrPlayer *player, GError *error);
-
-
-GQuark
-xmr_player_error_quark()
+static gint g_vlc_events[] =
 {
-	static GQuark quark = 0;
-	if (!quark)
-		quark = g_quark_from_static_string("xmr_player_error");
+	libvlc_MediaPlayerEncounteredError,
+	libvlc_MediaPlayerBuffering,
+	libvlc_MediaPlayerPlaying,
+	libvlc_MediaPlayerPaused,
+	libvlc_MediaPlayerStopped,
+	libvlc_MediaPlayerTimeChanged,
+	libvlc_MediaPlayerEndReached
+};
 
-	return quark;
-}
+static gint g_vlc_event_count = sizeof(g_vlc_events) / sizeof(g_vlc_events[0]);
 
-#define ENUM_ENTRY(NAME, DESC) { NAME, "" #NAME "", DESC }
-
-GType
-xmr_player_error_get_type()
+typedef struct
 {
-	static GType type = 0;
-
-	if (type == 0)
+	int type;
+	union
 	{
-		static const GEnumValue values[] =
-		{
-			ENUM_ENTRY(XMR_PLAYER_ERROR_NO_AUDIO, "no-audio"),
-			ENUM_ENTRY(XMR_PLAYER_ERROR_GENERAL, "general-error"),
-			ENUM_ENTRY(XMR_PLAYER_ERROR_INTERNAL, "internal-error"),
-			ENUM_ENTRY(XMR_PLAYER_ERROR_NOT_FOUND, "not-found"),
-			{ 0, 0, 0 }
-		};
-
-		type = g_enum_register_static("XmrPlayerError", values);
-	}
-
-	return type;
-}
-
-static gboolean
-emit_volume_changed_idle(XmrPlayer *player)
-{
-	gdouble vol;
-
-	if (gst_element_implements_interface(player->priv->playbin, GST_TYPE_STREAM_VOLUME))
-	{
-		vol = gst_stream_volume_get_volume(GST_STREAM_VOLUME (player->priv->playbin),
-						    GST_STREAM_VOLUME_FORMAT_CUBIC);
-	}
-	else
-	{
-		vol = player->priv->cur_volume;
-	}
-
-	g_signal_emit(player, signals[VOLUME_CHANGED], 0, vol);
-
-	return FALSE;
-}
-
-static void
-volume_notify_cb(GObject *element, GstObject *prop_object, GParamSpec *pspec, XmrPlayer *player)
-{
-	gdouble vol;
-	g_object_get(element, "volume", &vol, NULL);
-
-	player->priv->cur_volume = vol;
-
-	g_idle_add((GSourceFunc) emit_volume_changed_idle, player);
-}
-
-static gboolean
-tick_timeout(XmrPlayer *player)
-{
-	if (player->priv->playing)
-	{
+		float buffering;
 		gint64 position;
-		gint64 duration;
-
-		position = xmr_player_get_time(player);
-		duration = xmr_player_get_duration(player);
-
-		g_signal_emit(player, signals[TICK], 0, position, duration);
-	}
-
-	return TRUE;
-}
+	};
+} PlayerEvent;
 
 static void
-about_to_finish_cb(GstElement *playbin, XmrPlayer *player)
+vlc_event_callback(const libvlc_event_t *event, void *userdata)
 {
-	player->priv->current_track_finishing = TRUE;
-	g_signal_emit(player, signals[EOS], 0, TRUE);
-}
-
-static void
-track_change_done(XmrPlayer *player, GError *error)
-{
-	XmrPlayerPrivate *priv = player->priv;
-
-	priv->stream_change_pending = FALSE;
-
-	if (error != NULL)
+	XmrPlayer *player = (XmrPlayer *)userdata;
+	PlayerEvent *player_event = g_new0(PlayerEvent, 1);
+	
+	switch(event->type)
 	{
-		xmr_debug ("track change failed: %s", error->message);
-		return;
-	}
-
-	xmr_debug ("track change finished");
-
-	priv->current_track_finishing = FALSE;
-	priv->buffering = FALSE;
-	priv->playing = TRUE;
-
-	if (priv->tick_timeout_id == 0)
-	{
-		priv->tick_timeout_id =
-			g_timeout_add (1000 / 2,
-				       (GSourceFunc) tick_timeout,
-				       player);
-	}
-}
-
-static void
-start_state_change(XmrPlayer *player, GstState state, enum StateChangeAction action)
-{
-	GstStateChangeReturn scr;
-
-	player->priv->state_change_action = action;
-	scr = gst_element_set_state(player->priv->playbin, state);
-	if (scr == GST_STATE_CHANGE_SUCCESS)
-	{
-		xmr_debug ("state change succeeded synchronously");
-		state_change_finished(player, NULL);
-	}
-}
-
-static void
-state_change_finished(XmrPlayer *player, GError *error)
-{
-	XmrPlayerPrivate *priv = player->priv;
-	enum StateChangeAction action = priv->state_change_action;
-	priv->state_change_action = DO_NOTHING;
-
-	switch (action)
-	{
-	case DO_NOTHING:
+	case libvlc_MediaPlayerBuffering:
+		player_event->buffering = event->u.media_player_buffering.new_cache;
 		break;
 
-	case PLAYER_SHUTDOWN:
-		if (error != NULL) {
-			g_warning ("unable to shut down player pipeline: %s\n", error->message);
-		}
-		break;
-
-	case SET_NEXT_URI:
-		if (error != NULL) {
-			g_warning ("unable to stop playback: %s\n", error->message);
-		} else {
-			xmr_debug ("setting new playback URI %s", priv->uri);
-			g_object_set (priv->playbin, "uri", priv->uri, NULL);
-			start_state_change (player, GST_STATE_PLAYING, FINISH_TRACK_CHANGE);
-		}
-		break;
-
-	case STOP_TICK_TIMER:
-		if (error != NULL) {
-			g_warning ("unable to pause playback: %s\n", error->message);
-		} else {
-			if (priv->tick_timeout_id != 0) {
-				g_source_remove (priv->tick_timeout_id);
-				priv->tick_timeout_id = 0;
-			}
-		}
-		break;
-
-	case FINISH_TRACK_CHANGE:
-		track_change_done (player, error);
-		break;
-	}
-}
-
-static gboolean
-bus_cb(GstBus *bus, GstMessage *message, XmrPlayer *player)
-{
-	XmrPlayerPrivate *priv;
-
-	g_return_val_if_fail (player != NULL, FALSE);
-	priv = player->priv;
-
-	switch (GST_MESSAGE_TYPE (message))
-	{
-	case GST_MESSAGE_ERROR:
-		{
-			gchar *debug;
-			GError *error;
-
-			gst_message_parse_error(message, &error, &debug);
-
-			g_signal_emit(player, signals[ERROR], 0, error);
-
-			g_free(debug);
-			g_error_free(error);
-		}
-		break;
-
-	case GST_MESSAGE_EOS:
-		g_signal_emit(player, signals[EOS], 0, FALSE);
-		break;
-
-	case GST_MESSAGE_BUFFERING:
-	{
-		gint progress;
-		gst_message_parse_buffering(message, &progress);
-		if (progress >= 100)
-		{
-			priv->buffering = FALSE;
-			if (priv->playing)
-			{
-				xmr_debug("buffering done, setting pipeline back to PLAYING");
-				gst_element_set_state (priv->playbin, GST_STATE_PLAYING);
-			}
-			else
-			{
-				xmr_debug("buffering done, leaving pipeline PAUSED");
-			}
-		}
-		else if (priv->buffering == FALSE && priv->playing)
-		{
-			xmr_debug ("buffering - temporarily pausing playback");
-			gst_element_set_state (priv->playbin, GST_STATE_PAUSED);
-			priv->buffering = TRUE;
-		}
-		g_signal_emit(player, signals[BUFFERING], 0, progress);
-		break;
-	}
-
-	case GST_MESSAGE_STATE_CHANGED:
-		{
-			GstState oldstate;
-			GstState newstate;
-			GstState pending;
-			gst_message_parse_state_changed (message, &oldstate, &newstate, &pending);
-
-			if (GST_MESSAGE_SRC(message) == GST_OBJECT(priv->playbin))
-			{
-				if (pending == GST_STATE_VOID_PENDING)
-				{
-					xmr_debug("playbin reached state %s", gst_element_state_get_name(newstate));
-					state_change_finished(player, NULL);
-				}
-				g_signal_emit(player, signals[STATE_CHANGED], 0, oldstate, newstate);
-			}
-			break;
-		}
-		
-	case GST_MESSAGE_CLOCK_LOST:
-		/* Get a new clock */
-		gst_element_set_state(priv->playbin, GST_STATE_PAUSED);
-		gst_element_set_state(priv->playbin, GST_STATE_PLAYING);
+	case libvlc_MediaPlayerTimeChanged:
+		player_event->position = event->u.media_player_time_changed.new_time;
 		break;
 
 	default:
 		break;
 	}
-
-	return TRUE;
+	
+	player_event->type = event->type;
+	
+	g_async_queue_push(player->priv->event_queue, player_event);
+	g_main_context_wakeup(g_main_context_default());
 }
 
 static gboolean
-init_pipeline(XmrPlayer *player, GError **error)
+player_event_poll(XmrPlayer *player)
 {
-	XmrPlayerPrivate *priv = player->priv;
-
-	priv->playbin = gst_element_factory_make ("playbin2", NULL);
-	if (priv->playbin == NULL)
+	PlayerEvent *event = g_async_queue_try_pop(player->priv->event_queue);
+	if (event == NULL)
+		return TRUE;
+	
+	switch(event->type)
 	{
-		g_set_error(error,
-			     XMR_PLAYER_ERROR,
-			     XMR_PLAYER_ERROR_GENERAL,
-			     _("Failed to create playbin2 element; check your GStreamer installation"));
-		return FALSE;
-	}
-
-	g_signal_connect_object(G_OBJECT(priv->playbin),
-				 "about-to-finish",
-				 G_CALLBACK(about_to_finish_cb),
-				 player, 0);
-	g_signal_connect_object(G_OBJECT(priv->playbin),
-				 "deep-notify::volume",
-				 G_CALLBACK(volume_notify_cb),
-				 player, 0);
-
-	gst_bus_add_watch(gst_element_get_bus(priv->playbin),
-			   (GstBusFunc)bus_cb,
-			   player);
-
-	g_object_notify(G_OBJECT(player), "playbin");
-	g_object_notify(G_OBJECT(player), "bus");
-
-	g_object_get(priv->playbin, "audio-sink", &priv->audio_sink, NULL);
-	if (priv->audio_sink == NULL)
+	case libvlc_MediaPlayerEncounteredError:
 	{
-		priv->audio_sink = gst_element_factory_make("autoaudiosink", "audio-output");
-		if (priv->audio_sink) {
-			g_object_set(priv->playbin, "audio-sink", priv->audio_sink, NULL);
-		}
-	}
-	else
-	{
-		xmr_debug ("existing audio sink found");
-		g_object_unref(priv->audio_sink);
-	}
+		GError error = { 0 };
+		error.message = (gchar *)libvlc_errmsg();
 
+		g_signal_emit(player, signals[ERROR], 0, &error);
+	}
+		break;
+
+	case libvlc_MediaPlayerBuffering:
+	{
+		g_signal_emit(player, signals[BUFFERING], 0, (guint)event->buffering);
+	}
+		break;
+
+	case libvlc_MediaPlayerPlaying:
+	case libvlc_MediaPlayerPaused:
+	case libvlc_MediaPlayerStopped:
+		g_signal_emit(player, signals[STATE_CHANGED], 0);
+		break;
+
+	case libvlc_MediaPlayerTimeChanged:
+	{
+		g_signal_emit(player, signals[TICK], 0, event->position, xmr_player_get_duration(player));
+	}
+		break;
+
+	case libvlc_MediaPlayerEndReached:
+		g_signal_emit(player, signals[EOS], 0, FALSE);
+		break;
+		
+	default:
+		break;
+	}
+	
+	g_free(event);
+	
 	return TRUE;
 }
 
@@ -406,23 +159,29 @@ xmr_player_dispose(GObject *object)
 {
 	XmrPlayer *player = XMR_PLAYER(object);
 	XmrPlayerPrivate *priv = player->priv;
+	
+	libvlc_event_manager_t *event_mgr;
+	gint i;
 
-	if (priv->tick_timeout_id != 0)
+	event_mgr = libvlc_media_player_event_manager(priv->player);
+	
+	for (i = 0; i < g_vlc_event_count; ++i)
+		libvlc_event_detach(event_mgr, g_vlc_events[i], vlc_event_callback, player);
+
+	if (priv->event_idle_id != 0)
 	{
-		g_source_remove (priv->tick_timeout_id);
-		priv->tick_timeout_id = 0;
+		g_source_remove (priv->event_idle_id);
+		priv->event_idle_id = 0;
 	}
 
-	if (priv->playbin != NULL)
+	if (priv->event_queue)
 	{
-		gst_element_set_state(priv->playbin, GST_STATE_NULL);
-		g_object_unref(priv->playbin);
-		priv->playbin = NULL;
-		priv->audio_sink = NULL;
+		g_async_queue_unref(priv->event_queue);
+		priv->event_queue = NULL;
 	}
 
-	g_free(priv->uri);
-	g_free(priv->prev_uri);
+	libvlc_media_player_release(priv->player);
+	libvlc_release(priv->instance);
 
 	G_OBJECT_CLASS(xmr_player_parent_class)->dispose(object);
 }
@@ -438,18 +197,10 @@ xmr_player_get_property(GObject *object,
 
 	switch(prop_id)
 	{
-	case PROP_PLAYBIN:
-		g_value_set_object (value, priv->playbin);
+	case PROP_PLAYER:
+		g_value_set_object (value, priv->player);
 		break;
-	case PROP_BUS:
-		if (priv->playbin)
-		{
-			GstBus *bus;
-			bus = gst_element_get_bus (priv->playbin);
-			g_value_set_object(value, bus);
-			gst_object_unref(bus);
-		}
-		break;
+
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
 		break;
@@ -512,7 +263,7 @@ init_signals(XmrPlayerClass *klass)
 		g_signal_new("buffering",
 					G_OBJECT_CLASS_TYPE(object_class),
 					G_SIGNAL_RUN_LAST,
-					G_STRUCT_OFFSET(XmrPlayerClass, tick),
+					G_STRUCT_OFFSET(XmrPlayerClass, buffering),
 					NULL, NULL,
 					g_cclosure_marshal_VOID__UINT,
 					G_TYPE_NONE,
@@ -525,21 +276,9 @@ init_signals(XmrPlayerClass *klass)
 					G_SIGNAL_RUN_LAST,
 					G_STRUCT_OFFSET(XmrPlayerClass, state_changed),
 					NULL, NULL,
-					xmr_marshal_VOID__INT_INT,
+					g_cclosure_marshal_VOID__VOID,
 					G_TYPE_NONE,
-					2,
-					G_TYPE_INT, G_TYPE_INT);
-
-	signals[VOLUME_CHANGED] =
-		g_signal_new("volume-changed",
-					G_OBJECT_CLASS_TYPE(object_class),
-					G_SIGNAL_RUN_LAST,
-					G_STRUCT_OFFSET(XmrPlayerClass, volume_changed),
-					NULL, NULL,
-					g_cclosure_marshal_VOID__FLOAT,
-					G_TYPE_NONE,
-					1,
-					G_TYPE_FLOAT);
+					0);
 }
 
 static void install_properties(XmrPlayerClass *klass)
@@ -547,19 +286,10 @@ static void install_properties(XmrPlayerClass *klass)
 	GObjectClass *object_class = G_OBJECT_CLASS(klass);
 
 	g_object_class_install_property(object_class,
-				PROP_PLAYBIN,
-				g_param_spec_object ("playbin",
-					"playbin",
-					"playbin element",
-					GST_TYPE_ELEMENT,
-					G_PARAM_READABLE));
-
-	g_object_class_install_property (object_class,
-				PROP_BUS,
-				g_param_spec_object ("bus",
-					"bus",
-					"GStreamer message bus",
-					GST_TYPE_BUS,
+				PROP_PLAYER,
+				g_param_spec_pointer("player",
+					"player",
+					"player",
 					G_PARAM_READABLE));
 }
 
@@ -576,15 +306,17 @@ xmr_player_class_init(XmrPlayerClass *klass)
 	install_properties(klass);
 
 	klass->open = xmr_player_open;
-	klass->opened = xmr_player_opened;
-	klass->close = xmr_player_close;
 	klass->play = xmr_player_play;
 	klass->pause = xmr_player_pause;
+	klass->playpause = xmr_player_playpause;
+	klass->stop = xmr_player_stop;
 	klass->playing = xmr_player_playing;
 	klass->set_volume = xmr_player_set_volume;
 	klass->get_volume = xmr_player_get_volume;
 	klass->set_time = xmr_player_set_time;
 	klass->get_time = xmr_player_get_time;
+	klass->get_loop = xmr_player_get_loop;
+	klass->set_loop = xmr_player_set_loop;
 
 	g_type_class_add_private(object_class, sizeof(XmrPlayerPrivate));
 }
@@ -593,21 +325,41 @@ static void
 xmr_player_init(XmrPlayer *player)
 {
 	XmrPlayerPrivate *priv;
+	libvlc_event_manager_t *event_mgr;
+	gint i;
 
 	player->priv = G_TYPE_INSTANCE_GET_PRIVATE(player, XMR_TYPE_PLAYER, XmrPlayerPrivate);
 	priv = player->priv;
+	
+	priv->instance = libvlc_new(0, NULL);
+	priv->player = libvlc_media_player_new(priv->instance);
+	
+	priv->event_queue = g_async_queue_new();
+	priv->event_idle_id = g_timeout_add(10, (GSourceFunc)player_event_poll, player);
+	
+	event_mgr = libvlc_media_player_event_manager(priv->player);
+	
+	for (i = 0; i < g_vlc_event_count; ++i)
+		libvlc_event_attach(event_mgr, g_vlc_events[i], vlc_event_callback, player);
+	
+	priv->loop_count = 0;
+}
 
-	priv->playbin = NULL;
-	priv->audio_sink = NULL;
+static void
+xmr_player_set_repeat(XmrPlayer *player)
+{
+	libvlc_media_t *media;
+	gchar *option;
+	
+	media = libvlc_media_player_get_media(player->priv->player);
+	if (media == NULL)
+		return ;
 
-	priv->uri = NULL;
-	priv->prev_uri = NULL;
-	priv->playing = FALSE;
-	priv->buffering = FALSE;
-	priv->cur_volume = 1.0;
-	priv->tick_timeout_id = 0;
-	priv->current_track_finishing = FALSE;
-	priv->stream_change_pending = FALSE;
+	option = g_strdup_printf("input-repeat=%d", player->priv->loop_count);
+
+	libvlc_media_add_option(media, option);
+	
+	g_free(option);
 }
 
 XmrPlayer*
@@ -620,22 +372,16 @@ xmr_player_new()
 
 gboolean
 xmr_player_open(XmrPlayer	*player,
-			const gchar *uri,
-			GError		**error)
+			const gchar *uri)
 {
 	XmrPlayerPrivate *priv;
 	gchar *r_uri = NULL;
+	libvlc_media_t *media = NULL;
 
 	g_return_val_if_fail( player != NULL && uri != NULL, FALSE);
 	priv = player->priv;
-
-	if (priv->playbin == NULL)
-	{
-		if (!init_pipeline(player, error))
-			return FALSE;
-	}
-
-	xmr_player_close(player);
+	
+	xmr_player_stop(player);
 
 	{
 		static const gchar * const prefix[] =
@@ -643,9 +389,9 @@ xmr_player_open(XmrPlayer	*player,
 			"http://", "file://" // we don't deal with others
 		};
 		gboolean prefix_ok = FALSE;
-		int i;
+		gint i;
 
-		for (i=0; i<2; i++)
+		for (i = 0; i < 2; ++i)
 		{
 			if (g_str_has_prefix(uri, prefix[i]))
 			{
@@ -655,199 +401,129 @@ xmr_player_open(XmrPlayer	*player,
 		}
 
 		if (!prefix_ok) {
-			r_uri = g_strdup_printf("file://%s", uri);
+			r_uri = g_filename_to_uri(uri, NULL, NULL);
 		} else {
 			r_uri = g_strdup(uri);
 		}
 	}
 
-	g_free (priv->prev_uri);
-	priv->prev_uri = priv->uri;
-	priv->uri = r_uri;
+	media = libvlc_media_new_location(priv->instance, r_uri);
+	g_free(r_uri);
 
-	priv->stream_change_pending = TRUE;
-
-	return TRUE;
-}
-
-gboolean
-xmr_player_opened(XmrPlayer *player)
-{
-	g_return_val_if_fail( player != NULL, FALSE);
-	return player->priv->uri != NULL;
-}
-
-gboolean
-xmr_player_close(XmrPlayer	*player)
-{
-	XmrPlayerPrivate *priv;
-
-	g_return_val_if_fail( player != NULL, FALSE);
-	priv = player->priv;
+	if(media == NULL)
+		return FALSE;
 	
-	xmr_player_set_time(player, 0);
-
-	if (priv->playbin != NULL)
-	{
-		gst_element_set_state(priv->playbin, GST_STATE_NULL);
-	}
-
-	g_free (priv->uri);
-	g_free (priv->prev_uri);
-	priv->uri = NULL;
-	priv->prev_uri = NULL;
-
-	priv->playing = FALSE;
-	priv->buffering = FALSE;
-	priv->current_track_finishing = FALSE;
-
-	if (priv->tick_timeout_id != 0)
-	{
-		g_source_remove(priv->tick_timeout_id);
-		priv->tick_timeout_id = 0;
-	}
-
+	libvlc_media_player_set_media(priv->player, media);
+	xmr_player_set_repeat(player);
+	
 	return TRUE;
 }
 
 gboolean
 xmr_player_play(XmrPlayer *player)
 {
-	XmrPlayerPrivate *priv;
-
-	g_return_val_if_fail( player != NULL, FALSE);
-	priv = player->priv;
-
-	g_return_val_if_fail( priv->playbin != NULL, FALSE);
-	g_return_val_if_fail( priv->uri != NULL, FALSE);
-
-	if (priv->stream_change_pending == FALSE)
-	{
-		xmr_debug ("no stream change pending, just restarting playback");
-		start_state_change (player, GST_STATE_PLAYING, FINISH_TRACK_CHANGE);
-	}
-	else if (priv->current_track_finishing)
-	{
-		xmr_debug ("current track finishing -> just setting URI on playbin");
-		g_object_set(priv->playbin, "uri", priv->uri, NULL);
-
-		track_change_done(player, NULL);
-	}
-	else
-	{
-		xmr_debug ("play next song");
-		start_state_change(player, GST_STATE_READY, SET_NEXT_URI);
-	}
-
-	return TRUE;
+	g_return_val_if_fail(player != NULL, FALSE);
+	
+	return libvlc_media_player_play(player->priv->player) == 0;
 }
 
 void	
 xmr_player_pause(XmrPlayer *player)
 {
-	XmrPlayerPrivate *priv;
-
-	g_return_if_fail( player != NULL);
-	priv = player->priv;
-
-	if (!priv->playing)
-		return ;
-
-	priv->playing = FALSE;
-	g_return_if_fail( priv->playbin != NULL);
-
-	start_state_change(player, GST_STATE_PAUSED, STOP_TICK_TIMER);
+	g_return_if_fail(player != NULL);
+	
+	libvlc_media_player_pause(player->priv->player);
 }
 
-gboolean
+void
+xmr_player_playpause(XmrPlayer *player)
+{
+	if (xmr_player_playing(player))
+		xmr_player_pause(player);
+	else
+		xmr_player_play(player);
+}
+
+void
+xmr_player_stop(XmrPlayer *player)
+{
+	g_return_if_fail(player != NULL);
+	
+	libvlc_media_player_stop(player->priv->player);
+}
+
+void
 xmr_player_resume(XmrPlayer *player)
 {
-	g_return_val_if_fail( player != NULL, FALSE);
-	g_return_val_if_fail( player->priv->playbin != NULL, FALSE);
+	g_return_val_if_fail(player != NULL, FALSE);
 
-	if (player->priv->playing)
-		return TRUE;
-
-	start_state_change(player, GST_STATE_PLAYING, FINISH_TRACK_CHANGE);
-
-	return TRUE;
+	libvlc_media_player_set_pause(player->priv->player, 0);
 }
 
 gboolean
 xmr_player_playing(XmrPlayer *player)
 {
-	g_return_val_if_fail( player != NULL, FALSE);
-
-	return player->priv->playing;
+	g_return_val_if_fail(player != NULL, FALSE);
+	
+	return libvlc_media_player_is_playing(player->priv->player) == 1;
 }
 
 void
 xmr_player_set_volume(XmrPlayer *player,
 			float		 volume)
 {
-	g_return_if_fail( player != NULL);
-	g_return_if_fail (volume >= 0.0 && volume <= 1.0);
-
-	if (player->priv->playbin == NULL)
-		return ;
-
-	g_signal_handlers_block_by_func(player->priv->playbin, volume_notify_cb, player);
-
-	if (gst_element_implements_interface(player->priv->playbin, GST_TYPE_STREAM_VOLUME))
-		gst_stream_volume_set_volume(GST_STREAM_VOLUME(player->priv->playbin),
-					      GST_STREAM_VOLUME_FORMAT_CUBIC, volume);
-	else
-		g_object_set(player->priv->playbin, "volume", volume, NULL);
-
-	g_signal_handlers_unblock_by_func(player->priv->playbin, volume_notify_cb, player);
-
-	player->priv->cur_volume = volume;
+	g_return_if_fail(player != NULL);
+	g_return_if_fail(volume >= 0.0 && volume <= 1.0);
+	
+	libvlc_audio_set_volume(player->priv->player, volume * 100);
 }
 
 float
 xmr_player_get_volume(XmrPlayer *player)
 {
-	g_return_val_if_fail( player != NULL, 0);
+	g_return_val_if_fail(player != NULL, 0);
 
-	return player->priv->cur_volume;
+	return libvlc_audio_get_volume(player->priv->player) / 100;
 }
 
 void
 xmr_player_set_time(XmrPlayer	*player,
 			gint64		 newtime)
 {
-	g_return_if_fail( player != NULL);
-
-	gst_element_seek(player->priv->playbin, 1.0,
-			  GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
-			  GST_SEEK_TYPE_SET, newtime,
-			  GST_SEEK_TYPE_NONE, -1);
+	g_return_if_fail(player != NULL);
+	
+	libvlc_media_player_set_time(player->priv->player, newtime);
 }
 
 gint64
 xmr_player_get_time(XmrPlayer *player)
 {
-	g_return_val_if_fail( player != NULL, 0L);
+	g_return_val_if_fail(player != NULL, 0L);
 
-	if (player->priv->playbin != NULL)
-	{
-		gint64 position = -1;
-		GstFormat fmt = GST_FORMAT_TIME;
-
-		gst_element_query_position(player->priv->playbin, &fmt, &position);
-		return position;
-	}
-
-	return -1;
+	return libvlc_media_player_get_time(player->priv->player);
 }
 
 gint64
 xmr_player_get_duration(XmrPlayer *player)
 {
-	GstFormat fmt = GST_FORMAT_TIME;
-	gint64 duration = 0;
+	g_return_val_if_fail(player != NULL, 0L);
 
-	gst_element_query_duration(player->priv->playbin, &fmt, &duration);
+	return libvlc_media_player_get_length(player->priv->player);
+}
 
-	return duration;
+gint
+xmr_player_get_loop(XmrPlayer *player)
+{
+	g_return_val_if_fail(player != NULL, 0);
+	
+	return player->priv->loop_count;
+}
+
+void
+xmr_player_set_loop(XmrPlayer *player, gint count)
+{
+	g_return_if_fail(player != NULL);
+	
+	player->priv->loop_count = count;
+	xmr_player_set_repeat(player);
 }

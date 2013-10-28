@@ -99,11 +99,7 @@ enum
 	XMR_EVENT_LOGOUT,
 	XMR_EVENT_PLAYLIST,
 	XMR_EVENT_COVER,
-	XMR_EVENT_APPEND_RADIO,
-	XMR_EVENT_PLAYER_EOS,
-	XMR_EVENT_PLAYER_STATE_CHANGED,
-	XMR_EVENT_PLAYER_TICK,
-	XMR_EVENT_PLAYER_BUFFERING
+	XMR_EVENT_APPEND_RADIO
 };
 
 typedef struct
@@ -235,7 +231,7 @@ struct _XmrWindowPrivate
 	
 	GtkWidget *radio_search_box; /* for search artist radio */
 	
-	gboolean use_gst_buffering;
+	gboolean download_mode;
 	
 	gint search_music_count;
 	guint search_music_idle_id;
@@ -358,13 +354,6 @@ player_buffering(XmrPlayer *player,
 
 static void
 player_state_changed(XmrPlayer *player,
-			gint old_state,
-			gint new_state,
-			XmrWindow *window);
-
-static void
-player_volume_changed(XmrPlayer *player,
-			float volume,
 			XmrWindow *window);
 
 /**
@@ -904,7 +893,7 @@ xmr_window_init(XmrWindow *window)
 	priv->queue_event = g_async_queue_new();
 	priv->xmr_event_timer = g_timeout_add(XMR_EVENT_INTERVAL, (GSourceFunc)xmr_event_poll, window);
 	priv->buffering_timer = 0;
-	priv->use_gst_buffering = FALSE;
+	priv->download_mode = FALSE;
 	priv->search_music_count = 0;
 	priv->search_music_idle_id = 0;
 
@@ -963,7 +952,6 @@ xmr_window_init(XmrWindow *window)
 	g_signal_connect(priv->player, "tick", G_CALLBACK(player_tick), window);
 	g_signal_connect(priv->player, "buffering", G_CALLBACK(player_buffering), window);
 	g_signal_connect(priv->player, "state-changed", G_CALLBACK(player_state_changed), window);
-	g_signal_connect(priv->player, "volume-changed", G_CALLBACK(player_volume_changed), window);
 
 	g_signal_connect(window, "login-finish", G_CALLBACK(login_finish), NULL);
 	g_signal_connect(window, "logout", G_CALLBACK(on_logout), NULL);
@@ -1126,7 +1114,6 @@ xmr_window_dispose(GObject *obj)
 		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_tick), window);
 		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_buffering), window);
 		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_state_changed), window);
-		g_signal_handlers_disconnect_by_func(priv->player, G_CALLBACK(player_volume_changed), window);
 
 		g_object_unref(priv->player);
 		priv->player = NULL;
@@ -1746,8 +1733,9 @@ player_eos(XmrPlayer *player,
 			gboolean early,
 			XmrWindow *window)
 {
-	if (!early) {
-		xmr_event_send(window, XMR_EVENT_PLAYER_EOS, NULL);
+	if (!early)
+	{
+		xmr_window_play_next(window);
 	}
 }
 
@@ -1757,10 +1745,6 @@ player_error(XmrPlayer *player,
 			XmrWindow *window)
 {
 	xmr_debug("Player error(%d): %s\n", error->code, error->message);
-	// play next if "Stream contains no data" occurres
-	if (error->code == GST_STREAM_ERROR_TYPE_NOT_FOUND) {
-		xmr_event_send(window, XMR_EVENT_PLAYER_EOS, NULL);
-	}
 }
 
 static void
@@ -1778,11 +1762,11 @@ player_tick(XmrPlayer *player,
 	gint64 secs;
 	gchar *time;
 
-	secs = elapsed / G_USEC_PER_SEC / 1000;
+	secs = elapsed / 1000;
 	mins_elapsed = secs / 60;
 	secs_elapsed = secs % 60;
 
-	secs = duration / G_USEC_PER_SEC / 1000;
+	secs = duration / 1000;
 	mins_duration = secs / 60;
 	secs_duration = secs % 60;
 
@@ -1790,8 +1774,8 @@ player_tick(XmrPlayer *player,
 				mins_elapsed, secs_elapsed,
 				mins_duration, secs_duration
 				);
-
-	xmr_event_send(window, XMR_EVENT_PLAYER_TICK, time);
+	
+	xmr_label_set_text(XMR_LABEL(window->priv->labels[LABEL_TIME]), time);
 }
 
 static void
@@ -1799,28 +1783,35 @@ player_buffering(XmrPlayer *player,
 			guint progress,
 			XmrWindow *window)
 {
+	XmrWindowPrivate *priv = window->priv;
+
 	// to avoid too many buffering event
 	if (progress % 25 == 0)
-		xmr_event_send(window, XMR_EVENT_PLAYER_BUFFERING, GINT_TO_POINTER(progress));
+	{
+		if (progress == 100)
+			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING);
+		else
+			xmr_waiting_wnd_add_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING, WAITING_INFO_BUFFERING);
+		xmr_debug("buffering (%d)...", progress);
+	}
 }
 
 static void
 player_state_changed(XmrPlayer *player,
-			gint old_state,
-			gint new_state,
 			XmrWindow *window)
 {
-	xmr_event_send(window, XMR_EVENT_PLAYER_STATE_CHANGED, GINT_TO_POINTER(new_state));
-}
+	XmrWindowPrivate *priv = window->priv;
 
-static void
-player_volume_changed(XmrPlayer *player,
-			float volume,
-			XmrWindow *window)
-{
-	window->priv->syncing_volume = TRUE;
-	gtk_scale_button_set_value(GTK_SCALE_BUTTON(window->priv->buttons[BUTTON_VOLUME]), volume);
-	window->priv->syncing_volume = FALSE;
+	if (xmr_player_playing(priv->player))
+	{
+		gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
+		gtk_widget_show(priv->buttons[BUTTON_PAUSE]);
+	}
+	else
+	{
+		gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
+		gtk_widget_show(priv->buttons[BUTTON_PLAY]);
+	}
 }
 
 static gpointer
@@ -2255,11 +2246,11 @@ xmr_window_play_next(XmrWindow *window)
 	song = (SongInfo *)priv->playlist->data;
 	priv->current_song = song_info_copy(song);
 
-	// using gstreamer buffering
-	if (priv->use_gst_buffering)
+	// backend buffering
+	if (!priv->download_mode)
 	{
 		xmr_debug("play next song: %s", song->song_name);
-		xmr_player_open(priv->player, song->location, NULL);
+		xmr_player_open(priv->player, song->location);
 		xmr_player_play(priv->player);
 	}
 	else
@@ -2269,12 +2260,12 @@ xmr_window_play_next(XmrWindow *window)
 		if (is_track_downloaded(song))
 		{
 			xmr_debug("play next song: %s", file);
-			xmr_player_open(priv->player, file, NULL);
+			xmr_player_open(priv->player, file);
 			xmr_player_play(priv->player);
 		}
 		else
 		{
-			xmr_player_close(priv->player);
+			xmr_player_stop(priv->player);
 			xmr_downloader_add_task(priv->downloader, song->location, file);
 			start_buffering_timer(window);
 		}
@@ -2534,7 +2525,7 @@ load_settings(XmrWindow *window)
 
 	load_skin(window);
 	
-	priv->use_gst_buffering = g_settings_get_boolean(G_SETTINGS(priv->settings), "gst-buffering");
+	priv->download_mode = g_settings_get_boolean(G_SETTINGS(priv->settings), "download-mode");
 
 	xmr_settings_get_radio(priv->settings, &radio_name, &radio_url);
 	if (g_strcmp0(radio_names[0], radio_name) == 0)
@@ -2839,8 +2830,8 @@ init_pref_window(XmrWindow *window,
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), widget,
 							 gtk_label_new(_("Other")));
 	
-	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cbUseGstBuffering"));
-	g_settings_bind(G_SETTINGS(priv->settings), "gst-buffering", widget, "active", G_SETTINGS_BIND_DEFAULT);
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cbDownloadMode"));
+	g_settings_bind(G_SETTINGS(priv->settings), "download-mode", widget, "active", G_SETTINGS_BIND_DEFAULT);
 
 	widget = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "cb_skin"));
 	if (widget)
@@ -3550,10 +3541,10 @@ fetch_playlist_finish(XmrWindow *window,
 			song_info_free(priv->current_song);
 			priv->current_song = song_info_copy(song);
 
-			if (priv->use_gst_buffering)
+			if (!priv->download_mode)
 			{
 				xmr_debug("play song: %s", song->song_name);
-				xmr_player_open(priv->player, song->location, NULL);
+				xmr_player_open(priv->player, song->location);
 				xmr_player_play(priv->player);
 				
 				xmr_window_set_track_info(window);
@@ -3810,46 +3801,6 @@ xmr_event_poll(XmrWindow *window)
 			radio_info_free(radio->info);
 		}
 		break;
-
-	case XMR_EVENT_PLAYER_EOS:
-		xmr_window_play_next(window);
-		break;
-
-	case XMR_EVENT_PLAYER_STATE_CHANGED:
-		{
-			gint new_state = GPOINTER_TO_INT(event->data);
-			if (new_state == GST_STATE_PLAYING)
-			{
-				gtk_widget_hide(priv->buttons[BUTTON_PLAY]);
-				gtk_widget_show(priv->buttons[BUTTON_PAUSE]);
-			}
-			else if(new_state == GST_STATE_PAUSED)
-			{
-				gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
-				gtk_widget_show(priv->buttons[BUTTON_PLAY]);
-			}
-			event->data = NULL; // Do not free!!!
-		}
-		break;
-
-	case XMR_EVENT_PLAYER_TICK:
-		{
-			gchar *time = (gchar *)event->data;
-			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_TIME]), time);
-		}
-		break;
-		
-	case XMR_EVENT_PLAYER_BUFFERING:
-		{
-			gint progress = GPOINTER_TO_INT(event->data);
-			if (progress == 100)
-				xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING);
-			else
-				xmr_waiting_wnd_add_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING, WAITING_INFO_BUFFERING);
-			xmr_debug("buffering (%d)...", progress);
-			event->data = NULL;
-		}
-		break;
 	}
 
 	if (event->type != XMR_EVENT_COVER)
@@ -3864,7 +3815,7 @@ buffering_timeout(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
 
-	if (priv->use_gst_buffering)
+	if (!priv->download_mode)
 		return FALSE;
 
 	if (!xmr_window_playing(window))
@@ -3878,7 +3829,7 @@ buffering_timeout(XmrWindow *window)
 			xmr_debug("buffering ok...");
 			xmr_debug("play next song: %s", file);
 
-			xmr_player_open(priv->player, file, NULL);
+			xmr_player_open(priv->player, file);
 			xmr_player_play(priv->player);
 
 			g_free(file);
@@ -4033,9 +3984,9 @@ on_settings_changed(GSettings *settings,
 					const char *key,
 					XmrWindow *window)
 {
-	if (g_strcmp0(key, "gst-buffering") == 0)
+	if (g_strcmp0(key, "download-mode") == 0)
 	{
-		window->priv->use_gst_buffering = g_settings_get_boolean(settings, key);
+		window->priv->download_mode = g_settings_get_boolean(settings, key);
 	}
 	else if (g_strcmp0(key, "ontop") == 0)
 	{

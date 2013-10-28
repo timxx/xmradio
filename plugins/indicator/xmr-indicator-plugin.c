@@ -135,16 +135,14 @@ on_menu_item_activate(GtkMenuItem *item,
 
 static void
 player_state_changed(XmrPlayer *player,
-			gint old_state,
-			gint new_state,
 			XmrIndicatorPlugin *plugin)
 {
-	if (new_state == GST_STATE_PLAYING)
+	if (xmr_player_playing(player))
 	{
 		gtk_widget_hide(plugin->menu_item_play);
 		gtk_widget_show(plugin->menu_item_pause);
 	}
-	else if(new_state == GST_STATE_PAUSED)
+	else
 	{
 		gtk_widget_hide(plugin->menu_item_pause);
 		gtk_widget_show(plugin->menu_item_play);
