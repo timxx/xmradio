@@ -42,7 +42,6 @@
 #include "xmrlabel.h"
 #include "xmrdownloader.h"
 #include "xmrapp.h"
-#include "xmrwaitingwnd.h"
 #include "icon_enter_xpm.h"
 #include "xmrlist.h"
 #include "xmrsearchbox.h"
@@ -880,7 +879,6 @@ xmr_window_init(XmrWindow *window)
 	priv->message.title = NULL;
 
 	priv->downloader = xmr_downloader_new();
-	priv->waiting_wnd = xmr_waiting_wnd_new(GTK_WINDOW(window));
 	
 	priv->xmr_searchlist = NULL;
 	priv->radio_search_box = NULL;
@@ -1783,17 +1781,7 @@ player_buffering(XmrPlayer *player,
 			guint progress,
 			XmrWindow *window)
 {
-	XmrWindowPrivate *priv = window->priv;
-
-	// to avoid too many buffering event
-	if (progress % 25 == 0)
-	{
-		if (progress == 100)
-			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING);
-		else
-			xmr_waiting_wnd_add_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING, WAITING_INFO_BUFFERING);
-		xmr_debug("buffering (%d)...", progress);
-	}
+	xmr_debug("buffering (%d)...", progress);
 }
 
 static void
@@ -2109,7 +2097,6 @@ xmr_window_get_playlist(XmrWindow *window)
 {
 	if (window && window->priv->queue_fetch_playlist)
 	{
-		xmr_waiting_wnd_add_task(XMR_WAITING_WND(window->priv->waiting_wnd), INFO_PLAYLIST, WAITING_INFO_PLAYLIST);
 		g_async_queue_push(window->priv->queue_fetch_playlist, window);
 	}
 }
@@ -2134,7 +2121,6 @@ xmr_window_login(XmrWindow *window)
 {
 	g_return_if_fail(window != NULL);
 
-	xmr_waiting_wnd_add_task(XMR_WAITING_WND(window->priv->waiting_wnd), INFO_LOGIN, WAITING_INFO_LOGIN);
 #if GLIB_CHECK_VERSION(2, 32, 0)
 	g_thread_new("login", (GThreadFunc)thread_login, window);
 #else
@@ -3749,7 +3735,6 @@ xmr_event_poll(XmrWindow *window)
 			g_signal_emit(window, signals[LOGIN_FINISH], 0, l->ok, l->message);
 
 			g_free(l->message);
-			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_LOGIN);
 		}
 		break;
 
@@ -3761,7 +3746,6 @@ xmr_event_poll(XmrWindow *window)
 		{
 			FetchPlaylist *p = (FetchPlaylist *)event->data;
 			g_signal_emit(window, signals[FETCH_PLAYLIST_FINISH], 0, p->result, p->list);
-			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_PLAYLIST);
 		}
 		break;
 
@@ -3824,8 +3808,6 @@ buffering_timeout(XmrWindow *window)
 		{
 			gchar *file = make_track_file(priv->current_song);
 			
-			xmr_waiting_wnd_next_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING);
-			
 			xmr_debug("buffering ok...");
 			xmr_debug("play next song: %s", file);
 
@@ -3842,8 +3824,6 @@ buffering_timeout(XmrWindow *window)
 		}
 		else
 		{
-			xmr_waiting_wnd_add_task(XMR_WAITING_WND(priv->waiting_wnd), INFO_BUFFERING, WAITING_INFO_BUFFERING);
-
 			xmr_debug("buffering...");
 		}
 	}
