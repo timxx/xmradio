@@ -3045,6 +3045,8 @@ void
 xmr_window_quit(XmrWindow *window)
 {
 	gint x, y;
+	
+	xmr_player_stop(window->priv->player);
 
 	gtk_window_get_position(GTK_WINDOW(window), &x, &y);
 
