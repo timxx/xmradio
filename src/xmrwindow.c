@@ -162,6 +162,7 @@ struct _XmrWindowPrivate
 	GtkWidget	*menu_logout;
 	
 	GtkWidget	*menu_item_ontop;
+	GtkWidget	*menu_item_singlerepeat;
 
 	/**
 	 * #XmrChooser
@@ -896,7 +897,7 @@ xmr_window_init(XmrWindow *window)
 	priv->search_music_idle_id = 0;
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-    gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
+	gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
 	gtk_widget_add_events(GTK_WIDGET(window), GDK_BUTTON_PRESS_MASK);
 
 	gtk_window_set_default_icon_name("xmradio");
@@ -988,6 +989,10 @@ xmr_window_init(XmrWindow *window)
 	g_settings_bind(G_SETTINGS(priv->settings),
 				"ontop",
 				priv->menu_item_ontop, "active",
+				G_SETTINGS_BIND_DEFAULT);
+	g_settings_bind(G_SETTINGS(priv->settings),
+				"single-repeat",
+				priv->menu_item_singlerepeat, "active",
 				G_SETTINGS_BIND_DEFAULT);
 
 	gtk_widget_hide(priv->buttons[BUTTON_PAUSE]);
@@ -1733,7 +1738,17 @@ player_eos(XmrPlayer *player,
 {
 	if (!early)
 	{
-		xmr_window_play_next(window);
+		XmrWindowPrivate *priv = window->priv;
+		if (g_settings_get_boolean(G_SETTINGS(priv->settings), "single-repeat"))
+		{
+			// replay current song
+			xmr_player_open(player, priv->current_song->location);
+			xmr_player_play(player);
+		}
+		else
+		{
+			xmr_window_play_next(window);
+		}
 	}
 }
 
@@ -2206,7 +2221,7 @@ xmr_window_play_next(XmrWindow *window)
 
 	g_return_if_fail( window != NULL );
 	priv = window->priv;
-
+	
 	// change to default cover image first
 	if (priv->pb_cover)
 		set_cover_image(window, priv->pb_cover);
@@ -2338,6 +2353,11 @@ create_popup_menu(XmrWindow *window)
 
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+
+	item = gtk_check_menu_item_new_with_mnemonic(_("S_ingle Repeat"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
+	priv->menu_item_singlerepeat = item;
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
 
 	item = gtk_check_menu_item_new_with_mnemonic(_("Always on _Top"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);

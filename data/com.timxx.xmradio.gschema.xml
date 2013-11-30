@@ -55,6 +55,11 @@
 			<summary>Asks to stick window</summary>
 			<description>Set true to make window appear on all user desktops</description>
 		</key>
+		<key name="single-repeat" type="b">
+			<default>false</default>
+			<summary>Single repeat</summary>
+			<description>Play current song repeatly.</description>
+		</key>
 	</schema>
 	<schema id="com.timxx.xmradio.plugins" path="/apps/xmradio/plugins/">
 		<key name="active-plugins" type="as">
