@@ -98,23 +98,23 @@ on_menu_item_activate(GtkMenuItem *item,
 {
 	const gchar *menu = gtk_menu_item_get_label(item);
 	
-	if(g_strcmp0(menu, "_Quit") == 0)
+	if(g_strcmp0(menu, _("_Quit")) == 0)
 	{
 		xmr_window_quit(plugin->window);
 	}
-	else if(g_strcmp0(menu, "_Play") == 0)
+	else if(g_strcmp0(menu, _("_Play")) == 0)
 	{
 		xmr_window_play(plugin->window);
 		gtk_widget_hide(GTK_WIDGET(item));
 		gtk_widget_show(plugin->menu_item_pause);
 	}
-	else if(g_strcmp0(menu, "P_ause") == 0)
+	else if(g_strcmp0(menu, _("P_ause")) == 0)
 	{
 		xmr_window_pause(plugin->window);
 		gtk_widget_hide(GTK_WIDGET(item));
 		gtk_widget_show(plugin->menu_item_play);
 	}
-	else if(g_strcmp0(menu, "_Next") == 0)
+	else if(g_strcmp0(menu, _("_Next")) == 0)
 	{
 		xmr_window_play_next(plugin->window);
 	}
@@ -316,17 +316,17 @@ xmr_indicator_plugin_init(XmrIndicatorPlugin *plugin)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 
-	item = gtk_menu_item_new_with_mnemonic("_Play");
+	item = gtk_menu_item_new_with_mnemonic(_("_Play"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
 	plugin->menu_item_play = item;
 
-	item = gtk_menu_item_new_with_mnemonic("P_ause");
+	item = gtk_menu_item_new_with_mnemonic(_("P_ause"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
 	plugin->menu_item_pause = item;
 
-	item = gtk_menu_item_new_with_mnemonic("_Next");
+	item = gtk_menu_item_new_with_mnemonic(_("_Next"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
 
@@ -344,7 +344,7 @@ xmr_indicator_plugin_init(XmrIndicatorPlugin *plugin)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 
-	item = gtk_menu_item_new_with_mnemonic("_Quit");
+	item = gtk_menu_item_new_with_mnemonic(_("_Quit"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
 

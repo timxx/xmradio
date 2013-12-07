@@ -6,10 +6,10 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: xmradio 0.4.3\n"
+"Project-Id-Version: xmradio 0.5.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-07-14 16:34+0800\n"
-"PO-Revision-Date: 2013-07-14 16:38+0800\n"
+"POT-Creation-Date: 2013-12-07 14:28+0800\n"
+"PO-Revision-Date: 2013-12-07 14:30+0800\n"
 "Last-Translator: Weitian Leung <weitianleung@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: zh_CN\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:144
+#: src/main.c:143
 #, c-format
 msgid ""
 "%s\n"
@@ -42,9 +42,9 @@ msgstr "添加到播放列表"
 msgid "Album"
 msgstr "专辑"
 
-#: src/xmrwindow.c:2365
+#: src/xmrwindow.c:2364
 msgid "Always on _Top"
-msgstr "窗口置顶"
+msgstr "窗口置顶(_T)"
 
 #: src/xmrlist.c:305
 msgid "Artist"
@@ -70,13 +70,17 @@ msgstr "当播放时间比例超过设置值时自动标记喜欢"
 msgid "Auto Login"
 msgstr "自动登陆"
 
-#: src/xmrwindow.c:58
+#: src/xmrwindow.c:57
 msgid "Buffering..."
 msgstr "正在缓冲..."
 
 #: data/ui/about.ui:12
 msgid "Copyright @ 2012-2013 Weitian Leung"
 msgstr ""
+
+#: data/ui/pref.ui:12
+msgid "Download before play"
+msgstr "先下载后播放"
 
 #: data/ui/pref.ui:194
 msgid "Email: "
@@ -86,28 +90,24 @@ msgstr "邮件："
 msgid "Enter artist name..."
 msgstr "请输入艺人名字..."
 
-#: src/xmrplayer.c:367
-msgid "Failed to create playbin2 element; check your GStreamer installation"
-msgstr "创建playbin2元素失败了"
-
 #: src/xmrlist.c:305
 msgid "From"
 msgstr "来自"
 
-#: src/xmrwindow.c:59
+#: src/xmrwindow.c:58
 msgid "Getting playlist..."
 msgstr "正在获取播放列表..."
 
-#: src/xmrwindow.c:2848 src/xmrwindow.c:3129
+#: src/xmrwindow.c:2846 src/xmrwindow.c:3129
 msgid "Gtk Theme"
 msgstr "GTK主题"
 
 #: data/xmradio.desktop.in.h:8 plugins/indicator/xmr-indicator-plugin.c:130
-#: plugins/indicator/xmr-indicator-plugin.c:345
+#: plugins/indicator/xmr-indicator-plugin.c:340
 msgid "Hate"
 msgstr "不再播放"
 
-#: plugins/indicator/xmr-indicator-plugin.c:162
+#: plugins/indicator/xmr-indicator-plugin.c:160
 msgid "Hide on exit when playing"
 msgstr "关闭时隐藏程序到后台运行"
 
@@ -115,8 +115,8 @@ msgstr "关闭时隐藏程序到后台运行"
 msgid "Invert Selection"
 msgstr "反选"
 
-#: data/ui/login.ui:37 src/xmrwindow.c:2387 src/xmrwindow.c:2914
-#: src/xmrwindow.c:3006
+#: data/ui/login.ui:37 src/xmrwindow.c:2385 src/xmrwindow.c:2912
+#: src/xmrwindow.c:3004
 msgid "Login"
 msgstr "登陆"
 
@@ -137,16 +137,16 @@ msgstr ""
 "登陆失败了：\n"
 "%s"
 
-#: src/xmrwindow.c:57
+#: src/xmrwindow.c:56
 msgid "Login..."
 msgstr "正在登陆..."
 
-#: src/xmrwindow.c:2391 src/xmrwindow.c:2984
+#: src/xmrwindow.c:2389 src/xmrwindow.c:2982
 msgid "Logout"
 msgstr "注销"
 
 #: data/xmradio.desktop.in.h:7 plugins/indicator/xmr-indicator-plugin.c:126
-#: plugins/indicator/xmr-indicator-plugin.c:341
+#: plugins/indicator/xmr-indicator-plugin.c:336
 msgid "Love"
 msgstr "喜欢"
 
@@ -154,7 +154,7 @@ msgstr "喜欢"
 msgid "Music Player"
 msgstr "音乐播放器"
 
-#: src/xmrwindow.c:943
+#: src/xmrwindow.c:931
 msgid "Music search ..."
 msgstr "音乐搜索..."
 
@@ -170,9 +170,14 @@ msgstr "网络出错啦。"
 msgid "Oops! Not found any related artist."
 msgstr "未找到相关的艺人。"
 
-#: src/xmrwindow.c:2840
+#: src/xmrwindow.c:2838
 msgid "Other"
 msgstr "其它"
+
+#: plugins/indicator/xmr-indicator-plugin.c:111
+#: plugins/indicator/xmr-indicator-plugin.c:324
+msgid "P_ause"
+msgstr "暂停(_A)"
 
 #: data/ui/login.ui:87
 msgid "Password:"
@@ -186,17 +191,21 @@ msgstr "暂停"
 msgid "Play"
 msgstr "播放"
 
-#: src/xmrlist.c:408 src/xmrwindow.c:2358
+#: src/xmrlist.c:408 src/xmrwindow.c:2352
 msgid "Playlist"
 msgstr "播放列表"
 
-#: src/xmrwindow.c:2836
+#: src/xmrwindow.c:2834
 msgid "Plugins"
 msgstr "插件"
 
 #: data/ui/pref.ui:230
 msgid "Preferences"
 msgstr "首选项"
+
+#: src/xmrwindow.c:2359
+msgid "S_ingle Repeat"
+msgstr "单曲循环(_I)"
 
 #: src/xmrsearchbox.c:544
 msgid "Search Artist Radio"
@@ -211,7 +220,7 @@ msgid "Select All"
 msgstr "全选"
 
 #: plugins/indicator/xmr-indicator-plugin.c:121
-#: plugins/indicator/xmr-indicator-plugin.c:314
+#: plugins/indicator/xmr-indicator-plugin.c:312
 msgid "Show"
 msgstr "显示"
 
@@ -219,7 +228,7 @@ msgstr "显示"
 msgid "Show window on all desktops"
 msgstr "在所有桌面上显示窗口"
 
-#: src/xmrwindow.c:2831
+#: src/xmrwindow.c:2829
 msgid "Skin"
 msgstr "皮肤"
 
@@ -236,15 +245,11 @@ msgstr "网址："
 msgid "Unable to write file: %s"
 msgstr "无法写入文件：%s"
 
-#: data/ui/pref.ui:12
-msgid "Use GStreamer buffering"
-msgstr "使用GStreamer内部缓冲机制"
-
 #: data/ui/login.ui:74
 msgid "User Name:"
 msgstr "用户名："
 
-#: src/xmrwindow.c:3005
+#: src/xmrwindow.c:3003
 msgid "User name and password may not empty"
 msgstr "用户名、密码不为空"
 
@@ -252,7 +257,7 @@ msgstr "用户名、密码不为空"
 msgid "Version: "
 msgstr "版本："
 
-#: src/xmrwindow.c:1024
+#: src/xmrwindow.c:1015
 msgid "XMRadio"
 msgstr ""
 
@@ -272,17 +277,41 @@ msgstr "虾米搜索"
 msgid "XiaMi radio"
 msgstr "虾米电台"
 
-#: src/xmrwindow.c:2331 src/xmrwindow.c:2415
+#: src/xmrwindow.c:2377 src/xmrwindow.c:2429
+msgid "_About"
+msgstr "关于(_A)"
+
+#: src/xmrwindow.c:2325 src/xmrwindow.c:2413
 msgid "_Gtk Theme"
-msgstr "GTK主题"
+msgstr "_GTK主题"
 
-#: src/xmrwindow.c:2352
+#: plugins/indicator/xmr-indicator-plugin.c:117
+#: plugins/indicator/xmr-indicator-plugin.c:329
+msgid "_Next"
+msgstr "下一首(_N)"
+
+#: plugins/indicator/xmr-indicator-plugin.c:105
+#: plugins/indicator/xmr-indicator-plugin.c:319
+msgid "_Play"
+msgstr "播放(_P)"
+
+#: src/xmrwindow.c:2372 src/xmrwindow.c:2421
+msgid "_Preferences"
+msgstr "首选项(_P)"
+
+#: src/xmrwindow.c:2396 src/xmrwindow.c:2463
+#: plugins/indicator/xmr-indicator-plugin.c:101
+#: plugins/indicator/xmr-indicator-plugin.c:347
+msgid "_Quit"
+msgstr "退出(_Q)"
+
+#: src/xmrwindow.c:2346
 msgid "_Radio"
-msgstr "电台"
+msgstr "电台(_R)"
 
-#: src/xmrwindow.c:2338
+#: src/xmrwindow.c:2332
 msgid "_Skin"
-msgstr "皮肤"
+msgstr "皮肤(_S)"
 
 #: src/xmrdownloader.c:187
 msgid "curl_easy_init failed"
@@ -297,18 +326,24 @@ msgstr "curl_easy_perform失败：%s"
 msgid "xmradio"
 msgstr "xmradio"
 
-#: src/xmrwindow.c:954
+#: src/xmrwindow.c:942
 msgid "年代电台"
 msgstr ""
 
-#: src/xmrwindow.c:55
+#: src/xmrwindow.c:54
 msgid "新歌电台"
 msgstr ""
 
-#: src/xmrwindow.c:953
+#: src/xmrwindow.c:941
 msgid "星座电台"
 msgstr ""
 
-#: src/xmrwindow.c:952
+#: src/xmrwindow.c:940
 msgid "风格电台"
 msgstr ""
+
+#~ msgid "Failed to create playbin2 element; check your GStreamer installation"
+#~ msgstr "创建playbin2元素失败了"
+
+#~ msgid "Use GStreamer buffering"
+#~ msgstr "使用GStreamer内部缓冲机制"

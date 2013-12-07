@@ -2369,12 +2369,12 @@ create_popup_menu(XmrWindow *window)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
-	item = gtk_menu_item_new_with_mnemonic("_Preferences");
+	item = gtk_menu_item_new_with_mnemonic(_("_Preferences"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
 
-	item = gtk_menu_item_new_with_mnemonic("_About");
+	item = gtk_menu_item_new_with_mnemonic(_("_About"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
@@ -2393,7 +2393,7 @@ create_popup_menu(XmrWindow *window)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
-	item = gtk_menu_item_new_with_mnemonic("_Quit");
+	item = gtk_menu_item_new_with_mnemonic(_("_Quit"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
@@ -2418,7 +2418,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 
 		set_gtk_theme(window);
 	}
-	else if(g_strcmp0(menu, "_Preferences") == 0)
+	else if(g_strcmp0(menu, _("_Preferences")) == 0)
 	{
 		GtkWidget *pref_window = NULL;
 		pref_window = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "window_pref"));
@@ -2426,7 +2426,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 			gtk_widget_show_all(pref_window);
 		}
 	}
-	else if(g_strcmp0(menu, "_About") == 0)
+	else if(g_strcmp0(menu, _("_About")) == 0)
 	{
 		GtkBuilder *builder = NULL;
 		static GtkWidget *dialog_about;
@@ -2460,7 +2460,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 	{
 		xmr_window_logout(window);
 	}
-	else if(g_strcmp0(menu, "_Quit") == 0)
+	else if(g_strcmp0(menu, _("_Quit")) == 0)
 	{
 		xmr_window_quit(window);
 	}
