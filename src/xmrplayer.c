@@ -455,7 +455,7 @@ xmr_player_stop(XmrPlayer *player)
 void
 xmr_player_resume(XmrPlayer *player)
 {
-	g_return_val_if_fail(player != NULL, FALSE);
+	g_return_if_fail(player != NULL);
 
 	libvlc_media_player_set_pause(player->priv->player, 0);
 }

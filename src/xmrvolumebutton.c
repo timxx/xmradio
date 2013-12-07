@@ -297,13 +297,13 @@ xmr_volume_button_set_image_from_stock(XmrVolumeButton *button, const gchar *sto
 	image = gtk_button_get_image(GTK_BUTTON(button));
 	if (image == NULL)
 	{
-		image = gtk_image_new_from_stock(stock, GTK_ICON_SIZE_BUTTON);
+		image = gtk_image_new_from_icon_name(stock, GTK_ICON_SIZE_BUTTON);
 
 		gtk_button_set_image(GTK_BUTTON(button), image);
 	}
 	else
 	{
-		gtk_image_set_from_stock(GTK_IMAGE(image), stock, GTK_ICON_SIZE_BUTTON);
+		gtk_image_set_from_icon_name(GTK_IMAGE(image), stock, GTK_ICON_SIZE_BUTTON);
 	}
 }
 

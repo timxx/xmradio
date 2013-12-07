@@ -62,9 +62,9 @@ XMR_DEFINE_PLUGIN(XMR_TYPE_SEARCH_PLUGIN, XmrSearchPlugin, xmr_search_plugin,)
 #define XIAMI_SEARCH_URL "http://www.xiami.com/search?key="
 #define XIAMI_INFO_URL "http://www.xiami.com/song/playlist/id/"
 
-#define SONG_PATTERN "href=\"/song/"
-#define ARTIST_PATTERN "href=\"/artist/"
-#define ALBUM_PATTERN "href=\"/album/"
+#define SONG_PATTERN "class=\"song_name\""
+#define ARTIST_PATTERN "class=\"song_artist\""
+#define ALBUM_PATTERN "class=\"song_album\""
 
 static gchar *
 decode_url(const gchar *url)
@@ -182,7 +182,7 @@ get_song_id_info(const gchar *id)
 	GString *data = g_string_new("");
 	gint result = xmr_service_get_url_data(service, url, data);
 	g_object_unref(service);
-	
+
 	do
 	{
 		const gchar *p = data->str;
@@ -247,19 +247,34 @@ parse_result_data(const gchar *data)
 
 	const gchar *current = data;
 	const gchar *p;
-	
+
+	/*
+	<td class="song_name">
+		<a target="_blank" href="http://www.xiami.com/song/1770779526" title="中国人"><b class="key_red">中国人</b></a>
+	</td>
+	<td class="song_artist">
+		<a target="_blank" href="http://www.xiami.com/artist/648" title="刘德华">刘德华</a>
+	</td>
+	<td class="song_album">
+		<a target="_blank" href="http://www.xiami.com/album/491512" title="Unforgettable 2011中国巡回演唱会">《Unforgettable 2011中国巡回演唱会》</a>
+	</td>
+	*/
 	while ((p = strstr(current, SONG_PATTERN)) != NULL)
 	{
 		gchar *tmp;
 		SongInfo *info;
 		current = p + strlen(SONG_PATTERN);
-		// PATTERN: href="/song/XXXXXXX". 'X' must be number 
-		if (!isdigit(*current))
-			continue;
-
-		p = strchr(current, '\"');
+		p = strstr(current, "/song/");
 		if (p == NULL)
 			break;
+
+		current = p + strlen("/song/");
+		if (!isdigit(*current))
+			continue;
+		
+		p = current + 1;
+		while (p && isdigit(*p))
+			p++;
 
 		// song id
 		tmp = g_strndup(current, p - current);
@@ -276,7 +291,7 @@ parse_result_data(const gchar *data)
 		{
 			song_info_free(info);
 			continue;
-		}	
+		}
 		info->song_name = tmp;
 
 		// artist name

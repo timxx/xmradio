@@ -262,7 +262,7 @@ mmkeys_grab(XmrMMKeysPlugin *plugin, gboolean grab)
 	gint keycodes[] = {0, 0, 0, 0, 0};
 	GdkDisplay *display;
 
-	guint i, j;
+	GdkScreen *screen;
 
 	display = gdk_display_get_default();
 	keycodes[0] = XKeysymToKeycode(GDK_DISPLAY_XDISPLAY(display), XF86XK_AudioPlay);
@@ -271,30 +271,27 @@ mmkeys_grab(XmrMMKeysPlugin *plugin, gboolean grab)
 	keycodes[3] = XKeysymToKeycode(GDK_DISPLAY_XDISPLAY(display), XF86XK_AudioNext);
 	keycodes[4] = XKeysymToKeycode(GDK_DISPLAY_XDISPLAY(display), XF86XK_AudioPause);
 
-	for (i = 0; i < gdk_display_get_n_screens(display); ++i)
+	screen = gdk_display_get_default_screen(display);
+	if (screen != NULL)
 	{
-		GdkScreen *screen = gdk_display_get_screen(display, i);
+		GdkWindow *root = gdk_screen_get_root_window (screen);
+		guint j;
 
-		if (screen != NULL)
+		for (j = 0; j < G_N_ELEMENTS(keycodes); ++j)
 		{
-			GdkWindow *root = gdk_screen_get_root_window (screen);
-
-			for (j = 0; j < G_N_ELEMENTS(keycodes); ++j)
+			if (keycodes[j] != 0)
 			{
-				if (keycodes[j] != 0)
-				{
-					if (grab)
-						grab_mmkey(keycodes[j], root);
-					else
-						ungrab_mmkey(keycodes[j], root);
-				}
+				if (grab)
+					grab_mmkey(keycodes[j], root);
+				else
+					ungrab_mmkey(keycodes[j], root);
 			}
-
-			if (grab)
-				gdk_window_add_filter(root, filter_mmkeys, (gpointer)plugin->window);
-			else
-				gdk_window_remove_filter(root, filter_mmkeys, (gpointer) plugin->window);
 		}
+
+		if (grab)
+			gdk_window_add_filter(root, filter_mmkeys, (gpointer)plugin->window);
+		else
+			gdk_window_remove_filter(root, filter_mmkeys, (gpointer) plugin->window);
 	}
 }
 

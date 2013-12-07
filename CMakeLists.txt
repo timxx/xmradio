@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(xmradio)
 
-set(version 0.4.4)
+set(version 0.5.0)
 
 set(XMR_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${XMR_CMAKE_PATH} ${CMAKE_MODULE_PATH})

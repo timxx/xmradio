@@ -1,3 +1,43 @@
+xmradio (0.5.0-1~saucy) saucy; urgency=high
+
+  * 0.5.0
+    - backend changed from gstreamer to libvlc
+    - new Single Repeat play mode
+    - fixed can't search music
+    - removed XmrWaitingWnd
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 07 Dec 2013 15:05:36 +0800
+
+xmradio (0.5.0-1~raring) raring; urgency=high
+
+  * 0.5.0
+    - backend changed from gstreamer to libvlc
+    - new Single Repeat play mode
+    - fixed can't search music
+    - removed XmrWaitingWnd
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 07 Dec 2013 15:04:52 +0800
+
+xmradio (0.5.0-1~quantal) quantal; urgency=high
+
+  * 0.5.0
+    - backend changed from gstreamer to libvlc
+    - new Single Repeat play mode
+    - fixed can't search music
+    - removed XmrWaitingWnd
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 07 Dec 2013 15:04:05 +0800
+
+xmradio (0.5.0-1~precise) precise; urgency=high
+
+  * 0.5.0
+    - backend changed from gstreamer to libvlc
+    - new Single Repeat play mode
+    - fixed can't search music
+    - removed XmrWaitingWnd
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 07 Dec 2013 15:03:18 +0800
+
 xmradio (0.4.4~saucy) saucy; urgency=high
 
   * 0.4.4
@@ -304,14 +344,14 @@ xmradio (0.3.1~oneiric) oneiric; urgency=low
 xmradio (0.3.0~oneiric) oneiric; urgency=low
 
   * 0.3.0
-    - 增加我的电台、虾米猜
+    - 澧炲姞鎴戠殑鐢靛彴銆佽櫨绫崇寽
 
  -- Weitian Leung <weitianleung@gmail.com>  Sat, 29 Sep 2012 16:50:06 +0800
  
 xmradio (0.3.0~precise) precise; urgency=low
 
   * 0.3.0
-    - 增加我的电台、虾米猜
+    - 澧炲姞鎴戠殑鐢靛彴銆佽櫨绫崇寽
 
  -- Weitian Leung <weitianleung@gmail.com>  Sat, 29 Sep 2012 16:47:14 +0800
  
