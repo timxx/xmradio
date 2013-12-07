@@ -98,23 +98,23 @@ on_menu_item_activate(GtkMenuItem *item,
 {
 	const gchar *menu = gtk_menu_item_get_label(item);
 	
-	if(g_strcmp0(menu, GTK_STOCK_QUIT) == 0)
+	if(g_strcmp0(menu, "_Quit") == 0)
 	{
 		xmr_window_quit(plugin->window);
 	}
-	else if(g_strcmp0(menu, GTK_STOCK_MEDIA_PLAY) == 0)
+	else if(g_strcmp0(menu, "_Play") == 0)
 	{
 		xmr_window_play(plugin->window);
 		gtk_widget_hide(GTK_WIDGET(item));
 		gtk_widget_show(plugin->menu_item_pause);
 	}
-	else if(g_strcmp0(menu, GTK_STOCK_MEDIA_PAUSE) == 0)
+	else if(g_strcmp0(menu, "P_ause") == 0)
 	{
 		xmr_window_pause(plugin->window);
 		gtk_widget_hide(GTK_WIDGET(item));
 		gtk_widget_show(plugin->menu_item_play);
 	}
-	else if(g_strcmp0(menu, GTK_STOCK_MEDIA_NEXT) == 0)
+	else if(g_strcmp0(menu, "_Next") == 0)
 	{
 		xmr_window_play_next(plugin->window);
 	}
@@ -309,45 +309,42 @@ xmr_indicator_plugin_init(XmrIndicatorPlugin *plugin)
 	plugin->indicator = NULL;
 	plugin->popup_menu = gtk_menu_new();
 
-	item = gtk_image_menu_item_new_with_label(_("Show"));
+	item = gtk_menu_item_new_with_label(_("Show"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
 
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 
-	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_MEDIA_PLAY, NULL);
+	item = gtk_menu_item_new_with_mnemonic("_Play");
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
-	gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(item), TRUE);
 	plugin->menu_item_play = item;
 
-	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_MEDIA_PAUSE, NULL);
+	item = gtk_menu_item_new_with_mnemonic("P_ause");
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
-	gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(item), TRUE);
 	plugin->menu_item_pause = item;
 
-	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_MEDIA_NEXT, NULL);
-	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
-	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
-	gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(item), TRUE);
-
-	item = gtk_separator_menu_item_new();
-	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
-
-	item = gtk_image_menu_item_new_with_label(_("Love"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
-	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
-
-	item = gtk_image_menu_item_new_with_label(_("Hate"));
+	item = gtk_menu_item_new_with_mnemonic("_Next");
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
 
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 
-	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);
+	item = gtk_menu_item_new_with_mnemonic(_("Love"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
+
+	item = gtk_menu_item_new_with_mnemonic(_("Hate"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
+	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
+
+	item = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
+
+	item = gtk_menu_item_new_with_mnemonic("_Quit");
 	gtk_menu_shell_append(GTK_MENU_SHELL(plugin->popup_menu), item);
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), plugin);
 

@@ -929,7 +929,7 @@ xmr_window_init(XmrWindow *window)
 	
 	priv->search_box = gtk_entry_new();
 	gtk_entry_set_placeholder_text(GTK_ENTRY(priv->search_box), _("Music search ..."));
-	gtk_entry_set_icon_from_stock(GTK_ENTRY(priv->search_box), GTK_ENTRY_ICON_SECONDARY, GTK_STOCK_FIND);
+	gtk_entry_set_icon_from_icon_name(GTK_ENTRY(priv->search_box), GTK_ENTRY_ICON_SECONDARY, "edit-find");
 
 	gtk_fixed_put(GTK_FIXED(priv->fixed), priv->search_box, 0, 0);
 
@@ -1508,15 +1508,15 @@ set_gtk_theme(XmrWindow *window)
 
 	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->buttons[BUTTON_PLAY], 25, 5);
 	xmr_button_set_type(XMR_BUTTON(priv->buttons[BUTTON_PLAY]), XMR_BUTTON_NORMAL);
-	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_PLAY]), GTK_STOCK_MEDIA_PLAY);
+	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_PLAY]), "media-playback-start");
 
 	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->buttons[BUTTON_PAUSE], 25, 5);
 	xmr_button_set_type(XMR_BUTTON(priv->buttons[BUTTON_PAUSE]), XMR_BUTTON_NORMAL);
-	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_PAUSE]), GTK_STOCK_MEDIA_PAUSE);
+	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_PAUSE]), "media-playback-pause");
 
 	gtk_fixed_move(GTK_FIXED(priv->fixed), priv->buttons[BUTTON_NEXT], 75, 5);
 	xmr_button_set_type(XMR_BUTTON(priv->buttons[BUTTON_NEXT]), XMR_BUTTON_NORMAL);
-	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_NEXT]), GTK_STOCK_MEDIA_NEXT);
+	xmr_button_set_image_from_stock(XMR_BUTTON(priv->buttons[BUTTON_NEXT]), "media-skip-forward");
 	gtk_widget_show(priv->buttons[BUTTON_NEXT]);
 
 	if (xmr_player_playing(priv->player))
@@ -2319,6 +2319,8 @@ create_popup_menu(XmrWindow *window)
 
 	priv->popup_menu = gtk_menu_new();
 	priv->skin_menu = gtk_menu_new();
+	
+	gtk_menu_set_accel_group(GTK_MENU(priv->popup_menu), accel_group);
 
 	item = gtk_radio_menu_item_new_with_mnemonic(priv->skin_item_group, _("_Gtk Theme"));
 	priv->skin_item_group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM(item));
@@ -2327,7 +2329,7 @@ create_popup_menu(XmrWindow *window)
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
 
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Skin"));
+	item = gtk_menu_item_new_with_mnemonic(_("_Skin"));
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), priv->skin_menu);
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
@@ -2367,13 +2369,12 @@ create_popup_menu(XmrWindow *window)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
-	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_PREFERENCES, accel_group);
-	gtk_image_menu_item_set_accel_group(GTK_IMAGE_MENU_ITEM(item), accel_group);
+	item = gtk_menu_item_new_with_mnemonic("_Preferences");
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
 
-	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ABOUT, accel_group);
+	item = gtk_menu_item_new_with_mnemonic("_About");
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
@@ -2392,7 +2393,7 @@ create_popup_menu(XmrWindow *window)
 	item = gtk_separator_menu_item_new();
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
-	item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
+	item = gtk_menu_item_new_with_mnemonic("_Quit");
 	gtk_menu_shell_append(GTK_MENU_SHELL(priv->popup_menu), item);
 
 	g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate), window);
@@ -2417,7 +2418,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 
 		set_gtk_theme(window);
 	}
-	else if(g_strcmp0(menu, GTK_STOCK_PREFERENCES) == 0)
+	else if(g_strcmp0(menu, "_Preferences") == 0)
 	{
 		GtkWidget *pref_window = NULL;
 		pref_window = GTK_WIDGET(gtk_builder_get_object(priv->ui_pref, "window_pref"));
@@ -2425,7 +2426,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 			gtk_widget_show_all(pref_window);
 		}
 	}
-	else if(g_strcmp0(menu, GTK_STOCK_ABOUT) == 0)
+	else if(g_strcmp0(menu, "_About") == 0)
 	{
 		GtkBuilder *builder = NULL;
 		static GtkWidget *dialog_about;
@@ -2459,7 +2460,7 @@ on_menu_item_activate(GtkMenuItem *item, XmrWindow *window)
 	{
 		xmr_window_logout(window);
 	}
-	else if(g_strcmp0(menu, GTK_STOCK_QUIT) == 0)
+	else if(g_strcmp0(menu, "_Quit") == 0)
 	{
 		xmr_window_quit(window);
 	}
@@ -3907,7 +3908,7 @@ on_search_box_focus_out(GtkWidget *widget,
 					   GdkEvent  *event,
 					   gpointer   data)
 {
-	gtk_entry_set_icon_from_stock(GTK_ENTRY(widget), GTK_ENTRY_ICON_SECONDARY, GTK_STOCK_FIND);
+	gtk_entry_set_icon_from_icon_name(GTK_ENTRY(widget), GTK_ENTRY_ICON_SECONDARY, "edit-find");
 
 	return FALSE;
 }

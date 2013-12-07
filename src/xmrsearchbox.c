@@ -536,7 +536,7 @@ xmr_search_box_init(XmrSearchBox *box)
 	priv->entry_box = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX(vbox), priv->entry_box, TRUE, TRUE, 0);
 	
-	gtk_entry_set_icon_from_stock(GTK_ENTRY(priv->entry_box), GTK_ENTRY_ICON_SECONDARY, GTK_STOCK_FIND);
+	gtk_entry_set_icon_from_icon_name(GTK_ENTRY(priv->entry_box), GTK_ENTRY_ICON_SECONDARY, "edit-find");
 	gtk_entry_set_placeholder_text(GTK_ENTRY(priv->entry_box), _("Enter artist name..."));
 	
 	gtk_window_set_skip_taskbar_hint(GTK_WINDOW(box), TRUE);
