@@ -2,7 +2,7 @@
  * xmrsearchbox.c
  * This file is part of xmradio
  *
- * Copyright (C) 2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2013-2014  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,9 +35,6 @@ G_DEFINE_TYPE(XmrSearchBox, xmr_search_box, GTK_TYPE_WINDOW)
 
 #define SEARCH_URL	"http://www.xiami.com/search/artist?key="
 #define RADIO_URL	"http://www.xiami.com/radio/xml/type/5/id/"
-
-#define ARTIST_PATTERN "href=\"/artist/"
-#define IMG_SRC_PATTERN "<img src=\""
 
 struct _XmrSearchBoxPrivate
 {
@@ -196,38 +193,44 @@ append_artist(XmrSearchBox *box,
 }
 
 static gchar *
-get_artist_name(const gchar *str, gint length)
+my_strndup(const gchar *str, gsize n)
 {
-	gchar *name = g_malloc0(length * sizeof(gchar));
-	gint i = 0, j;
+	gchar *dup = NULL;
+	gchar *cur = NULL;
+	const gchar *end;
 
-	for (j = 0; j < length; ++j)
+	if (str == NULL || n == 0)
+		return NULL;
+	
+	dup = g_new(gchar, n + 1);
+	cur = dup;
+	end = str + n;
+	
+	while (1)
 	{
-		if (str[j] == '<')
+		while (str && str < end && *str == '<')
 		{
-			for ( ; j < length; ++j)
-			{
-				if (str[j] == '>')
-				{
-					j++;
-					break;
-				}
-			}
+			while (str && str < end && *str && *str != '>')
+				str++;
+			
+			str++;
 		}
-		if (j < length)
-		{
-			if (str[j] == '<') // skip "<...>" in next loop
-			{
-				--j;
-				continue ;
-			}
-			name[i++] = str[j];
-		}
+		
+		if (str >= end || !str || !*str)
+			break;
+		
+		*cur++ = *str++;
 	}
 	
-	return name;
+	*cur = '\0';
+	
+	return dup;
 }
 
+/*
+ * FIXME:
+ * We should have a better way to parse (e.g. html parser?)
+ */
 static void
 parse_data(XmrSearchBox *box, GString *data)
 {
@@ -235,98 +238,72 @@ parse_data(XmrSearchBox *box, GString *data)
 	const gchar *p;
 	gboolean found_one = FALSE;
 	
-	while ((p = strstr(current, ARTIST_PATTERN)) != NULL)
+	while ((p = strstr(current, "artist_item100_block")) != NULL)
 	{
 		gchar *artist_id = NULL;
 		gchar *img_src = NULL;
 		gchar *artist_name = NULL;
 		gchar *artist_region = NULL;
-
-		current = p + strlen(ARTIST_PATTERN);
-		// PATTERN: href="/artist/XXXXXXX". 'X' must be number 
-		if (!isdigit(*current))
-			continue;
 		
-		p = strchr(current, '\"');
-		if (p == NULL)
+		const gchar *div_begin = p;
+		const gchar *div_end = strstr(p, "</div>");
+		const gchar *begin, *end;
+		
+		if (div_end == NULL)
 			break;
 
-		// artist id
-		artist_id = g_strndup(current, p - current);
-		if (artist_id == NULL)
-			continue ;
+		begin = strstr(p, "/artist/");
+		if (begin == NULL)
+			break;
+
+		begin = begin + strlen("/artist/");
+		end = strchr(begin, '\"');
+		artist_id = g_strndup(begin, end - begin);
 		
-		current = p + 1;
-		p = strstr(current, IMG_SRC_PATTERN);
-		if (p != NULL)
+		begin = strstr(div_begin, "<strong>");
+		end = strstr(begin, "</strong>");
+		artist_name = my_strndup(begin, end - begin);
+		
+		begin = strstr(div_begin, "<span class=\"singer_region\"");
+		end = strstr(begin, "</span>");
+		artist_region = my_strndup(begin, end - begin);
+		
+		begin = strstr(div_begin, "<img src=\"");
+		begin = begin + strlen("<img src=\"");
+		end = strchr(begin, '\"');
+		
+		current = div_end;
+		
+		img_src = g_strndup(begin, end - begin);
 		{
-			current = p + strlen(IMG_SRC_PATTERN);
-			p = strchr(current, '\"');
-			if (p == NULL)
-			{
-				g_free(artist_id);
-				break;
-			}
-			
-			img_src = g_strndup(current, p - current);
-			current = p + 1;
-			
 			// download img_src to tmp file
+			XmrService *srv = xmr_service_new();
+			GString *img_data = g_string_new("");
+			gint result = xmr_service_get_url_data(srv, img_src, img_data);
+			if (result == CURLE_OK)
 			{
-				XmrService *srv = xmr_service_new();
-				GString *img_data = g_string_new("");
-				gint result = xmr_service_get_url_data(srv, img_src, img_data);
-				if (result == CURLE_OK)
-				{
-					gchar *tmp_file = g_malloc0(260);
-					strcpy(tmp_file, "/tmp/xmradio-img-srcXXXXXX");
-					int fd = mkstemp(tmp_file);
-					
-					int bytes = write(fd, img_data->str, img_data->len * sizeof(gchar));
-					if (bytes == 0)
-					{
-						// warn_unused_result 
-					}
-					close(fd);
-					
-					g_free(img_src);
-					img_src = tmp_file;
-				}
-				else
-				{
-					g_free(img_src);
-					img_src = NULL;
-				}
+				gchar *tmp_file = g_malloc0(260);
+				strcpy(tmp_file, "/tmp/xmradio-img-srcXXXXXX");
+				int fd = mkstemp(tmp_file);
 				
-				g_string_free(img_data, TRUE);
-				g_object_unref(srv);
+				int bytes = write(fd, img_data->str, img_data->len * sizeof(gchar));
+				if (bytes == 0)
+				{
+					// warn_unused_result 
+				}
+				close(fd);
+				
+				g_free(img_src);
+				img_src = tmp_file;
 			}
-		}
-		
-		// artist name
-		// FIXME: maybe wrong someday...
-		p = strstr(current, "<strong>");
-		if (p != NULL)
-		{
-			current = p + strlen("<strong>");
-			p = strstr(current, "</strong>");
-			if (p != NULL)
+			else
 			{
-				artist_name = get_artist_name(current, p - current);
-				current = p + 1;
+				g_free(img_src);
+				img_src = NULL;
 			}
-		}
-		
-		p = strstr(current, "singer_region\">");
-		if (p != NULL)
-		{
-			current = p + strlen("singer_region\">");
-			p = strchr(current, '<');
-			if (p != NULL)
-			{
-				artist_region = g_strndup(current, p - current);
-				current = p + 1;
-			}
+			
+			g_string_free(img_data, TRUE);
+			g_object_unref(srv);
 		}
 		
 		found_one = TRUE;
