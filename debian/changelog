@@ -1,3 +1,24 @@
+xmradio (0.5.1~saucy) saucy; urgency=high
+
+  * 0.5.1
+    - fixed artist radio not working
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 29 Mar 2014 13:47:08 +0800
+
+xmradio (0.5.1~quantal) quantal; urgency=high
+
+  * 0.5.1
+    - fixed artist radio not working
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 29 Mar 2014 13:46:48 +0800
+
+xmradio (0.5.1~precise) precise; urgency=high
+
+  * 0.5.1
+    - fixed artist radio not working
+
+ -- Weitian Leung <weitianleung@gmail.com>  Sat, 29 Mar 2014 13:46:28 +0800
+
 xmradio (0.5.0-1~saucy) saucy; urgency=high
 
   * 0.5.0
