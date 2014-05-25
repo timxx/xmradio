@@ -1,3 +1,10 @@
+xmradio (0.5.1~trusty) trusty; urgency=high
+
+  * 0.5.1
+    - fixed artist radio not working
+
+ -- Weitian Leung <weitianleung@gmail.com>  Mon, 26 May 2014 00:01:56 +0800
+
 xmradio (0.5.1~saucy) saucy; urgency=high
 
   * 0.5.1
