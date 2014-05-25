@@ -18,7 +18,7 @@ Package: xmradio
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
          dbus,
-         libvlc5, libvlccore5,
+         vlc, libvlc5, libvlccore5,
          gnome-icon-theme,
 Description: Xia Mi Radio for Linux
  xmradio is a tiny Internet Xia Mi Radio client for Linux, which
