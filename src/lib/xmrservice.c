@@ -1,4 +1,4 @@
-/** 
+/**
  * xmrservice.c
  * This file is part of xmradio
  *
@@ -51,7 +51,7 @@ struct _XmrServicePrivate
 	gchar	*usr_name;
 
 	CURL	*curl;
-	
+
 	gchar	*cookie;	// cookie file
 };
 
@@ -140,7 +140,7 @@ xmr_service_get_property (GObject    *object,
 	}
 }
 
-static void 
+static void
 xmr_service_dispose(GObject *obj)
 {
 	XmrService *xs;
@@ -161,7 +161,7 @@ xmr_service_dispose(GObject *obj)
 		curl_easy_cleanup(priv->curl);
 		priv->curl = NULL;
 	}
-	
+
 	if (priv->cookie)
 	{
 		g_free(priv->cookie);
@@ -182,8 +182,8 @@ static void xmr_service_class_init(XmrServiceClass *klass)
 	g_object_class_install_property(obj_class,
 					 PROP_USR_ID,
 					 g_param_spec_string("usr-id",
-							      "User id",
-							      "User id",
+								  "User id",
+								  "User id",
 								  NULL,
 								  G_PARAM_READWRITE
 						 ));
@@ -191,8 +191,8 @@ static void xmr_service_class_init(XmrServiceClass *klass)
 	g_object_class_install_property(obj_class,
 					 PROP_USR_NAME,
 					 g_param_spec_string("usr-name",
-							      "User name",
-							      "User name",
+								  "User name",
+								  "User name",
 								  NULL,
 								  G_PARAM_READWRITE
 						 ));
@@ -220,10 +220,10 @@ static void xmr_service_init(XmrService *xs)
 	priv->curl = curl_easy_init();
 	if (priv->curl)
 	{
-        curl_easy_setopt(priv->curl, CURLOPT_USERAGENT, XMR_USER_AGENT);
+		curl_easy_setopt(priv->curl, CURLOPT_USERAGENT, XMR_USER_AGENT);
 		curl_easy_setopt(priv->curl, CURLOPT_CONNECTTIMEOUT, 10);
 		curl_easy_setopt(priv->curl, CURLOPT_NOSIGNAL, 1L);
-    }
+	}
 }
 
 XmrService* xmr_service_new()
@@ -326,7 +326,7 @@ xmr_service_get_track_list_by_id(XmrService *xs, GList **list, int type)
 		break;
 
 	case 1: // 虾米猜
-		url = g_strdup_printf("http://www.xiami.com/radio/xml/type/2/id/%s", xs->priv->usr_id);
+		url = g_strdup_printf("http://www.xiami.com/radio/xml/type/8/id/%s", xs->priv->usr_id);
 		break;
 	}
 
@@ -364,7 +364,7 @@ xmr_service_get_radio_list(XmrService *xs, GList **list, gint style)
 	GString *data;
 	gchar *url;
 
-	g_return_val_if_fail(xs != NULL, 1);	
+	g_return_val_if_fail(xs != NULL, 1);
 
 	data = g_string_new("");
 	if (data == NULL)
@@ -396,13 +396,13 @@ xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 
 	priv = xs->priv;
 
-    curl_easy_setopt(priv->curl, CURLOPT_URL, url);
+	curl_easy_setopt(priv->curl, CURLOPT_URL, url);
 	curl_easy_setopt(priv->curl, CURLOPT_HTTPGET, 1);
 	curl_easy_setopt(priv->curl, CURLOPT_FOLLOWLOCATION, 1);
 
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEDATA, data);
-	
+
 	if (priv->cookie)
 		curl_easy_setopt(priv->curl, CURLOPT_COOKIEFILE, priv->cookie);
 
@@ -410,7 +410,7 @@ xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 	curl_easy_setopt(priv->curl, CURLOPT_VERBOSE, 1L);
 #endif
 
-    ret = curl_easy_perform(priv->curl);
+	ret = curl_easy_perform(priv->curl);
 
 	return ret;
 }
@@ -418,27 +418,27 @@ xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 static size_t
 write_func(void *ptr, size_t size, size_t nmemb, void *data)
 {
-    size_t real_size = size * nmemb;
+	size_t real_size = size * nmemb;
 	GString *g_string;
 
-    if (ptr == NULL)
-        return 0;
+	if (ptr == NULL)
+		return 0;
 
 	g_string = (GString *)data;
 
 	// GString doesn't support '\0'
 	// g_string = g_string_append(g_string, (gchar *)ptr);
 	g_string->str = (gchar *)g_realloc(g_string->str, g_string->len + real_size + 1);
-    if (g_string->str == NULL)
-        return 0;
+	if (g_string->str == NULL)
+		return 0;
 
-    if (memcpy(&(g_string->str[g_string->len]), ptr, real_size) == NULL)
-        return 0;
+	if (memcpy(&(g_string->str[g_string->len]), ptr, real_size) == NULL)
+		return 0;
 
-    g_string->len += real_size;
-    g_string->str[g_string->len] = 0;
+	g_string->len += real_size;
+	g_string->str[g_string->len] = 0;
 
-    return real_size;
+	return real_size;
 }
 
 static gint
@@ -448,16 +448,16 @@ post_url_data(XmrService *xs, const gchar *url, GString *post_data, GString *dat
 	gint result = -1;
 
 	priv = xs->priv;
-	
+
 	curl_easy_setopt(priv->curl, CURLOPT_URL, url);
-    curl_easy_setopt(priv->curl, CURLOPT_POST, 1L);
+	curl_easy_setopt(priv->curl, CURLOPT_POST, 1L);
 
 	curl_easy_setopt(priv->curl, CURLOPT_POSTFIELDS, post_data->str);
-    curl_easy_setopt(priv->curl, CURLOPT_POSTFIELDSIZE, post_data->len);
+	curl_easy_setopt(priv->curl, CURLOPT_POSTFIELDSIZE, post_data->len);
 
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEDATA, data);
-	
+
 	if (priv->cookie)
 		curl_easy_setopt(priv->curl, CURLOPT_COOKIEJAR, priv->cookie);
 
@@ -508,7 +508,7 @@ parse_login_status(XmrService *xs, GString *data, gchar **message)
 		value = xmlNodeGetContent(child);
 		if (value == NULL)
 			break;
-		 
+
 		result = g_strtod((gchar *)value, NULL);
 		xmlFree(value);
 
@@ -533,7 +533,7 @@ parse_login_status(XmrService *xs, GString *data, gchar **message)
 				xmlFree(value);
 			}
 		}
-		 
+
 	}
 	while(0);
 
@@ -644,14 +644,14 @@ get_track(xmlNodePtr root, GList **list)
 		song->artist_name	= (gchar *)xml_first_child_content(root, BAD_CAST "artist");
 		song->album_cover	= (gchar *)xml_first_child_content(root, BAD_CAST "pic");
 		url					= (gchar *)xml_first_child_content(root, BAD_CAST "location");
-		
+
 		if (song->song_name == NULL)
 			song->song_name = (gchar *)xml_first_child_content(root, BAD_CAST "song_name");
 		if (song->artist_name == NULL)
 			song->artist_name = (gchar *)xml_first_child_content(root, BAD_CAST "artist_name");
 		if (song->album_cover == NULL)
 			song->album_cover = (gchar *)xml_first_child_content(root, BAD_CAST "album_cover");
-		
+
 		if (url == NULL)
 			break;
 
