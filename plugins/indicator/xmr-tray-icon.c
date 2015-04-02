@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define GDK_DISABLE_DEPRECATION_WARNINGS
+
 #include "xmr-tray-icon.h"
 
 G_DEFINE_TYPE(XmrTrayIcon, xmr_tray_icon, GTK_TYPE_STATUS_ICON)

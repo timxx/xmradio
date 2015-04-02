@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define GDK_DISABLE_DEPRECATION_WARNINGS
+
 #include "xmrlabel.h"
 
 #define DEFAULT_TIMEOUT	600
@@ -343,7 +345,7 @@ void
 xmr_label_set_color(XmrLabel *label,
 			const gchar *color)
 {
-	GdkColor gdk_color;
+	GdkRGBA gdk_color;
 	XmrLabelPrivate *priv;
 
 	g_return_if_fail(label != NULL);
@@ -356,11 +358,11 @@ xmr_label_set_color(XmrLabel *label,
 	}
 	else
 	{
-		if (gdk_color_parse(color, &gdk_color))
+		if (gdk_rgba_parse(&gdk_color, color))
 		{
-			priv->current_color->red = gdk_color.red / 65535.0;
-			priv->current_color->green = gdk_color.green / 65535.0;
-			priv->current_color->blue = gdk_color.blue / 65535.0;
+			priv->current_color->red = gdk_color.red;
+			priv->current_color->green = gdk_color.green;
+			priv->current_color->blue = gdk_color.blue;
 			// always set to 1.0
 			priv->current_color->alpha = 1.0;
 		}
