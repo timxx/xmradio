@@ -2,7 +2,7 @@
  * xmrwindow.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012 - 2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1272,20 +1272,32 @@ on_draw(XmrWindow *window, cairo_t *cr, gpointer data)
 static gboolean
 on_button_press(XmrWindow *window, GdkEventButton *event, gpointer data)
 {
-	if (event->button == 1)  
-    {
+	// check volume button popup state before doing anything
+	GtkScaleButton * button = GTK_SCALE_BUTTON(window->priv->buttons[BUTTON_VOLUME]);
+	if (button)
+	{
+		GtkWidget *w = gtk_scale_button_get_popup(button);
+		if (w && gtk_widget_is_visible(w))
+		{
+			return FALSE;
+		}
+	}
+
+	if (event->button == 1)
+	{
 		if (window->priv->gtk_theme) 	// ignore if using gtk theme
 			return FALSE;
+
 		gtk_window_begin_move_drag(GTK_WINDOW(window),
-					event->button,
-					event->x_root, event->y_root,
-					event->time);
-    }
+								   event->button,
+								   event->x_root, event->y_root,
+								   event->time);
+	}
 	else if (event->button == 3)
 	{
 		GtkMenu *menu = GTK_MENU(window->priv->popup_menu);
 		gtk_menu_popup(menu, NULL, NULL, NULL, NULL,
-					event->button, event->time);
+					   event->button, event->time);
 		return TRUE;
 	}
 
