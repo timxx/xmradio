@@ -638,6 +638,11 @@ search_music_progress_idle(GtkEntry *entry);
 
 static void
 search_music_progress_done(GtkEntry *entry);
+
+static void
+on_current_track_changed(XmrWindow *window,
+						 SongInfo *new_track,
+						 gpointer data);
 //=========================================================================
 static void
 install_properties(GObjectClass *object_class)
@@ -945,6 +950,7 @@ xmr_window_init(XmrWindow *window)
 
 	g_signal_connect(window, "draw", G_CALLBACK(on_draw), NULL);
 	g_signal_connect(window, "button-press-event", G_CALLBACK(on_button_press), NULL);
+	g_signal_connect(window, "track-changed", G_CALLBACK(on_current_track_changed), NULL);
 
 	g_signal_connect(priv->player, "eos", G_CALLBACK(player_eos), window);
 	g_signal_connect(priv->player, "error", G_CALLBACK(player_error), window);
@@ -4030,4 +4036,20 @@ static void
 search_music_progress_done(GtkEntry *entry)
 {
 	gtk_entry_set_progress_fraction(entry, 0.0);
+}
+
+static void
+on_current_track_changed(XmrWindow *window,
+						 SongInfo *new_track,
+						 gpointer data)
+{
+	gchar *title = NULL;
+
+	if (new_track->artist_name)
+		title = g_strdup_printf("[%s - %s] - %s", new_track->artist_name, new_track->song_name, _("XMRadio"));
+	else
+		title = g_strdup_printf("[%s] - %s", new_track->song_name, _("XMRadio"));
+
+	gtk_window_set_title(GTK_WINDOW(window), title);
+	g_free(title);
 }
