@@ -2,7 +2,7 @@
  * xmrradio.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2015 Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "xmrradio.h"
+
+#define _DEF_IMG_W 100
+#define _DEF_IMG_H 100
 
 G_DEFINE_TYPE(XmrRadio, xmr_radio, GTK_TYPE_BUTTON);
 
@@ -238,9 +241,19 @@ void
 xmr_radio_set_logo(XmrRadio *radio,
 			const gchar *uri)
 {
+	GdkPixbuf *pixbuf = NULL;
+
 	g_return_if_fail(radio != NULL);
 
-	gtk_image_set_from_file(GTK_IMAGE(radio->priv->image), uri);
+	pixbuf = gdk_pixbuf_new_from_file_at_scale(uri,
+											   _DEF_IMG_W, _DEF_IMG_H,
+											   TRUE, NULL);
+
+	if (pixbuf)
+	{
+		gtk_image_set_from_pixbuf(GTK_IMAGE(radio->priv->image), pixbuf);
+		g_object_unref(pixbuf);
+	}
 }
 
 void
