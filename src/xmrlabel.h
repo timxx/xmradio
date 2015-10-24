@@ -2,7 +2,7 @@
  * xmrlabel.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2015 Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,13 +37,13 @@ typedef struct _XmrLabelPrivate		XmrLabelPrivate;
 
 struct _XmrLabel
 {
-	GtkMisc parent;
+	GtkWidget parent;
 	XmrLabelPrivate *priv;
 };
 
 struct _XmrLabelClass
 {
-	GtkMiscClass parent_class;
+	GtkWidgetClass parent_class;
 };
 
 GType		xmr_label_get_type();

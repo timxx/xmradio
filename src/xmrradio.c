@@ -142,7 +142,7 @@ static void xmr_radio_init(XmrRadio *radio)
 	radio->priv = priv;
 
 	priv->image = gtk_image_new();
-	priv->cursor = gdk_cursor_new(GDK_HAND1);
+	priv->cursor = gdk_cursor_new_for_display(gtk_widget_get_display(GTK_WIDGET(radio)), GDK_HAND1);
 	priv->url = NULL;
 
 	gtk_button_set_image(GTK_BUTTON(radio), priv->image);

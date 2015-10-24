@@ -2,7 +2,7 @@
  * xmrartist.c
  * This file is part of xmartist
  *
- * Copyright (C) 2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2013 - 2015 Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -180,7 +180,7 @@ static void xmr_artist_init(XmrArtist *artist)
 
 	priv->button = gtk_button_new();
 	priv->image = gtk_image_new();
-	priv->cursor = gdk_cursor_new(GDK_HAND1);
+	priv->cursor = gdk_cursor_new_for_display(gtk_widget_get_display(GTK_WIDGET(artist)), GDK_HAND1);
 	priv->info = g_new0(Artist, 1);
 	priv->label_name = gtk_label_new("");
 	priv->label_region = gtk_label_new("");

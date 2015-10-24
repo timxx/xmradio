@@ -2,7 +2,7 @@
  * xmrlabel.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define GDK_DISABLE_DEPRECATION_WARNINGS
-
 #include "xmrlabel.h"
 
 #define DEFAULT_TIMEOUT	600
 #define DEFAULT_SPEED	5
 
-G_DEFINE_TYPE(XmrLabel, xmr_label, GTK_TYPE_MISC)
+G_DEFINE_TYPE(XmrLabel, xmr_label, GTK_TYPE_WIDGET)
 
 struct _XmrLabelPrivate
 {

@@ -2,7 +2,7 @@
  * xmrbutton.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -154,7 +154,7 @@ xmr_button_init(XmrButton *button)
 	priv->last_state = STATE_NORMAL;
 	priv->toggle_state = STATE_NORMAL;
 	priv->is_toggle_state = FALSE;
-	priv->cursor = gdk_cursor_new(GDK_HAND1);
+	priv->cursor = gdk_cursor_new_for_display(gtk_widget_get_display(GTK_WIDGET(button)), GDK_HAND1);
 
 	for(i=0; i<LAST_STATE; ++i) 
 		priv->images[i] = NULL;
