@@ -1,0 +1,10 @@
+# object files
+*.o
+*.so
+
+# QtCreator project
+CMakeLists.txt.user
+*.cbp
+
+# vim backup
+*.swp
