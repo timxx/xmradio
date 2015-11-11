@@ -1,7 +1,7 @@
 /** 
  * xmr-mpris-plugin.c
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -479,7 +479,7 @@ build_metadata(XmrMprisPlugin *plugin)
 				g_variant_new ("o", "/org/mpris/MediaPlayer2/Track/track0"));
 
 	g_variant_builder_add(builder, "{sv}", "mpris:length",
-				g_variant_new("x", plugin->duration / 1000));
+				g_variant_new("x", plugin->duration * 1000));
 
 	if (plugin->current_song != NULL)
 	{
