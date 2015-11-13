@@ -106,6 +106,9 @@ player_tick(XmrPlayer	*player,
 {
 	GError *error = NULL;
 
+	if (duration != plugin->duration)
+		metadata_changed(plugin);
+
 	plugin->duration = duration;
 	plugin->elapsed = elapsed;
 
