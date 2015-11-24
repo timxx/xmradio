@@ -263,6 +263,7 @@ xmr_label_init(XmrLabel *label)
 {
 	XmrLabelPrivate *priv;
 	GtkStyleContext *context;
+	gboolean found_color = FALSE;
 
 	label->priv = G_TYPE_INSTANCE_GET_PRIVATE(label, XMR_TYPE_LABEL, XmrLabelPrivate);
 	priv = label->priv;
@@ -274,7 +275,10 @@ xmr_label_init(XmrLabel *label)
 
 	context = gtk_widget_get_style_context(GTK_WIDGET(label));
 
-	gtk_style_context_lookup_color(context, "text_color", &priv->default_color);
+	found_color = gtk_style_context_lookup_color(context, "text_color", &priv->default_color);
+	if (!found_color)
+		gtk_style_context_get_color(context, GTK_STATE_FLAG_NORMAL, &priv->default_color);
+
 	if (priv->default_color.alpha <= 0)
 		priv->default_color.alpha = 1.0;
 
