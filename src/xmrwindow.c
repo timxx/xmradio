@@ -94,29 +94,10 @@ enum
 
 typedef struct
 {
+	GtkWidget *parent;
 	gchar *message;
 	gchar *title;
 }Message;
-
-typedef struct
-{
-	guint type;
-	gpointer data;
-}XmrEvent;
-
-typedef struct
-{
-	XmrWindow *window;
-	gint result;
-	GList *list;
-}FetchPlaylist;
-
-typedef struct
-{
-	XmrWindow *window;
-	gboolean ok;
-	gchar *message;
-}LoginFinish;
 
 typedef enum
 {
@@ -195,8 +176,6 @@ struct _XmrWindowPrivate
 	GtkWidget *dialog_login;
 
 	gboolean syncing_volume;
-
-	Message message;
 
 	XmrDownloader *downloader;
 
@@ -345,7 +324,10 @@ idle_like_song(XmrWindow *window);
 static gboolean
 idle_dislike_song(XmrWindow *window);
 
-static void
+static gboolean
+idle_do_login(XmrWindow *window);
+
+static gboolean
 xmr_window_get_playlist(XmrWindow *window);
 
 static void
@@ -384,7 +366,7 @@ load_settings(XmrWindow *window);
 static void
 load_skin(XmrWindow *window);
 
-static void
+static gboolean
 load_radio(XmrWindow *window);
 
 /**
@@ -497,7 +479,7 @@ on_volume_button_value_changed(GtkScaleButton *button,
 			XmrWindow *window);
 
 static gboolean
-show_message_idle(XmrWindow *window);
+show_message_idle(Message *msg);
 
 static void
 login_finish(XmrWindow *window,
@@ -828,9 +810,6 @@ xmr_window_init(XmrWindow *window)
 
 	priv->dialog_login = NULL;
 	priv->syncing_volume = FALSE;
-
-	priv->message.message = NULL;
-	priv->message.title = NULL;
 
 	priv->downloader = xmr_downloader_new();
 	
@@ -1883,7 +1862,26 @@ idle_dislike_song(XmrWindow *window)
 	return FALSE;
 }
 
-static void
+static gboolean
+idle_do_login(XmrWindow *window)
+{
+	XmrWindowPrivate *priv;
+	gint result;
+	gchar *message = NULL;
+
+	g_return_val_if_fail(window != NULL, FALSE);
+	priv = window->priv;
+
+	result = xmr_service_login(priv->service, priv->usr, priv->pwd, &message);
+
+	g_signal_emit(window, signals[LOGIN_FINISH], 0, result == 0, message);
+
+	g_free(message);
+
+	return FALSE;
+}
+
+static gboolean
 xmr_window_get_playlist(XmrWindow *window)
 {
 	g_assert(window != NULL);
@@ -1916,23 +1914,14 @@ xmr_window_get_playlist(XmrWindow *window)
 	}
 
 	g_signal_emit(window, signals[FETCH_PLAYLIST_FINISH], 0, result, list);
+
+	return FALSE;
 }
 
 void
 xmr_window_login(XmrWindow *window)
 {
-	XmrWindowPrivate *priv;
-	gint result;
-	gchar *message = NULL;
-
-	g_return_if_fail(window != NULL);
-	priv = window->priv;
-
-	result = xmr_service_login(priv->service, priv->usr, priv->pwd, &message);
-
-	g_signal_emit(window, signals[LOGIN_FINISH], 0, result == 0, message);
-
-	g_free(message);
+	idle_do_login(window);
 }
 
 void
@@ -2351,7 +2340,7 @@ load_settings(XmrWindow *window)
 		{
 			if (!radio_url || *radio_url == 0)
 				priv->switch_radio = TRUE;
-			xmr_window_login(window);
+			g_idle_add((GSourceFunc)idle_do_login, window);
 		}
 	}
 	else
@@ -2369,10 +2358,10 @@ load_settings(XmrWindow *window)
 			xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), DEFAULT_RADIO_NAME);
 		}
 
-		xmr_window_get_playlist(window);
+		g_idle_add((GSourceFunc)xmr_window_get_playlist, window);
 	}
 
-	load_radio(window);
+	g_idle_add((GSourceFunc)load_radio, window);
 
 	g_free(radio_name);
 	g_free(radio_url);
@@ -2448,7 +2437,7 @@ load_skin(XmrWindow *window)
 	}
 }
 
-static void
+static gboolean
 load_radio(XmrWindow *window)
 {
 	XmrWindowPrivate *priv = window->priv;
@@ -2489,6 +2478,8 @@ load_radio(XmrWindow *window)
 	}
 
 	g_object_unref(db);
+
+	return FALSE;
 }
 
 static void
@@ -3215,17 +3206,13 @@ xmr_window_decrease_search_music_count(XmrWindow *window)
 }
 
 static gboolean
-show_message_idle(XmrWindow *window)
+show_message_idle(Message *msg)
 {
-	XmrWindowPrivate *priv = window->priv;
+	xmr_message(GTK_WIDGET(msg->parent), msg->message, msg->title);
 
-	xmr_message(GTK_WIDGET(window), priv->message.message, priv->message.title);
-
-	g_free(priv->message.message);
-	g_free(priv->message.title);
-
-	priv->message.message = NULL;
-	priv->message.title = NULL;
+	g_free(msg->message);
+	g_free(msg->title);
+	g_free(msg);
 
 	return FALSE;
 }
@@ -3240,17 +3227,22 @@ login_finish(XmrWindow *window,
 	if (!ok)
 	{
 		gchar *error_message;
+		Message *msg;
 
 		error_message = g_strdup_printf(_("Login failed:\n%s"), message);
 
-		priv->message.message = g_strdup(error_message);
-		priv->message.title = g_strdup(_("Login Status"));
-		g_idle_add((GSourceFunc)show_message_idle, window);
+		msg = g_malloc0(sizeof(Message));
+		msg->parent = GTK_WIDGET(window);
+		msg->message = g_strdup(error_message);
+		msg->title = g_strdup(_("Login Status"));
+		g_idle_add((GSourceFunc)show_message_idle, msg);
 
 		if (g_list_length(priv->playlist) == 0)
 		{
-			if (priv->radio_type != Radio_Type_Custom) {
+			if (priv->radio_type != Radio_Type_Custom)
+			{
 				change_radio(window, DEFAULT_RADIO_NAME, DEFAULT_RADIO_URL);
+				xmr_label_set_text(XMR_LABEL(priv->labels[LABEL_RADIO]), DEFAULT_RADIO_NAME);
 			}
 		}
 
