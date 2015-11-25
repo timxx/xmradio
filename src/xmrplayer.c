@@ -2,7 +2,7 @@
  * xmrplayer.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013, 2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -380,8 +380,6 @@ xmr_player_open(XmrPlayer	*player,
 
 	g_return_val_if_fail( player != NULL && uri != NULL, FALSE);
 	priv = player->priv;
-	
-	xmr_player_stop(player);
 
 	{
 		static const gchar * const prefix[] =
@@ -415,6 +413,8 @@ xmr_player_open(XmrPlayer	*player,
 	
 	libvlc_media_player_set_media(priv->player, media);
 	xmr_player_set_repeat(player);
+
+	libvlc_media_release(media);
 	
 	return TRUE;
 }
