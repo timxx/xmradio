@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<skin
+	version="1.0"
+	name="DouBanFM"
+	author="Weitian Leung"
+	url="https://github.com/timxx/xmradio"
+	email="weitianleung@gmail.com"
+	>
+
+	<main_window image="background.png">
+
+		<close position="250, 10" image="close.png" />
+		<minimize position="265, 10" image="minimize.png" />
+		<play position="470, 1" image="play.png" />
+		<pause position="470, 1" image="pause.png" />
+
+		<like position="340, 190" image="like.png" />
+		<dislike position="400, 190" image="dislike.png" />
+		<next position="460, 190" image="next.png" />
+
+		<artist position="270, 30" size="200, 30" font="Bold 15" color="#323232"/>
+		<album position="270, 65" size="200, 20" font="10" color="#323232" />
+		<song_name position="270, 90" size="200, 20" font="Bold 10" color="#009765"/>
+
+		<progress position="270, 125" size="120, 20" font="9" color="#6c6c6c" />
+		<volume position="480, 125" image="volume.png" />
+
+		<cover position="0, 0" image="cover.png" size="245, 245"/>
+	</main_window>
+
+</skin>

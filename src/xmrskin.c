@@ -2,7 +2,7 @@
  * xmrskin.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012, 2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,24 +20,15 @@
 #include <libxml/parser.h>
 
 #include "xmrskin.h"
-#include "minizip/unzip.h"
 #include "xmrdebug.h"
 
-G_DEFINE_TYPE(XmrSkin, xmr_skin, G_TYPE_OBJECT);
+G_DEFINE_TYPE(XmrSkin, xmr_skin, G_TYPE_OBJECT)
 
 struct _XmrSkinPrivate
 {
 	xmlDocPtr doc;
-	unzFile zfile;
-
 	SkinInfo *skin_info;
 };
-
-static gint
-unzip_get_file_buffer(unzFile uzfile,
-			const gchar *name,
-			gchar **buffer,
-			gint *length);
 
 static gboolean
 fill_skin_info(XmrSkin *skin, const gchar *file);
@@ -50,17 +41,17 @@ xml_first_child(xmlNodePtr root, const xmlChar *child);
 
 static gboolean
 pos_str_to_ii(const gchar *str,
-			gint *x, gint *y);
+			  gint *x, gint *y);
 
 static xmlNodePtr
 xml_get_ui_node(XmrSkin *skin, const gchar *ui);
 
 static gboolean
 get_name_value(XmrSkin *skin,
-			const gchar *ui,
-			const gchar *name,
-			const gchar *attr,
-			gchar **value);
+			   const gchar *ui,
+			   const gchar *name,
+			   const gchar *attr,
+			   gchar **value);
 
 static void 
 xmr_skin_dispose(GObject *obj)
@@ -70,12 +61,6 @@ xmr_skin_dispose(GObject *obj)
 
 	if (priv->doc)
 		xmlFreeDoc(priv->doc);
-
-	if (priv->zfile)
-	{
-		unzCloseCurrentFile(priv->zfile);
-		unzClose(priv->zfile);
-	}
 
 	xmr_skin_info_free(priv->skin_info);
 
@@ -99,39 +84,13 @@ static void xmr_skin_init(XmrSkin *skin)
 	priv = skin->priv;
 
 	priv->doc = NULL;
-	priv->zfile = NULL;
 	priv->skin_info = g_new0(SkinInfo, 1);
-}
-
-static GdkPixbuf *
-gdk_pixbuf_from_memory(const gchar *buffer, gint len)
-{
-	GdkPixbuf *pixbuf = NULL;
-	GdkPixbufLoader *loader;
-
-	loader = gdk_pixbuf_loader_new();
-    if (loader == NULL)
-        return NULL;
-
-    if (!gdk_pixbuf_loader_write(loader, (const guchar *)buffer, len, NULL))
-		return NULL;
-
-    // forces the data to be parsed by the loader
-    gdk_pixbuf_loader_close(loader, NULL);
-
-    pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
-	if (pixbuf != NULL)
-		g_object_ref(pixbuf);
-
-	g_object_unref(loader);
-
-	return pixbuf;
 }
 
 XmrSkin* xmr_skin_new()
 {
 	return g_object_new(XMR_TYPE_SKIN,
-				NULL);
+						NULL);
 }
 
 gboolean
@@ -139,6 +98,7 @@ xmr_skin_load(XmrSkin *skin, const gchar *uri)
 {
 	XmrSkinPrivate *priv;
 	gboolean result = FALSE;
+	gchar *xml_file = NULL;
 
 	g_return_val_if_fail(skin != NULL && uri != NULL, FALSE);
 
@@ -150,59 +110,14 @@ xmr_skin_load(XmrSkin *skin, const gchar *uri)
 	}
 
 	xmr_debug("load skin: %s\n", uri);
-	do
-	{
-		gchar *buffer = NULL;
-		gint length = 0;
 
-		priv->zfile = unzOpen(uri);
-		if (priv->zfile == NULL)
-			break;
+	xml_file = g_strdup_printf("%s/skin.xml", uri);
 
-		if (unzip_get_file_buffer(priv->zfile, "skin.xml",&buffer, &length) < 0)
-			break;
+	priv->doc = xmlReadFile(xml_file, NULL, XML_PARSE_RECOVER | XML_PARSE_NOERROR);
+	if (priv->doc)
+		result = fill_skin_info(skin, uri);
 
-		priv->doc = xmlReadMemory(buffer, length, NULL, NULL, XML_PARSE_RECOVER | XML_PARSE_NOERROR);
-		if (priv->doc){
-			result = fill_skin_info(skin, uri);
-		}
-
-		g_free(buffer);
-	}
-	while(0);
-
-	return result;
-}
-
-static gint
-unzip_get_file_buffer(unzFile uzfile, const gchar *name, gchar **buffer, gint *length)
-{
-	unz_file_info file_info;
-	gint result = -1;
-
-	if (!uzfile)
-		return -1;
-
-	result = unzLocateFile(uzfile, name, 2);
-	if (result != UNZ_OK)
-		return result;
-
-	result = unzGetCurrentFileInfo(uzfile, &file_info, NULL, 0, NULL, 0, NULL, 0);
-	if (result != UNZ_OK)
-		return result;
-	
-	*length = file_info.uncompressed_size;
-	*buffer = (gchar *)g_malloc0(file_info.uncompressed_size * sizeof(gchar));
-	if (*buffer == NULL)
-		return result;
-
-	result = unzOpenCurrentFile(uzfile);
-	if (result != UNZ_OK)
-		return result;
-
-	result = unzReadCurrentFile(uzfile, *buffer, *length);
-
-	unzCloseCurrentFile(uzfile);
+	g_free(xml_file);
 
 	return result;
 }
@@ -227,7 +142,7 @@ fill_skin_info(XmrSkin *skin, const gchar *file)
 	priv->skin_info->url		= (gchar *)xml_get_prop(node, BAD_CAST "url");
 	priv->skin_info->email		= (gchar *)xml_get_prop(node, BAD_CAST "email");
 
-	return TRUE;
+	return (priv->skin_info->name && priv->skin_info->name[0]);
 }
 
 SkinInfo*
@@ -248,9 +163,8 @@ xmr_skin_info_free(SkinInfo *info)
 		g_free(info->email);
 		g_free(info->file);
 
-		if (info->data)
-		  if (info->data_destroy)
-				info->data_destroy(info->data);
+		if (info->data && info->data_destroy)
+			info->data_destroy(info->data);
 
 		g_free(info);
 	}
@@ -297,7 +211,7 @@ xml_first_child(xmlNodePtr root, const xmlChar *child)
 
 static gboolean
 pos_str_to_ii(const gchar *str,
-			gint *x, gint *y)
+			  gint *x, gint *y)
 {
 	gchar **strv;
 
@@ -343,10 +257,10 @@ xml_get_ui_node(XmrSkin *skin, const gchar *ui)
 
 static gboolean
 get_name_value(XmrSkin *skin,
-			const gchar *ui,
-			const gchar *name,
-			const gchar *attr,
-			gchar **value)
+			   const gchar *ui,
+			   const gchar *name,
+			   const gchar *attr,
+			   gchar **value)
 {
 	XmrSkinPrivate *priv;
 	xmlNodePtr root = NULL;
@@ -354,10 +268,10 @@ get_name_value(XmrSkin *skin,
 	xmlChar *xml_value = NULL;
 
 	g_return_val_if_fail(skin != NULL && name != NULL &&
-				attr != NULL && value != NULL, FALSE);
+			attr != NULL && value != NULL, FALSE);
 
 	priv = skin->priv;
-	g_return_val_if_fail(priv->doc != NULL && priv->zfile != NULL, FALSE);
+	g_return_val_if_fail(priv->doc != NULL, FALSE);
 
 	root = xml_get_ui_node(skin, ui);
 	if (root == NULL)
@@ -381,9 +295,9 @@ get_name_value(XmrSkin *skin,
 
 gboolean
 xmr_skin_get_position(XmrSkin *skin,
-			const gchar *ui,
-			const gchar *name,
-			gint *x, gint *y)
+					  const gchar *ui,
+					  const gchar *name,
+					  gint *x, gint *y)
 {
 	gchar *value = NULL;
 	gint result;
@@ -401,9 +315,9 @@ xmr_skin_get_position(XmrSkin *skin,
 
 gboolean
 xmr_skin_get_size(XmrSkin *skin,
-			const gchar *ui,
-			const gchar *name,
-			gint *w, gint *h)
+				  const gchar *ui,
+				  const gchar *name,
+				  gint *w, gint *h)
 {
 	gchar *value = NULL;
 	gint result;
@@ -421,20 +335,19 @@ xmr_skin_get_size(XmrSkin *skin,
 
 GdkPixbuf *
 xmr_skin_get_image(XmrSkin *skin,
-			const gchar *ui,
-			const gchar *name)
+				   const gchar *ui,
+				   const gchar *name)
 {
 	XmrSkinPrivate *priv;
 	xmlNodePtr root = NULL;
 	xmlNodePtr child = NULL;
-	gchar *buffer = NULL;
-	gint len = 0;
+	gchar *image_file = NULL;
 	xmlChar *image = NULL;
 	GdkPixbuf *pixbuf = NULL;
 
 	g_return_val_if_fail(skin != NULL, pixbuf);
 	priv = skin->priv;
-	g_return_val_if_fail(priv->doc != NULL && priv->zfile != NULL, pixbuf);
+	g_return_val_if_fail(priv->doc != NULL, pixbuf);
 
 	root = xml_get_ui_node(skin, ui);
 	if (root == NULL)
@@ -461,35 +374,29 @@ xmr_skin_get_image(XmrSkin *skin,
 		return pixbuf;
 	}
 
-	do
-	{
-		if (unzip_get_file_buffer(priv->zfile, (const gchar *)image, &buffer, &len) <= 0)
-			break;
-
-		pixbuf = gdk_pixbuf_from_memory(buffer, len);
-	}
-	while(0);
+	image_file = g_strdup_printf("%s/%s", priv->skin_info->file, image);
+	pixbuf = gdk_pixbuf_new_from_file(image_file, NULL);
 
 	xmlFree(image);
-	g_free(buffer);
+	g_free(image_file);
 
 	return pixbuf;
 }
 
 gboolean
 xmr_skin_get_color(XmrSkin *skin,
-			const gchar *ui,
-			const gchar *name,
-			gchar **color)
+				   const gchar *ui,
+				   const gchar *name,
+				   gchar **color)
 {
 	return get_name_value(skin, ui, name, "color", color);
 }
 
 gboolean
 xmr_skin_get_font(XmrSkin *skin,
-			const gchar *ui,
-			const gchar *name,
-			gchar **font)
+				  const gchar *ui,
+				  const gchar *name,
+				  gchar **font)
 {
 	return get_name_value(skin, ui, name, "font", font);
 }

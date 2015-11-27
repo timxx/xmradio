@@ -1,9 +1,9 @@
-set(SKIN_FILES
-	pure.skn
-	mini.skn
-	black.skn
-	doubanfm.skn
+set(skin_DRIS
+	black
+	doubanfm
+	mini
+	pure
 )
 
-install(FILES ${SKIN_FILES} DESTINATION ${skindir})
-generate_files("${SKIN_FILES}" "skin" "skin_data")
+install(DIRECTORY ${skin_DRIS} DESTINATION ${skindir})
+generate_dirs("${skin_DRIS}" "skin" "skin_data")

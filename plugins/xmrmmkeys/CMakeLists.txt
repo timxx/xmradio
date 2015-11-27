@@ -1,3 +1,5 @@
+PKG_CHECK_MODULES(LIBX11 REQUIRED "x11")
+
 set(XMRMMKEYS_SOURCES
 	xmrmmkeys.c
 )
@@ -9,7 +11,9 @@ include_directories(${GTK3_INCLUDE_DIRS})
 
 add_library(xmrmmkeys SHARED ${XMRMMKEYS_SOURCES})
 target_link_libraries(xmrmmkeys
+	xmradio-core
 	${LIBPEAS_LIBRARIES}
+	${LIBX11_LIBRARIES}
 )
 
 install(TARGETS xmrmmkeys LIBRARY DESTINATION ${plugindir})

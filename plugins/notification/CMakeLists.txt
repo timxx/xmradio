@@ -13,6 +13,7 @@ include_directories(${LIBNOTIFY_INCLUDE_DIRS})
 
 add_library(notification SHARED ${PLUGIN_SOURCES})
 target_link_libraries(notification
+	xmradio-core
 	${LIBPEAS_LIBRARIES}
 	${LIBNOTIFY_LIBRARIES}
 )

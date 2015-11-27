@@ -9,6 +9,7 @@ include_directories(${GTK3_INCLUDE_DIRS})
 
 add_library(mpris SHARED ${MPRIS_SOURCES})
 target_link_libraries(mpris
+	xmradio-core
 	${LIBPEAS_LIBRARIES}
 )
 

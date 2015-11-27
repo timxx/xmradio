@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<skin
+	version="1.0"
+	name="mini"
+	author="Weitian Leung"
+	url="https://github.com/timxx/xmradio"
+	email="weitianleung@gmail.com"
+	>
+
+	<main_window image="mini_player.png">
+		<play position="8, 3" image="play.png" />
+		<pause position="8, 3" image="pause.png" />
+		<next position="50, 3" image="next.png" />
+		<minimize position="332, 2" image="minimize.png" />
+		<close position="355, 2" image="close.png" />
+
+		<progress position="90, 3" size="85, 15" color="#CFEDFB" />
+		<song_name position="185, 3" size="145, 15" color="#CFEDFB" />
+	</main_window>
+
+</skin>

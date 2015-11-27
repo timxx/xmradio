@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<skin
+	version="2.1"
+	name="pure"
+	author="Weitian Leung"
+	url="https://github.com/timxx/xmradio"
+	email="weitianleung@gmail.com"
+	>
+
+	<main_window image="back.png">
+
+		<close position="5, 5" image="close.png" />
+		<minimize position="30, 5" image="minimize.png" />
+		<play position="363, 92" image="play.png" />
+		<pause position="363, 92" image="pause.png" />
+		<next position="430, 101" image="next.png" />
+		<like position="170, 161" image="like.png" />
+		<dislike position="205, 160" image="dislike.png" />
+		<volume position="240, 160" image="volume.png" />
+		<lyric position="335, 170" image="lyric.png" />
+		<download position="385, 170" image="download.png" />
+		<share position="435, 170" image="share.png" />
+		<siren position="105, 255" image="siren.png" />
+		<fengge position="195, 255" image="fengge.png" />
+		<xingzuo position="285, 255" image="xingzuo.png" />
+		<niandai position="375, 255" image="niandai.png" />
+
+		<radio_name position="60, 45" size="120, 20" color="#828282" />
+		<song_name position="170, 90" size="120, 20" font="Bold" color="#8e8e8e"/>
+		<artist position="170, 110" size="120, 20" font="9" color="#8e8e8e"/>
+		<progress position="170, 135" size="120, 20" font="9" color="#8e8e8e" />
+
+		<cover position="60, 85" image="cover.png"/>
+
+		<!--size: height will be ignored-->
+		<search_box position="345, 30" size="140, 0"/>
+
+	</main_window>
+
+</skin>

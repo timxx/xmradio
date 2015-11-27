@@ -10,7 +10,9 @@ include_directories(${GTK3_INCLUDE_DIRS})
 
 add_library(autocollect SHARED ${PLUGIN_SOURCES})
 target_link_libraries(autocollect
+	xmradio-core
 	${LIBPEAS_LIBRARIES}
+	${GTK3_LIBRARIES}
 )
 
 install(TARGETS autocollect LIBRARY DESTINATION ${plugindir})

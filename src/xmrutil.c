@@ -2,7 +2,7 @@
  * xmrutil.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013, 2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,36 @@ list_file(const gchar *folder,
 		{
 			opfunc(full_path, data);
 		}
+		g_free(full_path);
+	}
+
+	g_dir_close(dir);
+}
+
+void
+list_dir(const gchar *folder,
+		 FileOpFunc opfunc,
+		 gpointer data)
+{
+	GDir *dir;
+	const gchar *name;
+	gchar *full_path;
+
+	if (NULL == folder || NULL == opfunc)
+		return ;
+
+	dir = g_dir_open(folder, 0, NULL);
+	if (NULL == dir)
+		return ;
+
+	while((name = g_dir_read_name(dir)))
+	{
+		full_path = g_build_filename(folder, name, NULL);
+		if (g_file_test(full_path, G_FILE_TEST_IS_DIR))
+		{
+			opfunc(full_path, data);
+		}
+
 		g_free(full_path);
 	}
 

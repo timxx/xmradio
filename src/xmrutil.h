@@ -2,7 +2,7 @@
  * xmrutil.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013, 2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,11 @@ list_file(const gchar *folder,
 			gboolean recursive,
 			FileOpFunc opfunc,
 			gpointer data);
+
+void
+list_dir(const gchar *folder,
+		 FileOpFunc opfunc,
+		 gpointer data);
 
 /**
  * return package config dir

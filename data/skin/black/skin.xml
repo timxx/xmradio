@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<skin
+	version="1.0"
+	name="black"
+	author="Weitian Leung"
+	url="https://github.com/timxx/xmradio"
+	email="weitianleung@gmail.com"
+	>
+
+	<main_window image="back.png">
+
+		<close position="10, 10" image="close.png" />
+		<minimize position="30, 10" image="minimize.png" />
+		<play position="560, 60" image="play.png" />
+		<pause position="560, 60" image="pause.png" />
+		<next position="620, 65" image="next.png" />
+		<like position="158, 98" image="like.png" />
+		<dislike position="205, 97" image="dislike.png" />
+		<download position="455, 108" image="download.png" />
+
+		<song_name position="160, 45" size="200, 15" color="#FFFFFF"/>
+		<progress position="160, 70" size="150, 12" font="9" color="#EEEEEE" />
+
+		<cover position="45, 35"/>
+
+	</main_window>
+
+</skin>

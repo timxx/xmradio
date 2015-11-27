@@ -2377,7 +2377,7 @@ load_skin(XmrWindow *window)
 	skin_dir = g_strdup_printf("%s/skin", xmr_app_dir());
 	if (skin_dir)
 	{
-		list_file(skin_dir, FALSE, append_skin, &priv->skin_list);
+		list_dir(skin_dir, append_skin, &priv->skin_list);
 		g_free(skin_dir);
 	}
 
@@ -2385,12 +2385,12 @@ load_skin(XmrWindow *window)
 	skin_dir = g_strdup_printf("%s/skin", xmr_config_dir());
 	if (skin_dir)
 	{
-		list_file(skin_dir, FALSE, append_skin, &priv->skin_list);
+		list_dir(skin_dir, append_skin, &priv->skin_list);
 		g_free(skin_dir);
 	}
 
 	// load install location
-	list_file(SKINDIR, FALSE, append_skin, &priv->skin_list);
+	list_dir(SKINDIR, append_skin, &priv->skin_list);
 	
 	// always set gtk theme first
 	set_gtk_theme(window);
@@ -2495,6 +2495,9 @@ append_skin(const gchar *skin,
 
 	do
 	{
+		GList *p;
+		gboolean isDuplicated = FALSE;
+
 		if (!xmr_skin_load(xmr_skin, skin))
 		{
 			xmr_debug("Failed to load skin: %s", skin);
@@ -2502,6 +2505,22 @@ append_skin(const gchar *skin,
 		}
 
 		xmr_skin_get_info(xmr_skin, skin_info);
+
+		for (p = *list; p; p = p->next)
+		{
+			SkinInfo *info = (SkinInfo *)p->data;
+			if (g_strcmp0(info->name, skin_info->name) == 0)
+			{
+				isDuplicated = TRUE;
+				break;
+			}
+		}
+
+		if (isDuplicated)
+		{
+			xmr_skin_info_free(skin_info);
+			break;
+		}
 
 		*list = g_list_append(*list, skin_info);
 	}

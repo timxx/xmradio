@@ -96,7 +96,12 @@ if (ENABLE_ASAN)
 	endif()
 endif(ENABLE_ASAN)
 
-message("Build type: ${CMAKE_BUILD_TYPE}")
+if (CMAKE_BUILD_TYPE EQUAL "Release")
+	set(CMAKE_C_FLAGS "-s ${CMAKE_C_FLAGS}")
+endif()
+
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined ${CMAKE_SHARED_LINKER_FLAGS}")
+
 if (CMAKE_BUILD_TYPE EQUAL "Debug")
 	set(_DEBUG TRUE)
 endif()

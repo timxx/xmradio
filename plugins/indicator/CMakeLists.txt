@@ -35,11 +35,13 @@ include_directories(${GTK3_INCLUDE_DIRS})
 add_library(indicator SHARED ${INDICATOR_SOURCES})
 if (ENABLE_APPINDICATOR)
 	target_link_libraries(indicator
+		xmradio-core
 		${LIBPEAS_LIBRARIES}
 		${APPINDICATOR_LIBRARIES}
 	)
 else (ENABLE_APPINDICATOR)
 	target_link_libraries(indicator
+		xmradio-core
 		${LIBPEAS_LIBRARIES}
 	)
 endif (ENABLE_APPINDICATOR)

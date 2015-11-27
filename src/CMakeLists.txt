@@ -2,8 +2,6 @@ add_subdirectory(lib)
 
 PKG_CHECK_MODULES(GTK3 REQUIRED "gtk+-3.0")
 PKG_CHECK_MODULES(GTHREAD REQUIRED "gthread-2.0")
-PKG_CHECK_MODULES(ZLIB REQUIRED "zlib")
-PKG_CHECK_MODULES(GDKPIXBUF REQUIRED "gdk-pixbuf-2.0")
 PKG_CHECK_MODULES(LIBVLC REQUIRED "libvlc >= 2.0")
 PKG_CHECK_MODULES(SQLITE3 REQUIRED "sqlite3")
 PKG_CHECK_MODULES(DBUS REQUIRED "dbus-glib-1")
@@ -55,62 +53,35 @@ set(XMRADIO_CORE_SOURCES
 	xmrdownloader.c
 	xmrlabel.c
 	xmrlist.c
+	xmrplayer.c
 	xmrpluginengine.c
 	xmrradio.c
 	xmrsearchbox.c
 	xmrsettings.c
+	xmrskin.c
 	xmrutil.c
 	xmrvolumebutton.c
 	xmrwindow.c
 	${CMAKE_BINARY_DIR}/xmrmarshal.c
 )
 
-set(XMRPLAYER_SOURCES
-	xmrplayer.c
-	${CMAKE_BINARY_DIR}/xmrmarshal.c
-	xmrdebug.c
-)
-
-set(XMRSKIN_SOURCES
-	xmrskin.c
-	minizip/ioapi.c
-	minizip/unzip.c
-	xmrdebug.c
-)
-
 include_directories(${GTK3_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LIBXML_INCLUDE_DIRS})
-include_directories(${ZLIB_INCLUDE_DIRS})
-include_directories(${GDKPIXBUF_INCLUDE_DIRS})
 include_directories(${SQLITE3_INCLUDE_DIRS})
 include_directories(${DBUS_INCLUDE_DIRS})
 include_directories(${LIBPEAS_INCLUDE_DIRS})
 include_directories(${LIBPEAS-GTK_INCLUDE_DIRS})
 
-add_library(xmrplayer SHARED ${XMRPLAYER_SOURCES})
-target_link_libraries(xmrplayer
-	${LIBVLC_LIBRARIES}
-)
-
-add_library(xmrskin SHARED ${XMRSKIN_SOURCES})
-target_link_libraries(xmrskin
-	${ZLIB_LIBRARIES}
-	${GDKPIXBUF_LIBRARIES}
-	${LIBXML_LIBRARIES}
-)
-
 add_library(xmradio-core SHARED ${XMRADIO_CORE_SOURCES})
 target_link_libraries(xmradio-core
 	xmrservice
-	xmrplayer
-	xmrskin
 	${GTK3_LIBRARIES}
-	${GTHREAD_LIBRARIES}
 	${SQLITE3_LIBRARIES}
 	${DBUS_LIBRARIES}
-	${LIBPEAS_LIBRARIES}
 	${LIBPEAS-GTK_LIBRARIES}
+	${LIBXML_LIBRARIES}
+	${LIBVLC_LIBRARIES}
 )
 
 add_executable(xmradio ${XMRADIO_SOURCES})
@@ -118,8 +89,6 @@ target_link_libraries(xmradio xmradio-core)
 
 configure_file(xmradio.pc.in ${CMAKE_CURRENT_BINARY_DIR}/xmradio.pc)
 
-install(TARGETS xmrplayer LIBRARY DESTINATION ${libdir})
-install(TARGETS xmrskin LIBRARY DESTINATION ${libdir})
 install(TARGETS xmradio-core LIBRARY DESTINATION ${libdir})
 install(TARGETS xmradio DESTINATION ${prefix}/bin)
 install(FILES ${XMRADIO_HEADERS} DESTINATION ${includedir}/xmradio)

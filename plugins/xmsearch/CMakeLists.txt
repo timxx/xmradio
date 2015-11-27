@@ -10,6 +10,7 @@ include_directories(${GTK3_INCLUDE_DIRS})
 
 add_library(xmsearch SHARED ${PLUGIN_SOURCES})
 target_link_libraries(xmsearch
+	xmradio-core
 	${LIBPEAS_LIBRARIES}
 )
 

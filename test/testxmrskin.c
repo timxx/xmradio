@@ -2,7 +2,7 @@
  * testxmrskin.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012, 2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,28 +19,29 @@
  */
 #include "../src/xmrskin.h"
 #include "../src/xmrdebug.h"
+#include "../src/xmrutil.h"
 
 static void
 print_skin_info(SkinInfo *info);
 
-int main(int argc, char **argv)
+static void
+test_skin(const gchar *path, gpointer data)
 {
 	XmrSkin *skin;
 	SkinInfo *info;
 	GdkPixbuf *pixbuf;
 	gint x, y;
-#if !GLIB_CHECK_VERSION(2, 35, 7)
-	g_type_init();
-#endif
-	xmr_debug_enable(TRUE);
+
+	g_print("---------------------->\n");
 
 	skin = xmr_skin_new();
 
-	if (!xmr_skin_load(skin, "../data/skin/pure.skn"))
+	if (!xmr_skin_load(skin, path))
 	{
+
 		g_print("xmr_skin_load failed\n");
 		g_object_unref(skin);
-		return 1;
+		return ;
 	}
 
 	info = xmr_skin_info_new();
@@ -87,6 +88,21 @@ int main(int argc, char **argv)
 	}
 
 	g_object_unref(skin);
+}
+
+int main(int argc, char **argv)
+{
+	gchar *path;
+#if !GLIB_CHECK_VERSION(2, 35, 7)
+	g_type_init();
+#endif
+	xmr_debug_enable(TRUE);
+
+	path = g_strdup_printf("%s/skin", xmr_app_dir());
+
+	list_dir(path, test_skin, NULL);
+
+	g_free(path);
 
 	return 0;
 }
