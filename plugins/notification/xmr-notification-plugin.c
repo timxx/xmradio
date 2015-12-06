@@ -1,7 +1,7 @@
 /** 
  * xmr-notification-plugin.c
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2013, 2015  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,10 @@ typedef struct
 
 	NotifyNotification *notification;
 
+	gchar *summary;
+	gchar *body;
+	gboolean have_cover;
+
 }XmrNotificationPlugin;
 
 typedef struct
@@ -48,25 +52,34 @@ XMR_DEFINE_PLUGIN(XMR_TYPE_NOTIFICATION_PLUGIN, XmrNotificationPlugin, xmr_notif
 
 #define NOTIFY_TIMEOUT 3000
 
+static gboolean
+delay_show_notify(XmrNotificationPlugin *plugin)
+{
+	notify_notification_update(plugin->notification,
+							   plugin->summary, plugin->body,
+							   plugin->have_cover ? NULL : "xmradio");
+	notify_notification_show(plugin->notification, NULL);
+	return FALSE;
+}
+
 static void
 track_notification(XmrNotificationPlugin *plugin,
 			SongInfo *info,
 			gint timeout)
 {
-	gchar *summary, *body;
-
 	g_return_if_fail(info != NULL && plugin->notification != NULL);
 
-	summary = info->song_name;
-	body = info->artist_name;
+	g_free(plugin->summary);
+	g_free(plugin->body);
+
+	plugin->summary = g_strdup(info->song_name);
+	plugin->body = g_strdup(info->artist_name);
 
 	notify_notification_clear_hints(plugin->notification);
-
-	notify_notification_update(plugin->notification, summary, body, "xmradio");
-	
 	notify_notification_set_timeout(plugin->notification, timeout);
 
-	notify_notification_show(plugin->notification, NULL);
+	// wait 500ms for cover image
+	g_timeout_add(500, (GSourceFunc)delay_show_notify, plugin);
 }
 
 static void
@@ -74,6 +87,7 @@ track_changed(XmrWindow *window,
 			SongInfo *new_track,
 			XmrNotificationPlugin *plugin)
 {
+	plugin->have_cover = FALSE;
 	track_notification(plugin, new_track, NOTIFY_TIMEOUT);
 }
 
@@ -84,8 +98,8 @@ cover_image_changed(XmrWindow *window,
 {
 	g_return_if_fail(plugin->notification != NULL);
 
+	plugin->have_cover = TRUE;
 	notify_notification_set_image_from_pixbuf(plugin->notification, pixbuf);
-	notify_notification_show(plugin->notification, NULL);
 }
 
 static void
@@ -126,6 +140,8 @@ impl_deactivate(PeasActivatable *activatable)
 		g_object_unref(window);
 	}
 
+	g_free(plugin->summary);
+	g_free(plugin->body);
 	if (plugin->notification)
 		notify_notification_close(plugin->notification, NULL);
 }
@@ -136,6 +152,9 @@ xmr_notification_plugin_init (XmrNotificationPlugin *plugin)
 	notify_init("xmrario-notification-plugin");
 
 	plugin->notification = notify_notification_new("", "", "xmradio");
+	plugin->summary = NULL;
+	plugin->body = NULL;
+	plugin->have_cover = FALSE;
 }
 
 G_MODULE_EXPORT void
