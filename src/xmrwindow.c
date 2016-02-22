@@ -2,7 +2,7 @@
  * xmrwindow.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012 - 2015  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2016  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -4046,7 +4046,7 @@ on_current_track_changed(XmrWindow *window,
 	gchar *title = NULL;
 
 	if (new_track->artist_name)
-		title = g_strdup_printf("[%s - %s] - %s", new_track->artist_name, new_track->song_name, _("XMRadio"));
+		title = g_strdup_printf("[%s - %s] - %s", new_track->song_name, new_track->artist_name, _("XMRadio"));
 	else
 		title = g_strdup_printf("[%s] - %s", new_track->song_name, _("XMRadio"));
 
