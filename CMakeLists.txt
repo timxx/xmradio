@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
-project(xmradio)
+project(xmradio C)
 
 set(version 0.5.2)
 
