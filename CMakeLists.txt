@@ -60,7 +60,12 @@ set(exec_prefix ${CMAKE_INSTALL_PREFIX})
 set(bindir ${exec_prefix}/bin)
 
 if (NOT DEFINED LIB_INSTALL_DIR)
-	set(LIB_INSTALL_DIR ${exec_prefix}/lib)
+	get_property(_USE_LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+	if ("${_USE_LIB64}" STREQUAL "TRUE")
+		set(LIB_INSTALL_DIR "${exec_prefix}/lib64")
+	else()
+		set(LIB_INSTALL_DIR "${exec_prefix}/lib")
+	endif()
 endif()
 
 set(libdir ${LIB_INSTALL_DIR})
