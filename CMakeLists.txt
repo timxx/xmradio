@@ -101,6 +101,8 @@ if (ENABLE_ASAN)
 	endif()
 endif(ENABLE_ASAN)
 
+set(CMAKE_C_FLAGS "-Wno-deprecated-declarations ${CMAKE_C_FLAGS}")
+
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath='\$ORIGIN' -Wl,-rpath=${libdir} ${CMAKE_EXE_LINKER_FLAGS}")
 
 message("Build type: ${CMAKE_BUILD_TYPE}")
