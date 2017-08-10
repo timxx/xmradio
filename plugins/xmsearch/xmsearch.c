@@ -1,7 +1,7 @@
 /** 
  * xmsearch.c
  *
- * Copyright (C) 2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2013, 2017  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,9 +62,9 @@ XMR_DEFINE_PLUGIN(XMR_TYPE_SEARCH_PLUGIN, XmrSearchPlugin, xmr_search_plugin,)
 #define XIAMI_SEARCH_URL "http://www.xiami.com/search?key="
 #define XIAMI_INFO_URL "http://www.xiami.com/song/playlist/id/"
 
-#define SONG_PATTERN "class=\"song_name\""
-#define ARTIST_PATTERN "class=\"song_artist\""
-#define ALBUM_PATTERN "class=\"song_album\""
+#define SONG_PATTERN "<td class=\"song_name\">"
+#define ARTIST_PATTERN "<td class=\"song_artist\">"
+#define ALBUM_PATTERN "<td class=\"song_album\">"
 
 static gchar *
 decode_url(const gchar *url)
@@ -173,10 +173,9 @@ get_title_attr(const gchar *content, const gchar **end)
 	return g_strndup(content, q - content);
 }
 
-static SongInfo *
-get_song_id_info(const gchar *id)
+static void
+get_song_id_info(const gchar *id, SongInfo *info)
 {
-	SongInfo *info = NULL;
 	XmrService *service = xmr_service_new();
 	gchar *url = g_strdup_printf(XIAMI_INFO_URL"%s", id);
 	GString *data = g_string_new("");
@@ -208,7 +207,6 @@ get_song_id_info(const gchar *id)
 		while (q > p && isspace(*(q-1)))
 			q--;
 
-		info = song_info_new();
 		tmp = g_strndup(p, q - p);
 		info->location = decode_url(tmp);
 		g_free(tmp);
@@ -231,13 +229,10 @@ get_song_id_info(const gchar *id)
 		
 		info->album_cover = g_strndup(p, q - p);
 		info->song_id = g_strdup(id);
-	}while (0);
+	} while (0);
 
-	decode_url(id);
-	
 	g_free(url);
 	g_string_free(data, TRUE);
-	return info;
 }
 
 static GList *
@@ -248,72 +243,114 @@ parse_result_data(const gchar *data)
 	const gchar *current = data;
 	const gchar *p;
 
+	p = strstr(current, "<h5>歌曲</h5>");
+	if (p == NULL)
+		return NULL;
+
+	current = p + 15; // <h5>歌曲</h5>
+
+	p = strstr(current, "class=\"result_main\"");
+	if (p == NULL)
+		return NULL;
+
+	current = p + 19; // class="result_main"
+
 	/*
 	<td class="song_name">
-		<a target="_blank" href="http://www.xiami.com/song/1770779526" title="中国人"><b class="key_red">中国人</b></a>
+		<a target="_blank" href="http://www.xiami.com/song/b4BpNa4d6c" title="我一直都在"><b class="key_red">我一直都在</b></a>
 	</td>
 	<td class="song_artist">
-		<a target="_blank" href="http://www.xiami.com/artist/648" title="刘德华">刘德华</a>
+		<a target="_blank" href="http://www.xiami.com/artist/wFM3e0c3" title="原声带">
+		原声带</a> 	(
+			<a href="http://www.xiami.com/artist/9cyo7If55d6" title="">程于伦</a>
+			<a href="http://www.xiami.com/artist/yhNlz3ff8f1" title="">林稷安</a>
+		)
 	</td>
 	<td class="song_album">
-		<a target="_blank" href="http://www.xiami.com/album/491512" title="Unforgettable 2011中国巡回演唱会">《Unforgettable 2011中国巡回演唱会》</a>
+		<a target="_blank" href="http://www.xiami.com/album/eTML6c259" title="花样少年少女 电视原声带">《花样少年少女 电视原声带》</a>
 	</td>
+	<td class="song_act">
+		...
+		<a class="song_play" href="javascript:void(0)" title="试听" onclick="play('2069383', 'default', 0, this);"><span>试听</span></a>
 	*/
+
 	while ((p = strstr(current, SONG_PATTERN)) != NULL)
 	{
-		gchar *tmp;
-		SongInfo *info;
-		current = p + strlen(SONG_PATTERN);
-		p = strstr(current, "/song/");
+		gchar *value = NULL;
+		SongInfo *info = NULL;
+
+		p = strstr(p, "/song/");
 		if (p == NULL)
 			break;
 
-		current = p + strlen("/song/");
-		if (!isdigit(*current))
-			continue;
-		
-		p = current + 1;
-		while (p && isdigit(*p))
-			p++;
+		p += 6; // /song/
 
-		// song id
-		tmp = g_strndup(current, p - current);
-		// get song info
-		info = get_song_id_info(tmp);
-		g_free(tmp);
-		if (!info)
-			continue ;
-
-		current = p + 1;
-		// song name
-		tmp = get_title_attr(current, &current);
-		if (tmp == NULL)
+		// song_name
 		{
+			value = get_title_attr(p, &current);
+			if (value == NULL)
+				break;
+
+			info = song_info_new();
+			info->song_name = value;
+		}
+
+		// song_artist
+		{
+			p = strstr(current, ARTIST_PATTERN);
+			if (p != NULL)
+			{
+				value = get_title_attr(p, &current);
+				info->artist_name = value;
+
+				// TODO: get all artists
+			}
+		}
+
+		// song_album
+		{
+			p = strstr(current, ALBUM_PATTERN);
+			if (p != NULL)
+			{
+				value = get_title_attr(p, &current);
+				info->album_name = value;
+			}
+		}
+
+		// song_act
+		do
+		{
+			const gchar *end = NULL;
+			p = strstr(current, "<td class=\"song_act\">");
+			if (p == NULL)
+				break;
+
+			p += 21; // <td class="song_act">
+			end = strstr(p, "</td>");
+
+			p = strstr(p, "onclick=\"play('");
+			if (p == NULL)
+				break;
+
+			// maybe the song is disabled
+			if (end < p)
+				break;
+
+			p += 15; // onclick="play('
+
+			current = p;
+			while (current && *current && *current != '\'')
+				++current;
+
+			value = g_strndup(p, current - p);
+			get_song_id_info(value, info);
+			g_free(value);
+		} while (0);
+
+		if (info->song_id == NULL)
 			song_info_free(info);
-			continue;
-		}
-		info->song_name = tmp;
-
-		// artist name
-		p = strstr(current, ARTIST_PATTERN);
-		if (p != NULL)
-		{
-			tmp = get_title_attr(p, &current);
-			if (tmp != NULL)
-				info->artist_name = tmp;
-		}
-		
-		current = p + 1;
-		// album name
-		p = strstr(current, ALBUM_PATTERN);
-		if (p != NULL)
-		{
-			tmp = get_title_attr(p, &current);
-			if (tmp != NULL)
-				info->album_name = tmp;
-		}
-		
-		list = g_list_append(list, info);
+		else
+			list = g_list_append(list, info);
 	}
 		
 	return list;
