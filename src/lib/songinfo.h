@@ -2,7 +2,7 @@
  * songinfo.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2017  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 
 G_BEGIN_DECLS
 
-typedef struct
+struct SongInfo
 {
 	gchar *song_id;
 	gchar *song_name;	// song name
@@ -39,7 +39,9 @@ typedef struct
 	gchar *location;	// song url
 
 	gchar *grade;	//
-}SongInfo;
+};
+
+typedef struct SongInfo SongInfo;
 
 SongInfo *
 song_info_new();

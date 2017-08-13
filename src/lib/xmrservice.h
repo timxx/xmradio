@@ -2,7 +2,7 @@
  * xmrservice.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2017  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,8 @@ struct _XmrServiceClass
 {
 	GObjectClass parent;
 };
+
+typedef struct SongInfo  SongInfo;
 
 GType		xmr_service_get_type();
 XmrService*	xmr_service_new();
@@ -119,6 +121,9 @@ xmr_service_get_url_data(XmrService *xs,
 
 const gchar *
 xmr_service_get_error_str(gint code);
+
+SongInfo *
+xmr_track_to_songinfo(GString *track_data);
 
 G_END_DECLS
 

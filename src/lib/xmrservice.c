@@ -2,7 +2,7 @@
  * xmrservice.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012-2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012-2017  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,8 @@
 #define XMR_USER_AGENT	"XiaMiRadio/0.1"
 #define XMR_LOGIN_URL	"http://www.xiami.com/kuang/login"
 #define XMR_LOGOUT_URL	"http://www.xiami.com/member/logout"
+
+#define MAX_TRACK 3 // for performance purpose
 
 G_DEFINE_TYPE(XmrService, xmr_service, G_TYPE_OBJECT)
 
@@ -77,14 +79,14 @@ static xmlChar*
 xml_first_child_content(xmlNodePtr root, const xmlChar *child);
 
 static gint
-parse_track_list_data(GString *data, GList **list);
+parse_track_list_data(XmrService *xs, GString *data, GList **list);
 
 /**
  * get track info
  * and append to list
  */
 static void
-get_track(xmlNodePtr root, GList **list);
+get_track(XmrService *xs, xmlNodePtr root, GList **list);
 
 /**
  * decode url
@@ -348,9 +350,8 @@ xmr_service_get_track_list_by_style(XmrService *xs, GList **list, const gchar *u
 	data = g_string_new("");
 
 	result = xmr_service_get_url_data(xs, url, data);
-	if (result == 0){
-		parse_track_list_data(data, list);
-	}
+	if (result == 0)
+		parse_track_list_data(xs, data, list);
 
 	g_string_free(data, TRUE);
 
@@ -568,7 +569,7 @@ xml_first_child_content(xmlNodePtr root, const xmlChar *child)
 }
 
 static gint
-parse_track_list_data(GString *data, GList **list)
+parse_track_list_data(XmrService *xs, GString *data, GList **list)
 {
 	gint result = 1;
 	xmlDocPtr doc = NULL;
@@ -593,8 +594,9 @@ parse_track_list_data(GString *data, GList **list)
 		if (track_list == NULL)
 			break;
 
-		for(p = xmlFirstElementChild(track_list); p ; p = xmlNextElementSibling(p))
-			get_track(p, list);
+		p = xmlFirstElementChild(track_list);
+		for(; p && g_list_length(*list) < MAX_TRACK; p = xmlNextElementSibling(p))
+			get_track(xs, p, list);
 
 		result = 0;
 	}
@@ -605,13 +607,71 @@ parse_track_list_data(GString *data, GList **list)
 	return result;
 }
 
-static void
-get_track(xmlNodePtr root, GList **list)
+static gchar *
+get_value(xmlNodePtr node, const gchar * const * attrs, gint n)
 {
-	SongInfo *song;
-	gchar *url;
+	gint i = 0;
+	for (; i < n; ++i)
+	{
+		gchar *value = (gchar *)xml_first_child_content(node, BAD_CAST attrs[i]);
+		if (value != NULL)
+			return value;
+	}
 
-	song = song_info_new();
+	return NULL;
+}
+
+static gchar *
+get_grade(XmrService *xs, xmlNodePtr node, const gchar *id)
+{
+	gchar *value = (gchar *)xml_first_child_content(node, BAD_CAST "grade");
+	if (xs == NULL)
+		return NULL;
+	else if (value != NULL && g_strcmp0(value, "-1") != 0)
+		return value;
+
+	if (!xs->priv->logged)
+		return value;
+
+	if (value)
+		g_free(value);
+
+	// the grade comes from playlist is always -1, useless, too bad LoL
+	gchar *url = g_strdup_printf("http://www.xiami.com/song/playlist/id/%s", id);
+
+	GString *data = g_string_new("");
+	gint r = xmr_service_get_url_data(xs, url, data);
+	g_free(url);
+
+	value = NULL;
+	do
+	{
+		if (r != 0 || !data->str)
+			break;
+
+		const gchar *p = data->str;
+		p = strstr(p, "<grade>");
+		if (p == NULL)
+			break;
+
+		p += 7; // <grade>
+
+		const gchar *end = p;
+		while (end && *end && *end != '<')
+			++end;
+
+		value = g_strndup(p, end - p);
+	} while (0);
+
+	return value;
+}
+
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+
+static void
+get_track(XmrService *xs, xmlNodePtr root, GList **list)
+{
+	SongInfo *song = song_info_new();
 	if (song == NULL)
 		return ;
 
@@ -620,7 +680,15 @@ get_track(xmlNodePtr root, GList **list)
 		GList *p = *list;
 		gboolean song_exists = FALSE;
 
-		song->song_id		= (gchar *)xml_first_child_content(root, BAD_CAST "song_id");
+		const gchar *songIds[] = { "songId", "song_id" };
+		const gchar *songNames[] = { "songName", "subName", "name", "song_name", "title" };
+		const gchar *albumIds[] = { "albumId", "album_id" };
+		const gchar *albumNames[] = { "album_name", "title" };
+		const gchar *artistIds[] = { "artistId", "artist_id" };
+		const gchar *artistNames[] = { "singers", "artist", "artist_name" };
+		const gchar *albumCovers[] = { "pic", "album_logo", "album_cover" };
+
+		song->song_id = get_value(root, songIds, ARRAY_SIZE(songIds));
 		if (song->song_id == NULL)
 			break;
 
@@ -637,28 +705,19 @@ get_track(xmlNodePtr root, GList **list)
 		if (song_exists)
 			break;
 
-		song->song_name		= (gchar *)xml_first_child_content(root, BAD_CAST "title");
-		song->album_id		= (gchar *)xml_first_child_content(root, BAD_CAST "album_id");
-		song->album_name	= (gchar *)xml_first_child_content(root, BAD_CAST "album_name");
-		song->artist_id		= (gchar *)xml_first_child_content(root, BAD_CAST "artist_id");
-		song->artist_name	= (gchar *)xml_first_child_content(root, BAD_CAST "artist");
-		song->album_cover	= (gchar *)xml_first_child_content(root, BAD_CAST "pic");
-		url					= (gchar *)xml_first_child_content(root, BAD_CAST "location");
-
-		if (song->song_name == NULL)
-			song->song_name = (gchar *)xml_first_child_content(root, BAD_CAST "song_name");
-		if (song->artist_name == NULL)
-			song->artist_name = (gchar *)xml_first_child_content(root, BAD_CAST "artist_name");
-		if (song->album_cover == NULL)
-			song->album_cover = (gchar *)xml_first_child_content(root, BAD_CAST "album_cover");
-
+		gchar *url = (gchar *)xml_first_child_content(root, BAD_CAST "location");
 		if (url == NULL)
 			break;
-
 		song->location = decode_url(url);
 		g_free(url);
 
-		song->grade = (gchar *)xml_first_child_content(root, BAD_CAST "grade");
+		song->song_name = get_value(root, songNames, ARRAY_SIZE(songNames));
+		song->album_id = get_value(root, albumIds, ARRAY_SIZE(albumIds));
+		song->album_name = get_value(root, albumNames, ARRAY_SIZE(albumNames));
+		song->artist_id	= get_value(root, artistIds, ARRAY_SIZE(artistIds));
+		song->artist_name = get_value(root, artistNames, ARRAY_SIZE(artistNames));
+		song->album_cover= get_value(root, albumCovers, ARRAY_SIZE(albumCovers));
+		song->grade = get_grade(xs, root, song->song_id);
 
 		*list = g_list_append(*list, song);
 
@@ -668,6 +727,8 @@ get_track(xmlNodePtr root, GList **list)
 
 	song_info_free(song);
 }
+
+#undef ARRAY_SIZE
 
 static gchar *
 decode_url(const gchar *url)
@@ -842,4 +903,21 @@ const gchar *
 xmr_service_get_error_str(gint code)
 {
 	return curl_easy_strerror(code);
+}
+
+SongInfo*
+xmr_track_to_songinfo(GString *track_data)
+{
+	SongInfo *info = NULL;
+
+	GList *list = NULL;
+	parse_track_list_data(NULL, track_data, &list);
+
+	if (list)
+	{
+		info = song_info_copy(list->data);
+		g_list_free_full(list,  (GDestroyNotify)song_info_free);
+	}
+
+	return info;
 }
