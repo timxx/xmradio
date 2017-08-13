@@ -66,59 +66,6 @@ XMR_DEFINE_PLUGIN(XMR_TYPE_SEARCH_PLUGIN, XmrSearchPlugin, xmr_search_plugin,)
 #define ARTIST_PATTERN "<td class=\"song_artist\">"
 #define ALBUM_PATTERN "<td class=\"song_album\">"
 
-static gchar *
-decode_url(const gchar *url)
-{
-	int col = 0;
-	int row;
-	int x;
-	int len;
-	int i, j, k;
-	gchar *array;
-	gchar *decode_url = NULL;
-	gchar *p;
-
-	if (url == NULL)
-		return NULL;
-
-	row = *url - '0';
-	len = strlen(url + 1);
-	col = len / row;
-	x = len % row;
-
-	if (x != 0)
-	col += 1;
-
-	array = (char *)calloc(len + sizeof(char), sizeof(char));
-
-	k = 1;
-	for(i=0; i<row; i++)
-	{
-		for(j=0; j<col; j++, k++)
-			array[i + row * j] = url[k];
-
-		if (x > 0)
-		{
-			x--;
-			if(x == 0)
-			 col -= 1;
-		}
-	}
-
-	decode_url = curl_easy_unescape(NULL, array, 0, NULL);
-	p = decode_url;
-
-	while(*p)
-	{
-		if (*p == '^')
-			*p = '0';
-		p++;
-	}
-	free(array);
-
-	return decode_url;
-}
-
 static gboolean
 event_poll_idle(XmrSearchPlugin *plugin)
 {
@@ -155,88 +102,34 @@ event_poll_idle(XmrSearchPlugin *plugin)
 	return ret;
 }
 
-static char*
-get_title_attr(const gchar *content, const gchar **end)
+static SongInfo *
+get_song_id_info(XmrSearchPlugin *plugin, const gchar *id)
 {
-	const gchar *p, *q;
-	*end = content;
-	p = strstr(content, "title=\"");
-	if (p == NULL)
-		return NULL;
+	XmrWindow *window = NULL;
+	g_object_get(plugin, "object", &window, NULL);
+	g_assert(window != NULL);
 
-	content = p + strlen("title=\"");
-	q = strchr(content, '"');
-	if (q == NULL)
-		return NULL;
+	XmrService *service = NULL;
+	g_object_get(window, "service", &service, NULL);
+	g_assert(service != NULL);
 
-	*end = q + 1;
-	return g_strndup(content, q - content);
-}
-
-static void
-get_song_id_info(const gchar *id, SongInfo *info)
-{
-	XmrService *service = xmr_service_new();
 	gchar *url = g_strdup_printf(XIAMI_INFO_URL"%s", id);
 	GString *data = g_string_new("");
-	gint result = xmr_service_get_url_data(service, url, data);
-	g_object_unref(service);
-
-	do
-	{
-		const gchar *p = data->str;
-		const gchar *q;
-		gchar *tmp;
-
-		if (result != 0)
-			break;
-		
-		p = strstr(p, "<location>");
-		if (p == NULL)
-			break;
-		p += strlen("<location>");
-
-		q = strstr(p, "</location>");
-		if (q == NULL)
-			break;
-
-		// skip white space
-		while (*p && isspace(*p))
-			p++;
-		
-		while (q > p && isspace(*(q-1)))
-			q--;
-
-		tmp = g_strndup(p, q - p);
-		info->location = decode_url(tmp);
-		g_free(tmp);
-		
-		p = strstr(q, "<pic>");
-		if (p == NULL)
-			break;
-		p += strlen("<pic>");
-
-		q = strstr(p, "</pic>");
-		if (q == NULL)
-			break;
-		
-		// skip white space
-		while (*p && isspace(*p))
-			p++;
-		
-		while (q > p && isspace(*(q-1)))
-			q--;
-		
-		info->album_cover = g_strndup(p, q - p);
-		info->song_id = g_strdup(id);
-	} while (0);
-
+	xmr_service_get_url_data(service, url, data);
 	g_free(url);
+
+	g_object_unref(service);
+	g_object_unref(window);
+
+	SongInfo *info = xmr_track_to_songinfo(data);
+
 	g_string_free(data, TRUE);
+
+	return info;
 }
 
 static GList *
-parse_result_data(const gchar *data)
+parse_result_data(XmrSearchPlugin *plugin, const gchar *data)
 {
 	GList *list = NULL;
 
@@ -255,67 +148,10 @@ parse_result_data(const gchar *data)
 
 	current = p + 19; // class="result_main"
 
-	/*
-	<td class="song_name">
-		<a target="_blank" href="http://www.xiami.com/song/b4BpNa4d6c" title="我一直都在"><b class="key_red">我一直都在</b></a>
-	</td>
-	<td class="song_artist">
-		<a target="_blank" href="http://www.xiami.com/artist/wFM3e0c3" title="原声带">
-		原声带</a> 	(
-			<a href="http://www.xiami.com/artist/9cyo7If55d6" title="">程于伦</a>
-			<a href="http://www.xiami.com/artist/yhNlz3ff8f1" title="">林稷安</a>
-		)
-	</td>
-	<td class="song_album">
-		<a target="_blank" href="http://www.xiami.com/album/eTML6c259" title="花样少年少女 电视原声带">《花样少年少女 电视原声带》</a>
-	</td>
-	<td class="song_act">
-		...
-		<a class="song_play" href="javascript:void(0)" title="试听" onclick="play('2069383', 'default', 0, this);"><span>试听</span></a>
-	*/
-
 	while ((p = strstr(current, SONG_PATTERN)) != NULL)
 	{
 		gchar *value = NULL;
 		SongInfo *info = NULL;
-
-		p = strstr(p, "/song/");
-		if (p == NULL)
-			break;
-
-		p += 6; // /song/
-
-		// song_name
-		{
-			value = get_title_attr(p, &current);
-			if (value == NULL)
-				break;
-
-			info = song_info_new();
-			info->song_name = value;
-		}
-
-		// song_artist
-		{
-			p = strstr(current, ARTIST_PATTERN);
-			if (p != NULL)
-			{
-				value = get_title_attr(p, &current);
-				info->artist_name = value;
-
-				// TODO: get all artists
-			}
-		}
-
-		// song_album
-		{
-			p = strstr(current, ALBUM_PATTERN);
-			if (p != NULL)
-			{
-				value = get_title_attr(p, &current);
-				info->album_name = value;
-			}
-		}
 
 		// song_act
 		do
@@ -343,16 +179,21 @@ parse_result_data(const gchar *data)
 				++current;
 
 			value = g_strndup(p, current - p);
-			get_song_id_info(value, info);
+			info = get_song_id_info(plugin, value);
 			g_free(value);
 		} while (0);
+
+		current = p;
+
+		if (info == NULL)
+			continue;
 
 		if (info->song_id == NULL)
 			song_info_free(info);
 		else
 			list = g_list_append(list, info);
 	}
-		
+
 	return list;
 }
 
@@ -375,7 +216,7 @@ search_thread(Data *data)
 
 	if (result == 0)
 	{
-		GList *list = parse_result_data(result_data->str);
+		GList *list = parse_result_data(data->plugin, result_data->str);
 		if (list)
 			g_async_queue_push(data->plugin->event_queue, list);
 	}
