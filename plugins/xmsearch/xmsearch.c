@@ -62,10 +62,6 @@ XMR_DEFINE_PLUGIN(XMR_TYPE_SEARCH_PLUGIN, XmrSearchPlugin, xmr_search_plugin,)
 #define XIAMI_SEARCH_URL "http://www.xiami.com/search?key="
 #define XIAMI_INFO_URL "http://www.xiami.com/song/playlist/id/"
 
-#define SONG_PATTERN "<td class=\"song_name\">"
-#define ARTIST_PATTERN "<td class=\"song_artist\">"
-#define ALBUM_PATTERN "<td class=\"song_album\">"
-
 static gboolean
 event_poll_idle(XmrSearchPlugin *plugin)
 {
@@ -129,7 +125,7 @@ get_song_id_info(XmrSearchPlugin *plugin, const gchar *id)
 }
 
 static GList *
-parse_result_data(XmrSearchPlugin *plugin, const gchar *data)
+parse_result_data(XmrSearchPlugin *plugin, const gchar *data, long len)
 {
 	GList *list = NULL;
 
@@ -140,18 +136,27 @@ parse_result_data(XmrSearchPlugin *plugin, const gchar *data)
 	if (p == NULL)
 		return NULL;
 
+	len -= (p + 15 - current);
 	current = p + 15; // <h5>歌曲</h5>
 
 	p = strstr(current, "class=\"result_main\"");
 	if (p == NULL)
 		return NULL;
 
+	len -= (p + 19 - current);
 	current = p + 19; // class="result_main"
 
-	while ((p = strstr(current, SONG_PATTERN)) != NULL)
+#define MOVE_CURRENT(offset)	\
+	len -= (p + offset - current);	\
+	if (len <= 0) break;		\
+	current = p + offset;
+
+	while (len > 0 && (p = strstr(current, "<td class=\"song_name\">")) != NULL)
 	{
 		gchar *value = NULL;
 		SongInfo *info = NULL;
+
+		MOVE_CURRENT(22) // 22 = <td class="song_name">
 
 		// song_act
 		do
@@ -161,29 +166,31 @@ parse_result_data(XmrSearchPlugin *plugin, const gchar *data)
 			if (p == NULL)
 				break;
 
-			p += 21; // <td class="song_act">
-			end = strstr(p, "</td>");
+			MOVE_CURRENT(21) // <td class="song_act">
 
-			p = strstr(p, "onclick=\"play('");
+			end = strstr(current, "</td>");
+
+			p = strstr(current, "onclick=\"play('");
 			if (p == NULL)
 				break;
+
+			MOVE_CURRENT(15) // 15 = onclick="play('
 
 			// maybe the song is disabled
 			if (end < p)
 				break;
 
-			p += 15; // onclick="play('
+			p = current;
 
-			current = p;
-			while (current && *current && *current != '\'')
-				++current;
+			while (len > 0 && current && *current && *current != '\'')
+				++current, --len;
 
 			value = g_strndup(p, current - p);
 			info = get_song_id_info(plugin, value);
 			g_free(value);
 		} while (0);
 
-		current = p;
+#undef MOVE_CURRENT
 
 		if (info == NULL)
 			continue;
@@ -216,7 +223,7 @@ search_thread(Data *data)
 
 	if (result == 0)
 	{
-		GList *list = parse_result_data(data->plugin, result_data->str);
+		GList *list = parse_result_data(data->plugin, result_data->str, result_data->len);
 		if (list)
 			g_async_queue_push(data->plugin->event_queue, list);
 	}

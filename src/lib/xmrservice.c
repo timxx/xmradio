@@ -626,7 +626,7 @@ get_grade(XmrService *xs, xmlNodePtr node, const gchar *id)
 {
 	gchar *value = (gchar *)xml_first_child_content(node, BAD_CAST "grade");
 	if (xs == NULL)
-		return NULL;
+		return value;
 	else if (value != NULL && g_strcmp0(value, "-1") != 0)
 		return value;
 
