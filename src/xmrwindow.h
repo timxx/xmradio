@@ -2,7 +2,7 @@
  * xmrwindow.h
  * This file is part of xmradio
  *
- * Copyright (C) 2012 - 2013  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2017  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -160,6 +160,9 @@ xmr_window_increase_search_music_count(XmrWindow *window);
 
 void
 xmr_window_decrease_search_music_count(XmrWindow *window);
+
+void
+xmr_window_get_cookie(XmrWindow *window, gchar **cookie);
 
 G_END_DECLS
 

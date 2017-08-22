@@ -53,8 +53,6 @@ struct _XmrServicePrivate
 	gchar	*usr_name;
 
 	CURL	*curl;
-
-	gchar	*cookie;	// cookie file
 };
 
 /**
@@ -164,12 +162,6 @@ xmr_service_dispose(GObject *obj)
 		priv->curl = NULL;
 	}
 
-	if (priv->cookie)
-	{
-		g_free(priv->cookie);
-		priv->cookie = NULL;
-	}
-
 	G_OBJECT_CLASS(xmr_service_parent_class)->dispose(obj);
 }
 
@@ -212,12 +204,6 @@ static void xmr_service_init(XmrService *xs)
 	priv->logged = FALSE;
 	priv->usr_id = NULL;
 	priv->usr_name = NULL;
-	priv->cookie = NULL;
-	{
-		gint fd = g_file_open_tmp(NULL, &priv->cookie, NULL);
-		if (fd != -1)
-			close(fd);
-	}
 
 	priv->curl = curl_easy_init();
 	if (priv->curl)
@@ -225,6 +211,7 @@ static void xmr_service_init(XmrService *xs)
 		curl_easy_setopt(priv->curl, CURLOPT_USERAGENT, XMR_USER_AGENT);
 		curl_easy_setopt(priv->curl, CURLOPT_CONNECTTIMEOUT, 10);
 		curl_easy_setopt(priv->curl, CURLOPT_NOSIGNAL, 1L);
+		curl_easy_setopt(priv->curl, CURLOPT_COOKIEFILE, "");
 	}
 }
 
@@ -395,6 +382,8 @@ xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 	XmrServicePrivate *priv;
 	gint ret = -1;
 
+	g_return_val_if_fail(xs != NULL, -1);
+
 	priv = xs->priv;
 
 	curl_easy_setopt(priv->curl, CURLOPT_URL, url);
@@ -404,9 +393,6 @@ xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEDATA, data);
 
-	if (priv->cookie)
-		curl_easy_setopt(priv->curl, CURLOPT_COOKIEFILE, priv->cookie);
-
 #ifdef _DEBUG
 	curl_easy_setopt(priv->curl, CURLOPT_VERBOSE, 1L);
 #endif
@@ -414,6 +400,43 @@ xmr_service_get_url_data(XmrService *xs, const gchar *url, GString *data)
 	ret = curl_easy_perform(priv->curl);
 
 	return ret;
+}
+
+void
+xmr_service_get_cookie(XmrService *xs, gchar **cookie)
+{
+	g_return_if_fail(xs != NULL && cookie != NULL);
+
+	struct curl_slist *cookies = NULL;
+
+	do
+	{
+		CURLcode res = curl_easy_getinfo(xs->priv->curl, CURLINFO_COOKIELIST, &cookies);
+		if(res != CURLE_OK)
+			break;
+
+		struct curl_slist *p = cookies;
+		GString *data = g_string_new("");
+		while(p)
+		{
+			g_string_append_printf(data, "%s\n", p->data);
+			p = p->next;
+		}
+		*cookie = data->str;
+		g_string_free(data, FALSE);
+	} while (0);
+
+	if (cookies)
+		curl_slist_free_all(cookies);
+}
+
+void
+xmr_service_set_cookie(XmrService *xs,
+					   gchar *cookie)
+{
+	g_return_if_fail(xs != NULL && cookie != NULL);
+
+	curl_easy_setopt(xs->priv->curl, CURLOPT_COOKIELIST, cookie);
 }
 
 static size_t
@@ -458,9 +481,6 @@ post_url_data(XmrService *xs, const gchar *url, GString *post_data, GString *dat
 
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEFUNCTION, write_func);
 	curl_easy_setopt(priv->curl, CURLOPT_WRITEDATA, data);
-
-	if (priv->cookie)
-		curl_easy_setopt(priv->curl, CURLOPT_COOKIEJAR, priv->cookie);
 
 #ifdef _DEBUG
 	curl_easy_setopt(priv->curl, CURLOPT_VERBOSE, 1L);

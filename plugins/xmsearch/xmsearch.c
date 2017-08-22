@@ -44,6 +44,7 @@ typedef struct
 	gint thread_count;
 	gint last_thread_count;
 	GMutex *mutex;
+	gchar *cookies;
 }XmrSearchPlugin;
 
 typedef struct
@@ -101,21 +102,22 @@ event_poll_idle(XmrSearchPlugin *plugin)
 static SongInfo *
 get_song_id_info(XmrSearchPlugin *plugin, const gchar *id)
 {
-	XmrWindow *window = NULL;
-	g_object_get(plugin, "object", &window, NULL);
-	g_assert(window != NULL);
-
-	XmrService *service = NULL;
-	g_object_get(window, "service", &service, NULL);
-	g_assert(service != NULL);
+	XmrService *service = xmr_service_new();
 
 	gchar *url = g_strdup_printf(XIAMI_INFO_URL"%s", id);
 	GString *data = g_string_new("");
+
+	if (plugin->cookies)
+	{
+		g_mutex_lock(plugin->mutex);
+		xmr_service_set_cookie(service, plugin->cookies);
+		g_mutex_unlock(plugin->mutex);
+	}
+
 	xmr_service_get_url_data(service, url, data);
 	g_free(url);
 
 	g_object_unref(service);
-	g_object_unref(window);
 
 	SongInfo *info = xmr_track_to_songinfo(data);
 
@@ -254,6 +256,8 @@ on_music_search(XmrWindow *window,
 	plugin->last_thread_count++;
 	if (plugin->event_idle_id == 0)
 		plugin->event_idle_id = g_timeout_add(200, (GSourceFunc)event_poll_idle, plugin);
+	if (!plugin->cookies)
+		xmr_window_get_cookie(window, &plugin->cookies);
 
 	xmr_window_increase_search_music_count(window);
 
@@ -289,6 +293,7 @@ impl_activate(PeasActivatable *activatable)
 #else
 	plugin->mutex = g_mutex_new();
 #endif
+	plugin->cookies = NULL;
 }
 
 static void
@@ -321,6 +326,9 @@ impl_deactivate(PeasActivatable *activatable)
 #endif
 		plugin->mutex = NULL;
 	}
+
+	if (plugin->cookies)
+		g_free(plugin->cookies);
 }
 
 static void

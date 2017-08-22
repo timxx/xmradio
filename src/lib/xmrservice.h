@@ -119,6 +119,14 @@ xmr_service_get_url_data(XmrService *xs,
 			const gchar *url,
 			GString *data);
 
+void
+xmr_service_get_cookie(XmrService *xs,
+					   gchar **cookie);
+
+void
+xmr_service_set_cookie(XmrService *xs,
+					   gchar *cookie);
+
 const gchar *
 xmr_service_get_error_str(gint code);
 

@@ -2,7 +2,7 @@
  * xmrwindow.c
  * This file is part of xmradio
  *
- * Copyright (C) 2012 - 2016  Weitian Leung (weitianleung@gmail.com)
+ * Copyright (C) 2012 - 2017  Weitian Leung (weitianleung@gmail.com)
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -3443,6 +3443,18 @@ xmr_window_decrease_search_music_count(XmrWindow *window)
 		g_source_remove(priv->search_music_idle_id);
 		priv->search_music_idle_id = 0;
 	}
+}
+
+void
+xmr_window_get_cookie(XmrWindow *window, gchar **cookie)
+{
+	XmrWindowPrivate *priv;
+	g_return_if_fail(window != NULL);
+	priv = window->priv;
+
+	g_mutex_lock(priv->mutex);
+	xmr_service_get_cookie(priv->service, cookie);
+	g_mutex_unlock(priv->mutex);
 }
 
 static gboolean
