@@ -1,5 +1,8 @@
-#xmradio
-=======
+# xmradio
+
+## xmradio is no longer maintained
+## 已弃疗，喜欢用客户端听歌的朋友，推荐使用网易云音乐客户端（支持Linux）。可使用工具（[点我去看看](https://github.com/timxx/musicexporter)）导出虾米音乐收藏的歌曲列表，然后导入到网易的（貌似只有低版本的才有导入功能，比如2.0）
+
 
 Xia Mi Radio (虾米电台)
 
